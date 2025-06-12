@@ -27,6 +27,7 @@ const AdminEvents = lazy(() => import("./pages/admin/Events"));
 const AdminGallery = lazy(() => import("./pages/admin/Gallery"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
+const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
@@ -36,9 +37,11 @@ const AlbumDetail = lazy(() => import("./pages/AlbumDetail"));
 
 // Components
 import RequireAuth from "./components/auth/RequireAuth";
-import RequireAdmin from "./components/auth/RequireAdmin";
+import RequireAdmin from "./components/auth/RequireAdmin"; 
 import ExternalRedirect from "./components/ExternalRedirect";
 import PageLoader from "./components/PageLoader";
+import { LOOMOrganizationSchema } from "./components/SEOStructuredData";
+import { AutoBreadcrumbs } from "./components/InternalLinks";
 
 const queryClient = new QueryClient();
 
@@ -57,13 +60,13 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
   "/auth/register": "LOOM - Inscription",
-  "/auth/profile": "LOOM - Mon Profil",
-  "/admin/dashboard": "LOOM Admin - Tableau de bord",
+  "/auth/profile": "LOOM - Mon Profil",  "/admin/dashboard": "LOOM Admin - Tableau de bord",
   "/admin/articles": "LOOM Admin - Articles",
   "/admin/events": "LOOM Admin - Événements",
   "/admin/gallery": "LOOM Admin - Galerie",
   "/admin/users": "LOOM Admin - Utilisateurs",
   "/admin/tickets": "LOOM Admin - Tickets",
+  "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/privacy-policy": "LOOM - Politique de confidentialité",
   "/terms": "LOOM - Conditions d'utilisation",
   "/unauthorized": "LOOM - Accès non autorisé"
@@ -101,10 +104,14 @@ const App = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+  
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
+          {/* Données structurées globales de l'organisation */}
+          <LOOMOrganizationSchema />
+          
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -142,14 +149,14 @@ const App = () => {
               {/* Admin Routes - Using RequireAuth and RequireAdmin as route wrappers */}
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               
-              <Route element={<RequireAuth />}>
-                <Route element={<RequireAdmin />}>
+              <Route element={<RequireAuth />}>                <Route element={<RequireAdmin />}>
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
                   <Route path="/admin/articles" element={<AdminArticles />} />
                   <Route path="/admin/events" element={<AdminEvents />} />
                   <Route path="/admin/gallery" element={<AdminGallery />} />
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/admin/tickets" element={<AdminTickets />} />
+                  <Route path="/admin/seo" element={<AdminSEO />} />
                 </Route>
               </Route>
                 {/* Privacy Policy and Terms Routes */}

@@ -8,6 +8,8 @@ import ArticleCard from '@/components/ArticleCard';
 import { Tables } from '@/db/types';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import useSEO from '@/hooks/useSEO';
+import SEOPage from '@/components/SEOPage';
+import { InternalLinks } from '@/components/InternalLinks';
 
 const Articles = () => {
   // SEO Configuration

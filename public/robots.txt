@@ -13,8 +13,16 @@ Allow: /
 User-agent: *
 Allow: /
 
+# Pages importantes à explorer en priorité
+Allow: /articles
+Allow: /events
+Allow: /gallery
+Allow: /partners
+Allow: /about
+Allow: /monsieur-ours
+
 # Sitemap
-Sitemap: https://loom-bears.fr/sitemap.xml
+Sitemap: https://loom-lgbt.fr/sitemap.xml
 
 # Disallow admin pages
 Disallow: /admin/
@@ -23,3 +31,12 @@ Disallow: /auth/
 # Disallow temporary pages
 Disallow: /unauthorized
 Disallow: /404
+
+# Disallow fichiers techniques
+Disallow: /*.json$
+Disallow: /*.config.*$
+Disallow: /src/
+Disallow: /node_modules/
+
+# Informations de contact
+# Contact: contactloom34@gmail.com

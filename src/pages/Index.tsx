@@ -11,12 +11,17 @@ import EventCard from '@/components/EventCard';
 import Button from '@/components/Button';
 import { Tables } from '@/db/types';
 import useSEO from '@/hooks/useSEO';
+import { SEOHomePage } from '@/components/SEOPage';
+import { InternalLinks } from '@/components/InternalLinks';
 
 const Index = () => {
-  // SEO Configuration
+  // SEO Configuration avec composant dédié
+  const seoDescription = 'Rejoignez LOOM, l\'association Bear fondée en 2017 à Montpellier. Plus de 150 membres, 50+ événements par an. Découvrez notre communauté dynamique et nos activités.';
+  
+  // SEO Configuration (hook existant maintenu pour compatibilité)
   useSEO({
     title: 'LOOM - Les Ours Occitanie Méditerranée | Communauté Bear de Montpellier',
-    description: 'Rejoignez LOOM, l\'association Bear fondée en 2017 à Montpellier. Plus de 150 membres, 50+ événements par an. Découvrez notre communauté dynamique et nos activités.',
+    description: seoDescription,
     keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Méditerranée', 'Association', 'Communauté', 'LGBTQ+', 'événements', 'Bear community'],
     type: 'website'
   });
@@ -129,9 +134,14 @@ const Index = () => {
   // HelloAsso URLs
   const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
   const MEMBERSHIP_URL = "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
-
   return (
     <div className="flex flex-col min-h-screen bg-tan/10">
+      {/* SEO optimisé pour la page d'accueil */}
+      <SEOHomePage 
+        title="Communauté Bear de Montpellier"
+        description={seoDescription}
+      />
+      
       <Navbar />
       
       {/* Hero Section */}
@@ -379,11 +389,51 @@ const Index = () => {
               <p className="text-gray-600">
                 Explorez notre galerie photo pour revivre les moments forts de nos événements.
               </p>
+            </div>          </div>
+        </div>
+      </section>
+      
+      {/* Navigation rapide et SEO - Section de liens internes */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <SectionHeading 
+            title="Explorez LOOM" 
+            subtitle="Découvrez toutes les facettes de notre communauté"
+            centered
+          />
+          
+          <div className="mt-12">
+            <InternalLinks 
+              category="all" 
+              layout="grid" 
+              showDescription={true}
+              className="max-w-6xl mx-auto"
+            />
+          </div>
+          
+          {/* Section liens rapides pour le SEO */}
+          <div className="mt-12 text-center">
+            <h3 className="text-xl font-semibold mb-6">Liens rapides</h3>
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <Link to="/articles" className="px-4 py-2 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors">
+                📰 Dernières actualités
+              </Link>
+              <Link to="/events" className="px-4 py-2 bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors">
+                🎉 Événements à venir
+              </Link>
+              <Link to="/gallery" className="px-4 py-2 bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100 transition-colors">
+                📸 Photos de nos sorties
+              </Link>
+              <Link to="/partners" className="px-4 py-2 bg-orange-50 text-orange-700 rounded-full hover:bg-orange-100 transition-colors">
+                🤝 Nos partenaires
+              </Link>
+              <Link to="/monsieur-ours" className="px-4 py-2 bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100 transition-colors">
+                🐻 Monsieur Ours
+              </Link>
             </div>
           </div>
         </div>
       </section>
-      
       
       {/* CTA Section - Updated to only have "Become a Member" button */}
       <section className="py-16 md:py-24 bg-gradient-to-r from-brown to-brown-dark text-white">
@@ -398,12 +448,9 @@ const Index = () => {
             onClick={() => window.open(MEMBERSHIP_URL, '_blank', 'noopener,noreferrer')}
             className="inline-flex items-center justify-center bg-orange hover:bg-orange-dark text-white py-3 px-6 rounded-lg font-medium transition-colors"
           >
-            Nous rejoindre !
-          </button>
+            Nous rejoindre !          </button>
         </div>
-      </section>
-      
-      <Footer />
+      </section>      <Footer />
     </div>
   );
 };
