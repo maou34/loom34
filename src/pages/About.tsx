@@ -5,8 +5,17 @@ import SectionHeading from '@/components/SectionHeading';
 import { useState } from 'react';
 import { db } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
+import useSEO from '@/hooks/useSEO';
 
 const About = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'À propos - LOOM | Découvrez notre association Bear de Montpellier',
+    description: 'Découvrez LOOM - Les Ours Occitanie Méditerranée, association Bear fondée en 2017. Notre mission, nos valeurs et comment nous rejoindre dans notre communauté inclusive.',
+    keywords: ['LOOM', 'Bears', 'association', 'Montpellier', 'à propos', 'histoire', 'mission', 'valeurs', 'communauté LGBTQ+'],
+    type: 'website'
+  });
+
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',

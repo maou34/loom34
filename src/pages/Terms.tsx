@@ -1,7 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Construction } from 'lucide-react';
+import useSEO from '@/hooks/useSEO';
 
 const Terms = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'Conditions d\'utilisation - LOOM | Mentions légales',
+    description: 'Consultez les conditions d\'utilisation et mentions légales du site de LOOM - Les Ours Occitanie Méditerranée.',
+    keywords: ['conditions utilisation', 'mentions légales', 'LOOM', 'CGU'],
+    type: 'website'
+  });
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <Construction className="h-24 w-24 text-gray-400 mb-4" />
@@ -14,4 +23,4 @@ const Terms = () => {
   );
 };
 
-export default Terms; 
+export default Terms;

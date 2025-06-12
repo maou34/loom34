@@ -1,7 +1,7 @@
 import { useState, useEffect, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { db } from '@/db/client';
-import { Plus, ImageIcon, FolderOpen, GripVertical, Edit, Trash2 } from "lucide-react";
+import { Plus, ImageIcon, FolderOpen, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -13,9 +13,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from "framer-motion";
-import DragDropGallery from "@/components/admin/gallery/DragDropGallery";
-import { FixedSizeGrid as Grid } from 'react-window';
 import { GalleryUploadProgress } from "@/components/admin/gallery/GalleryUploadProgress";
+import PhotoAlbum from 'react-photo-album';
+import "react-photo-album/rows.css";
 
 type GalleryAlbum = Tables<'gallery_albums'>;
 type GalleryImage = {
@@ -27,11 +27,6 @@ type GalleryImage = {
   created_at: string;
   updated_at: string;
 };
-
-interface DraggedImage {
-  id: string;
-  albumId: string | null;
-}
 
 export default function Gallery() {
   const [isCreatingAlbum, setIsCreatingAlbum] = useState(false);
@@ -608,31 +603,10 @@ export default function Gallery() {
             </DialogContent>
           </Dialog>
 
-          <div className="space-y-2">
-            <Button 
+          <div className="space-y-2">            <Button 
               variant={showUnclassified ? "default" : "ghost"}
               className="w-full justify-start relative hover:bg-gray-100 transition-colors"
               onClick={handleUnclassifiedClick}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.add('bg-gray-100');
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove('bg-gray-100');
-              }}
-              onDrop={async (e) => {
-                e.preventDefault();
-                e.currentTarget.classList.remove('bg-gray-100');
-                const draggedImageData = e.dataTransfer.getData('application/json');
-                if (draggedImageData) {
-                  const { id } = JSON.parse(draggedImageData) as DraggedImage;
-                  await moveImageMutation.mutateAsync({
-                    imageId: id,
-                    newAlbumId: null
-                  });
-                }
-              }}
             >
               <FolderOpen className="h-4 w-4 mr-2" />
               Photos non classées
@@ -648,31 +622,10 @@ export default function Gallery() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                >
-                  <Button 
+                >                  <Button 
                     variant={selectedAlbum?.id === album.id ? "default" : "ghost"}
                     className={`flex-1 justify-start group relative overflow-hidden ${selectedAlbum?.id === album.id ? "text-white" : ""}`}
                     onClick={() => handleAlbumClick(album)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.add('bg-gray-100');
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.remove('bg-gray-100');
-                    }}
-                    onDrop={async (e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.remove('bg-gray-100');
-                      const draggedImageData = e.dataTransfer.getData('application/json');
-                      if (draggedImageData) {
-                        const { id } = JSON.parse(draggedImageData) as DraggedImage;
-                        await moveImageMutation.mutateAsync({
-                          imageId: id,
-                          newAlbumId: album.id
-                        });
-                      }
-                    }}
                   >
                     <div className="relative z-10 flex items-center">
                       <ImageIcon className="h-4 w-4 mr-2" />
@@ -782,95 +735,143 @@ export default function Gallery() {
                 </Button>
               </div>
             </div>
-          </div>
-
-          {Array.isArray(images) && images.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-              {images.map((image) => (
-                <div
-                  key={image.id}
-                  className="relative group aspect-square cursor-move rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
-                  draggable
-                  onDragStart={(e) => handleImageDragStart(e, image)}
-                >
-                  <img
-                    src={image.image_url}
-                    alt={image.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                    onError={(e) => {
-                      console.error('Error loading image:', image.image_url);
-                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Image+non+disponible';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <div className="w-full">
-                      <p className="text-white text-sm font-medium truncate mb-2">{image.title}</p>
-                      <div className="flex justify-end gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="text-white bg-white/20 hover:bg-white/30"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedImage(image);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <div className="space-y-4">
-                              <Label>Nom de la photo</Label>
-                              <Input
-                                defaultValue={image.title}
-                                onChange={(e) => {
-                                  setNewAlbumName(e.target.value);
-                                }}
-                              />
-                              <div className="flex justify-end gap-2">
-                                <DialogClose asChild>
-                                  <Button variant="outline">Annuler</Button>
-                                </DialogClose>
-                                <DialogClose asChild>
-                                  <Button
-                                    onClick={() => {
-                                      if (image.title.trim()) {
-                                        updateImageMutation.mutate({
-                                          id: image.id,
-                                          title: image.title,
-                                          description: image.description
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    Enregistrer
-                                  </Button>
-                                </DialogClose>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+          </div>          {Array.isArray(images) && images.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+              <style>{`
+                .react-photo-album img {
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                .react-photo-album img:hover {
+                  transform: scale(1.02);
+                  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                }
+              `}</style>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {selectedAlbum ? selectedAlbum.title : showUnclassified ? 'Photos non classées' : 'Toutes les photos'} 
+                  <span className="text-sm text-gray-500 ml-2">({images.length} image{images.length > 1 ? 's' : ''})</span>
+                </h3>
+              </div>
+                <PhotoAlbum
+                layout="rows"
+                photos={images.map((image, index) => ({
+                  src: image.image_url,
+                  width: 800,
+                  height: 600,
+                  alt: image.title || `Image ${index + 1}`,
+                  key: image.id,
+                  title: image.title,
+                  description: image.description,
+                  originalImage: image
+                }))}
+                targetRowHeight={250}
+                spacing={10}
+                onClick={({ photo }) => setSelectedImage(photo.originalImage)}
+              />
+              
+              {/* Image controls modal */}
+              {selectedImage && (
+                <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+                  <DialogContent className="max-w-md">
+                    <div className="space-y-4">
+                      <div className="text-center">
+                        <img 
+                          src={selectedImage.image_url} 
+                          alt={selectedImage.title} 
+                          className="max-w-full h-40 object-cover rounded-lg mx-auto mb-4"
+                        />
+                      </div>
+                      <div>
+                        <Label>Nom de la photo</Label>
+                        <Input
+                          defaultValue={selectedImage.title}
+                          onChange={(e) => {
+                            setNewAlbumName(e.target.value);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <Label>Déplacer vers l'album</Label>
+                        <select
+                          className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-brown focus:border-brown"
+                          defaultValue={selectedImage.album_id || ''}
+                          onChange={(e) => {
+                            const newAlbumId = e.target.value || null;
+                            moveImageMutation.mutate({
+                              imageId: selectedImage.id,
+                              newAlbumId: newAlbumId
+                            });
+                            toast({
+                              title: "Image déplacée",
+                              description: `Image déplacée vers ${newAlbumId ? albums.find(a => a.id === newAlbumId)?.title : 'Non classé'}`,
+                            });
+                          }}
+                        >
+                          <option value="">📁 Non classé</option>
+                          {albums.map(album => (
+                            <option key={album.id} value={album.id}>
+                              📸 {album.title}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Album actuel : {selectedAlbum ? selectedAlbum.title : 'Non classé'}
+                        </p>
+                      </div>
+                      <div className="flex justify-between gap-2">
                         <Button
                           variant="destructive"
-                          size="sm"
-                          className="bg-red-500/20 hover:bg-red-500/30 text-white"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={() => {
                             if (window.confirm("Êtes-vous sûr de vouloir supprimer cette photo ?")) {
-                              deleteImageMutation.mutate(image.id);
+                              deleteImageMutation.mutate(selectedImage.id);
+                              setSelectedImage(null);
                             }
                           }}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer
                         </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => setSelectedImage(null)}>
+                            Fermer
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              if (newAlbumName.trim()) {
+                                updateImageMutation.mutate({
+                                  id: selectedImage.id,
+                                  title: newAlbumName,
+                                  description: selectedImage.description || ''
+                                });
+                              }
+                              setSelectedImage(null);
+                            }}
+                          >
+                            Enregistrer le nom
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </DialogContent>                </Dialog>
+              )}            </div>
+          )}
+          
+          {Array.isArray(images) && images.length === 0 && (
+            <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <ImageIcon className="h-16 w-16 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2">
+                  {selectedAlbum ? `Aucune image dans "${selectedAlbum.title}"` : 
+                   showUnclassified ? 'Aucune photo non classée' : 
+                   'Aucune image dans la galerie'}
+                </h3>
+                <p className="text-gray-500">
+                  Glissez et déposez des images ici ou utilisez le bouton de sélection pour commencer.
+                </p>
+              </div>
             </div>
           )}
         </div>

@@ -3,37 +3,42 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, Suspense, lazy } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import React from "react";
 
-// Pages
+// Immediate pages (critical for initial load)
 import Index from "./pages/Index";
-import About from "./pages/About";
-import Events from "./pages/Events";
-import MonsieurOurs from "./pages/MonsieurOurs";
-import Gallery from "./pages/Gallery";
-import Partners from "./pages/Partners";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import Profile from "./pages/auth/Profile";
 import NotFound from "./pages/NotFound";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminArticles from "./pages/admin/Articles";
-import AdminEvents from "./pages/admin/Events";
-import AdminGallery from "./pages/admin/Gallery";
-import AdminUsers from "./pages/admin/Users";
-import AdminTickets from "./pages/admin/Tickets";
+import Unauthorized from "./pages/Unauthorized";
+
+// Lazy loaded pages
+const About = lazy(() => import("./pages/About"));
+const Events = lazy(() => import("./pages/Events"));
+const MonsieurOurs = lazy(() => import("./pages/MonsieurOurs"));
+const Gallery = lazy(() => import("./pages/Gallery"));
+const Partners = lazy(() => import("./pages/Partners"));
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const Profile = lazy(() => import("./pages/auth/Profile"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminArticles = lazy(() => import("./pages/admin/Articles"));
+const AdminEvents = lazy(() => import("./pages/admin/Events"));
+const AdminGallery = lazy(() => import("./pages/admin/Gallery"));
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
+const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
+const EventDetail = lazy(() => import("./pages/EventDetail"));
+const Articles = lazy(() => import("./pages/Articles"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const AlbumDetail = lazy(() => import("./pages/AlbumDetail"));
+
+// Components
 import RequireAuth from "./components/auth/RequireAuth";
 import RequireAdmin from "./components/auth/RequireAdmin";
-import ArticleDetail from "./pages/ArticleDetail";
-import EventDetail from "./pages/EventDetail";
-import Articles from "./pages/Articles";
 import ExternalRedirect from "./components/ExternalRedirect";
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import Terms from './pages/Terms';
-import Unauthorized from './pages/Unauthorized';
-import AlbumDetail from "./pages/AlbumDetail";
+import PageLoader from "./components/PageLoader";
 
 const queryClient = new QueryClient();
 
@@ -96,7 +101,6 @@ const App = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -105,16 +109,17 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <RouteReload />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              
-              {/* Main Pages */}
-              <Route path="/about" element={<About />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/articles" element={<Articles />} />
-              <Route path="/articles/:slug" element={<ArticleDetail />} />
-              <Route path="/events/:slug" element={<EventDetail />} />
-              <Route path="/monsieur-ours" element={<MonsieurOurs />} />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                
+                {/* Main Pages */}
+                <Route path="/about" element={<About />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/articles" element={<Articles />} />
+                <Route path="/articles/:slug" element={<ArticleDetail />} />
+                <Route path="/events/:slug" element={<EventDetail />} />
+                <Route path="/monsieur-ours" element={<MonsieurOurs />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/gallery/:albumId" element={<AlbumDetail />} />
               <Route path="/partners" element={<Partners />} />
@@ -147,8 +152,7 @@ const App = () => {
                   <Route path="/admin/tickets" element={<AdminTickets />} />
                 </Route>
               </Route>
-              
-              {/* Privacy Policy and Terms Routes */}
+                {/* Privacy Policy and Terms Routes */}
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
@@ -156,6 +160,7 @@ const App = () => {
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>

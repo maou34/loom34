@@ -10,17 +10,24 @@ import ArticleCard from '@/components/ArticleCard';
 import EventCard from '@/components/EventCard';
 import Button from '@/components/Button';
 import { Tables } from '@/db/types';
+import useSEO from '@/hooks/useSEO';
 
 const Index = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'LOOM - Les Ours Occitanie Méditerranée | Communauté Bear de Montpellier',
+    description: 'Rejoignez LOOM, l\'association Bear fondée en 2017 à Montpellier. Plus de 150 membres, 50+ événements par an. Découvrez notre communauté dynamique et nos activités.',
+    keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Méditerranée', 'Association', 'Communauté', 'LGBTQ+', 'événements', 'Bear community'],
+    type: 'website'
+  });
+
   // Animation on scroll
   const [isVisible, setIsVisible] = useState(false);
   const partnersRef = useRef<HTMLDivElement>(null);
-
-  // Fetch latest articles with debugging
+  // Fetch latest articles
   const { data: latestArticles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['latestArticles'],
     queryFn: async () => {
-      console.log('Fetching latest articles...');
       const { data, error } = await db
         .from('articles')
         .select('*')
@@ -28,44 +35,34 @@ const Index = () => {
         .order('date', { ascending: false })
         .limit(3);
       
-      if (error) {
-        console.error('Error fetching articles:', error);
-        throw error;
-      }
-      console.log('Articles retrieved:', data);
+      if (error) throw error;
       return data as Tables<'articles'>[];
     }
   });
 
-  // Fetch upcoming events with debugging
+  // Fetch upcoming events
   const { data: upcomingEventsRaw = [], isLoading: isLoadingEvents } = useQuery({
     queryKey: ['upcomingEvents'],
     queryFn: async () => {
-      console.log('Fetching upcoming events...');
       const { data, error } = await db
         .from('events')
         .select('*')
         .eq('published', true)
         .order('date', { ascending: true })
-        .limit(10); // On récupère plus d'événements pour être sûr d'avoir assez d'événements à venir
+        .limit(10);
       
-      if (error) {
-        console.error('Error fetching events:', error);
-        throw error;
-      }
-      console.log('Events retrieved:', data);
+      if (error) throw error;
       return data as Tables<'events'>[];
     }
   });
-
-  // Filtrage côté client : uniquement les événements à venir
+  // Filter upcoming events
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // On ignore l'heure
+  today.setHours(0, 0, 0, 0);
   const upcomingEvents = (upcomingEventsRaw || []).filter(event => {
     const eventDate = new Date(event.date);
     eventDate.setHours(0, 0, 0, 0);
     return eventDate >= today;
-  }).slice(0, 2); // On limite à 2 événements affichés
+  }).slice(0, 2);
 
   // Partners automatic scroll effect
   useEffect(() => {

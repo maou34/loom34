@@ -9,6 +9,8 @@ import { Tables } from '@/db/types';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import useSEO from '@/hooks/useSEO';
+import { generateEventStructuredData } from '@/lib/seo';
 
 const EventDetail = () => {
   const { slug } = useParams();
@@ -24,14 +26,35 @@ const EventDetail = () => {
         .eq('slug', slug)
         .single();
         
-      if (error) {
-        console.error('Error fetching event:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       return data as Tables<'events'>;
     }
   });
+
+  // SEO Configuration
+  useSEO({
+    title: event ? `${event.title} - LOOM` : 'Événement - LOOM',
+    description: event?.description || 'Découvrez cet événement de LOOM - Les Ours Occitanie Méditerranée',
+    keywords: ['LOOM', 'Bears', 'événement', 'communauté', event?.location || ''].filter(Boolean),
+    image: event?.image,
+    type: 'article',
+    publishedTime: event?.date,
+    author: 'LOOM'
+  });
+
+  // Generate structured data for event
+  useEffect(() => {
+    if (event) {
+      generateEventStructuredData({
+        name: event.title,
+        description: event.description,
+        startDate: event.date,
+        location: event.location,
+        image: event.image,
+        url: window.location.href
+      });
+    }
+  }, [event]);
 
   // Handle 404
   useEffect(() => {

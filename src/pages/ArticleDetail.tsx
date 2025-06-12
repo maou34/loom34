@@ -9,6 +9,8 @@ import { Tables } from '@/db/types';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import useSEO from '@/hooks/useSEO';
+import { generateArticleStructuredData } from '@/lib/seo';
 
 const ArticleDetail = () => {
   const { slug } = useParams();
@@ -24,14 +26,36 @@ const ArticleDetail = () => {
         .eq('slug', slug)
         .single();
         
-      if (error) {
-        console.error('Error fetching article:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       return data as Tables<'articles'>;
     }
   });
+
+  // SEO Configuration
+  useSEO({
+    title: article ? `${article.title} - LOOM` : 'Article - LOOM',
+    description: article?.excerpt || 'Découvrez cet article de LOOM - Les Ours Occitanie Méditerranée',
+    keywords: article?.category ? ['LOOM', 'Bears', article.category, 'article', 'communauté'] : ['LOOM', 'Bears', 'article'],
+    image: article?.image,
+    type: 'article',
+    publishedTime: article?.date,
+    author: 'LOOM'
+  });
+
+  // Generate structured data for article
+  useEffect(() => {
+    if (article) {
+      generateArticleStructuredData({
+        title: article.title,
+        description: article.excerpt,
+        image: article.image,
+        publishedTime: article.date,
+        modifiedTime: article.updated_at,
+        author: 'LOOM',
+        url: window.location.href
+      });
+    }
+  }, [article]);
 
   // Handle 404
   useEffect(() => {

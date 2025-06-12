@@ -1,0 +1,50 @@
+{
+  "name": "LOOM - Les Ours Occitanie Méditerranée",
+  "short_name": "LOOM",
+  "description": "Association Bear fondée en 2017 à Montpellier. Rejoignez une communauté dynamique de plus de 150 personnes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5E6D3",
+  "theme_color": "#8B4513",
+  "orientation": "portrait-primary",
+  "categories": ["social", "lifestyle"],
+  "lang": "fr",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Articles",
+      "short_name": "Articles",
+      "description": "Derniers articles de LOOM",
+      "url": "/articles",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Événements",
+      "short_name": "Events",
+      "description": "Prochains événements",
+      "url": "/events",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Galerie",
+      "short_name": "Gallery",
+      "description": "Photos de la communauté",
+      "url": "/gallery",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SectionHeading from '@/components/SectionHeading';
 import Button from '@/components/Button';
+import useSEO from '@/hooks/useSEO';
 
 const partnersList = [
   {
@@ -120,6 +121,14 @@ const partnersList = [
 ];
 
 const Partners = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'Nos Partenaires - LOOM | Commerces et établissements partenaires',
+    description: 'Découvrez les partenaires de LOOM - Les Ours Occitanie Méditerranée. Bars, restaurants, saunas et commerces qui soutiennent notre communauté Bear avec des avantages exclusifs.',
+    keywords: ['LOOM partenaires', 'commerces gay-friendly', 'bars Bears', 'restaurants Montpellier', 'saunas gay', 'avantages membres'],
+    type: 'website'
+  });
+
   return (
     <div className="flex flex-col min-h-screen bg-tan/10">
       <Navbar />

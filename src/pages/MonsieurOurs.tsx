@@ -4,8 +4,17 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Heart, MapPin, Quote, SunMedium, Leaf, Coffee, CircleDot, X, MousePointerClick } from "lucide-react";
 import { useState } from "react";
+import useSEO from '@/hooks/useSEO';
 
 const MonsieurOurs = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'Monsieur Ours - LOOM | Concours et représentants de notre communauté',
+    description: 'Découvrez les Monsieur Ours élus de LOOM depuis 2018. Histoire du concours, galerie des lauréats et informations sur ce titre emblématique de notre communauté Bear.',
+    keywords: ['Monsieur Ours', 'LOOM concours', 'représentant Bear', 'lauréats', 'communauté Bear', 'élection', 'titre'],
+    type: 'website'
+  });
+
   // HelloAsso URLs
   const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
   const MEMBERSHIP_URL = "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";

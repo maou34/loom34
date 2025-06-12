@@ -8,6 +8,8 @@ import { X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Tables } from '@/db/types';
+import PhotoAlbum from 'react-photo-album';
+import "react-photo-album/rows.css";
 
 const AlbumDetail = () => {
   const { albumId } = useParams();
@@ -46,10 +48,21 @@ const AlbumDetail = () => {
 
   if (isLoadingAlbum || isLoadingImages) {
     return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
-  }
-  if (!album) {
+  }  if (!album) {
     return <div className="min-h-screen flex items-center justify-center text-red-500">Album introuvable</div>;
   }
+
+  // Transform images for React Photo Album
+  const photos = images.map((image, index) => ({
+    src: image.image_url,
+    width: 800, // You can adjust this or get from image metadata
+    height: 600, // You can adjust this or get from image metadata
+    alt: image.title || `Image ${index + 1}`,
+    key: image.id,
+    title: image.title,
+    description: image.description,
+    originalImage: image
+  }));
 
   return (
     <div className="flex flex-col min-h-screen bg-tan/10">
@@ -59,31 +72,15 @@ const AlbumDetail = () => {
           <Button variant="outline" onClick={() => navigate(-1)}>
             Retour
           </Button>
-        </div>
-        <h1 className="text-3xl font-bold text-center mb-8">{album.title}</h1>
+        </div>        <h1 className="text-3xl font-bold text-center mb-8">{album.title}</h1>
         <div className="space-y-4">
           <p className="text-muted-foreground">{album.description}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
-            {images.map((image) => (
-              <motion.div
-                key={image.id}
-                whileHover={{ scale: 1.03 }}
-                className="relative group cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-white transition-shadow hover:shadow-2xl"
-                onClick={() => setSelectedImage(image)}
-              >
-                <img
-                  src={image.image_url}
-                  alt={image.title || 'Image'}
-                  className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 bg-gray-100"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end min-h-[48px]">
-                  <span className="text-base font-semibold text-white drop-shadow-lg truncate" title={image.title || image.image_url.split('/').pop()}>
-                    {image.title || image.image_url.split('/').pop()}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <PhotoAlbum
+            layout="rows"
+            photos={photos}
+            targetRowHeight={200}
+            onClick={({ photo }) => setSelectedImage(photo.originalImage)}
+          />
         </div>
         {/* Lightbox modale pour l'image */}
         {selectedImage && (

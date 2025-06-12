@@ -1,17 +1,27 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { ArrowLeft, Home } from "lucide-react";
 import Button from "@/components/Button";
+import useSEO from '@/hooks/useSEO';
 
 const NotFound = () => {
   const location = useLocation();
 
+  // SEO Configuration
+  useSEO({
+    title: 'Page introuvable - LOOM | Erreur 404',
+    description: 'Cette page n\'existe pas ou a été déplacée. Retournez à l\'accueil de LOOM pour découvrir notre communauté Bear.',
+    keywords: ['404', 'page introuvable', 'erreur', 'LOOM'],
+    type: 'website'
+  });
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
+    // Log 404 for analytics, but remove console.error for production
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        "404 Error: User attempted to access non-existent route:",
+        location.pathname
+      );
+    }
   }, [location.pathname]);
 
   return (

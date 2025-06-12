@@ -14,11 +14,22 @@ import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import useSEO from '@/hooks/useSEO';
+import PhotoAlbum from 'react-photo-album';
+import "react-photo-album/rows.css";
 
 type GalleryAlbum = Tables<'gallery_albums'>;
 type GalleryImage = Tables<'gallery_images'>;
 
 const Gallery = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'Galerie Photos - LOOM | Souvenirs et moments de notre communauté Bear',
+    description: 'Découvrez la galerie photos de LOOM - Les Ours Occitanie Méditerranée. Revivez nos événements, soirées et moments de convivialité en images.',
+    keywords: ['LOOM photos', 'galerie Bears', 'événements photos', 'souvenirs LOOM', 'communauté Bear', 'Montpellier'],
+    type: 'website'
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum | null>(null);
@@ -116,9 +127,21 @@ const Gallery = () => {
       </div>
     );
   }
-
   if (selectedAlbum) {
     const albumImages = images.filter(img => img.album_id === selectedAlbum.id);
+    
+    // Transform images for React Photo Album
+    const photos = albumImages.map((image, index) => ({
+      src: image.image_url,
+      width: 800, // You can adjust this or get from image metadata
+      height: 600, // You can adjust this or get from image metadata
+      alt: image.title || `Image ${index + 1}`,
+      key: image.id,
+      title: image.title,
+      description: image.description,
+      originalImage: image
+    }));
+
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center space-x-4 mb-8">
@@ -126,31 +149,14 @@ const Gallery = () => {
             Retour
           </Button>
           <h1 className="text-2xl font-bold">{selectedAlbum.title}</h1>
-        </div>
-
-        <div className="space-y-4">
+        </div>        <div className="space-y-4">
           <p className="text-muted-foreground">{selectedAlbum.description}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
-            {albumImages.map((image) => (
-              <motion.div
-                key={image.id}
-                whileHover={{ scale: 1.03 }}
-                className="relative group cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-white transition-shadow hover:shadow-2xl"
-                onClick={() => setSelectedImage(image)}
-              >
-                <img
-                  src={image.image_url}
-                  alt={image.title || 'Image'}
-                  className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 bg-gray-100"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 flex flex-col justify-end min-h-[48px]">
-                  <span className="text-base font-semibold text-white drop-shadow-lg truncate" title={image.title || image.image_url.split('/').pop()}>
-                    {image.title || image.image_url.split('/').pop()}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          <PhotoAlbum
+            layout="rows"
+            photos={photos}
+            targetRowHeight={200}
+            onClick={({ photo }) => setSelectedImage(photo.originalImage)}
+          />
         </div>
 
         {/* Lightbox modale pour l'image */}

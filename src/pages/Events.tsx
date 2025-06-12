@@ -11,8 +11,17 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import useSEO from '@/hooks/useSEO';
 
 const Events = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'Événements - LOOM | Calendrier des activités de la communauté Bear',
+    description: 'Découvrez tous les événements de LOOM - Les Ours Occitanie Méditerranée. Soirées, activités, rencontres et moments de convivialité de notre communauté Bear.',
+    keywords: ['LOOM événements', 'activités Bears', 'soirées Bear', 'Montpellier', 'calendrier LGBTQ+', 'rencontres Bears'],
+    type: 'website'
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
@@ -166,9 +175,18 @@ const Events = () => {
                       />
                     </div>
                     <div className="p-6">
-                      <h3 className="text-xl font-bold mb-2 group-hover:text-brown transition-colors">{event.title}</h3>
-                      <div className="text-gray-600 mb-4 line-clamp-2 prose prose-sm max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+                      <h3 className="text-xl font-bold mb-2 group-hover:text-brown transition-colors">{event.title}</h3>                      <div className="text-gray-600 mb-4 line-clamp-2 prose prose-sm max-w-none">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            // Disable links inside the card to prevent nested anchor tags
+                            a: ({ children }) => <span className="text-brown font-medium">{children}</span>,
+                            // Keep other formatting but remove interactive elements
+                            button: ({ children }) => <span>{children}</span>,
+                          }}
+                        >
+                          {event.description}
+                        </ReactMarkdown>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center text-gray-500">

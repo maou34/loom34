@@ -7,8 +7,17 @@ import Footer from '@/components/Footer';
 import ArticleCard from '@/components/ArticleCard';
 import { Tables } from '@/db/types';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import useSEO from '@/hooks/useSEO';
 
 const Articles = () => {
+  // SEO Configuration
+  useSEO({
+    title: 'Articles - LOOM | Actualités et nouvelles de la communauté Bear',
+    description: 'Découvrez les derniers articles de LOOM - Les Ours Occitanie Méditerranée. Actualités, événements passés, témoignages et nouvelles de notre communauté Bear.',
+    keywords: ['LOOM articles', 'actualités Bears', 'communauté Bear', 'Montpellier', 'nouvelles LGBTQ+', 'événements Bears'],
+    type: 'website'
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
