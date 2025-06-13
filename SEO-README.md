@@ -93,7 +93,6 @@ Accédez à `/admin/seo` pour :
 - `/gallery` - Galerie photos (priority: 0.8)
 - `/partners` - Partenaires (priority: 0.8)
 - `/monsieur-ours` - Mascotte (priority: 0.7)
-- `/privacy-policy` - Confidentialité (priority: 0.5)
 - `/terms` - CGU (priority: 0.5)
 
 ### Pages dynamiques

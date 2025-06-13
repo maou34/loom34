@@ -7,14 +7,12 @@ function generateSitemap() {
   const currentDate = new Date().toISOString().split('T')[0];
   
   const pages = [
-    { url: '', priority: '1.0', changefreq: 'weekly', lastmod: currentDate },
-    { url: '/about', priority: '0.9', changefreq: 'monthly', lastmod: currentDate },
+    { url: '', priority: '1.0', changefreq: 'weekly', lastmod: currentDate },    { url: '/about', priority: '0.9', changefreq: 'monthly', lastmod: currentDate },
     { url: '/articles', priority: '0.9', changefreq: 'daily', lastmod: currentDate },
     { url: '/events', priority: '0.9', changefreq: 'daily', lastmod: currentDate },
     { url: '/gallery', priority: '0.8', changefreq: 'weekly', lastmod: currentDate },
     { url: '/partners', priority: '0.8', changefreq: 'monthly', lastmod: currentDate },
     { url: '/monsieur-ours', priority: '0.7', changefreq: 'yearly', lastmod: currentDate },
-    { url: '/privacy-policy', priority: '0.5', changefreq: 'yearly', lastmod: currentDate },
     { url: '/terms', priority: '0.5', changefreq: 'yearly', lastmod: currentDate },
   ];
 

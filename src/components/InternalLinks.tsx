@@ -60,14 +60,7 @@ const INTERNAL_LINKS: InternalLink[] = [
     label: 'Monsieur Ours',
     description: 'L\'histoire de notre mascotte emblématique',
     category: 'secondary'
-  },
-  // Liens tertiaires
-  {
-    href: '/privacy-policy',
-    label: 'Politique de Confidentialité',
-    description: 'Notre engagement pour votre vie privée',
-    category: 'tertiary'
-  },
+  },  // Liens tertiaires
   {
     href: '/terms',
     label: 'Conditions d\'utilisation',

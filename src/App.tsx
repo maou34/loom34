@@ -31,8 +31,8 @@ const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const LegalNotice = lazy(() => import("./pages/LegalNotice"));
 const AlbumDetail = lazy(() => import("./pages/AlbumDetail"));
 
 // Components
@@ -65,10 +65,9 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/events": "LOOM Admin - Événements",
   "/admin/gallery": "LOOM Admin - Galerie",
   "/admin/users": "LOOM Admin - Utilisateurs",
-  "/admin/tickets": "LOOM Admin - Tickets",
-  "/admin/seo": "LOOM Admin - SEO & Référencement",
-  "/privacy-policy": "LOOM - Politique de confidentialité",
+  "/admin/tickets": "LOOM Admin - Tickets",  "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/terms": "LOOM - Conditions d'utilisation",
+  "/legal-notice": "LOOM - Mentions légales",
   "/unauthorized": "LOOM - Accès non autorisé"
 };
 
@@ -158,10 +157,8 @@ const App = () => {
                   <Route path="/admin/tickets" element={<AdminTickets />} />
                   <Route path="/admin/seo" element={<AdminSEO />} />
                 </Route>
-              </Route>
-                {/* Privacy Policy and Terms Routes */}
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<Terms />} />
+              </Route>                {/* Privacy Policy and Terms Routes */}              <Route path="/terms" element={<Terms />} />
+              <Route path="/legal-notice" element={<LegalNotice />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               
               {/* Catch-all route */}

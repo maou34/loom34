@@ -92,14 +92,12 @@ const Footer = () => {
               </div>
             </div>
           </div>
-          
-          <div className="mt-12 pt-8 border-t border-gray-800">
-            <div className="flex flex-wrap justify-center gap-4 mb-4">
-              <Link to="/privacy-policy" className="text-gray-400 hover:text-white">
-                Politique de Confidentialité
-              </Link>
+            <div className="mt-12 pt-8 border-t border-gray-800">            <div className="flex flex-wrap justify-center gap-4 mb-4">
               <Link to="/terms" className="text-gray-400 hover:text-white">
                 Conditions d'utilisation
+              </Link>
+              <Link to="/legal-notice" className="text-gray-400 hover:text-white">
+                Mentions Légales
               </Link>
               <Link to="/monsieur-ours" className="text-gray-400 hover:text-white">
                 Monsieur Ours
