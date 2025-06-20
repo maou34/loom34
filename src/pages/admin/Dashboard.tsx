@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
-import { FileText, CalendarDays, Image as ImageIcon, Users, ArrowUpRight, MessageSquare } from "lucide-react";
+import { FileText, CalendarDays, Image as ImageIcon, Users, ArrowUpRight, MessageSquare, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -83,6 +83,7 @@ export default function AdminDashboard() {
     galleryCount: 0,
     usersCount: 0,
     ticketsCount: 0,
+    partnersCount: 0,
     loading: true
   });
 
@@ -91,6 +92,8 @@ export default function AdminDashboard() {
     events: [],
     loading: true
   });
+
+  const [recentPartners, setRecentPartners] = useState<any[]>([]);
 
   // Fetch tickets count
   const { data: ticketsData } = useQuery({
@@ -128,10 +131,16 @@ export default function AdminDashboard() {
           .from('profiles')
           .select('*', { count: 'exact', head: true });
 
+        // Fetch partners count
+        const { count: partnersCount, error: partnersError } = await db
+          .from('partners')
+          .select('*', { count: 'exact', head: true });
+
         if (articlesError) console.error("Error fetching articles:", articlesError);
         if (eventsError) console.error("Error fetching events:", eventsError);
         if (galleryError) console.error("Error fetching gallery:", galleryError);
         if (usersError) console.error("Error fetching users:", usersError);
+        if (partnersError) console.error("Error fetching partners:", partnersError);
 
         setStats({
           articlesCount: articlesCount || 0,
@@ -139,6 +148,7 @@ export default function AdminDashboard() {
           galleryCount: galleryCount || 0,
           usersCount: usersCount || 0,
           ticketsCount: ticketsData || 0,
+          partnersCount: partnersCount || 0,
           loading: false
         });
       } catch (error) {
@@ -164,14 +174,20 @@ export default function AdminDashboard() {
           .order('created_at', { ascending: false })
           .limit(5);
 
-        if (articlesError) console.error("Error fetching recent articles:", articlesError);
-        if (eventsError) console.error("Error fetching recent events:", eventsError);
+        // Fetch recent partners
+        const { data: recentPartnersData, error: partnersError } = await db
+          .from('partners')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+        if (partnersError) console.error("Error fetching recent partners:", partnersError);
 
         setRecentActivity({
           articles: recentArticles || [],
           events: recentEvents || [],
           loading: false
         });
+        setRecentPartners(recentPartnersData || []);
       } catch (error) {
         console.error("Error fetching recent activity:", error);
         toast.error("Failed to load recent activity");
@@ -195,7 +211,7 @@ export default function AdminDashboard() {
       
       {/* Stats section */}
       <h3 className="text-lg font-medium text-gray-800 mb-4">Vue d'ensemble</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatsCard 
           icon={<FileText className="h-5 w-5 text-white" />} 
           title="Articles" 
@@ -240,6 +256,15 @@ export default function AdminDashboard() {
           color="bg-red-500"
           path="/admin/tickets"
         />
+
+        <StatsCard 
+          icon={<Heart className="h-5 w-5 text-white" />} 
+          title="Partenaires" 
+          count={stats.partnersCount} 
+          loading={stats.loading}
+          color="bg-pink-500"
+          path="/admin/partners"
+        />
       </div>
 
       {/* Quick Actions */}
@@ -261,6 +286,12 @@ export default function AdminDashboard() {
           icon={<ImageIcon className="h-5 w-5 text-purple-500" />} 
           title="Ajouter des photos" 
           path="/admin/gallery"
+        />
+
+        <QuickActionCard 
+          icon={<Heart className="h-5 w-5 text-pink-500" />} 
+          title="Gérer les partenaires" 
+          path="/admin/partners"
         />
 
         <QuickActionCard 
@@ -377,6 +408,61 @@ export default function AdminDashboard() {
               className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
             >
               Voir tous les événements
+              <ArrowUpRight className="h-3 w-3 ml-1" />
+            </Link>
+          </CardFooter>
+        </Card>
+
+        {/* Recent Partners */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Partenaires récents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center">
+                    <Skeleton className="h-12 w-12 rounded mr-3" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : recentPartners.length === 0 ? (
+              <div className="text-center py-6 text-gray-500">
+                Aucun partenaire ajouté pour le moment
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentPartners.map((partner: any) => (
+                  <div 
+                    key={partner.id} 
+                    className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div 
+                      className="h-12 w-12 bg-cover bg-center rounded mr-3 flex-shrink-0"
+                      style={{ backgroundImage: `url(${partner.logo})` }}
+                    />
+                    <div>
+                      <h4 className="font-medium text-gray-900 line-clamp-1">{partner.name}</h4>
+                      <p className="text-sm text-gray-500">
+                        {partner.type}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Link 
+              to="/admin/partners" 
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+            >
+              Voir tous les partenaires
               <ArrowUpRight className="h-3 w-3 ml-1" />
             </Link>
           </CardFooter>
