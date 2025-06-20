@@ -63,6 +63,11 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       href: "/admin/tickets",
       icon: <MessageSquare className="h-5 w-5 mr-2" />,
     },
+    {
+      title: "Partenaires",
+      href: "/admin/partners",
+      icon: <Users className="h-5 w-5 mr-2" />,
+    },
   ];
 
   const NavigationLinks = () => (

@@ -28,6 +28,7 @@ const AdminGallery = lazy(() => import("./pages/admin/Gallery"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
 const AdminSEO = lazy(() => import("./pages/admin/SEO"));
+const AdminPartners = lazy(() => import("./pages/admin/Partners"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
@@ -156,6 +157,7 @@ const App = () => {
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/admin/tickets" element={<AdminTickets />} />
                   <Route path="/admin/seo" element={<AdminSEO />} />
+                  <Route path="/admin/partners" element={<AdminPartners />} />
                 </Route>
               </Route>                {/* Privacy Policy and Terms Routes */}              <Route path="/terms" element={<Terms />} />
               <Route path="/legal-notice" element={<LegalNotice />} />
