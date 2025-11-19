@@ -43,8 +43,7 @@ export default function Gallery() {
   const [newImageTitle, setNewImageTitle] = useState("");
 
   // Upload server URL
-  const UPLOAD_URL = (import.meta as any).env?.VITE_UPLOAD_URL || 
-    (window.location.hostname === 'localhost' ? 'http://localhost:8081' : `${window.location.protocol}//${window.location.hostname}:8081`);
+  const UPLOAD_URL = (import.meta as any).env?.VITE_UPLOAD_URL || "";
 
   // Récupérer les paramètres depuis l'URL
   const urlParams = new URLSearchParams(window.location.search);
