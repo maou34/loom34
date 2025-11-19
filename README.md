@@ -67,7 +67,47 @@ src/
 - Gestion des utilisateurs
 - Gestion des tickets de contact
 
-## 🔄 Navigation
+## �️ Galerie: stockage d'images en local
+
+La galerie n'utilise plus Supabase Storage. Les images sont servies en statique depuis le dossier `public/gallery` et les enregistrements en base (table `gallery_images`) référencent un chemin relatif.
+
+### Ajouter des images
+
+1. Copiez vos fichiers dans le dépôt dans `public/gallery/<albumId>/` ou `public/gallery/unclassified/` si l'image n'appartient à aucun album.
+2. Dans l'admin, page Galerie, utilisez le formulaire « Ajouter une image par chemin » et saisissez le chemin relatif à partir de `/public`, par exemple:
+	- `/gallery/<albumId>/mon-fichier.jpg`
+	- `/gallery/unclassified/photo.png`
+3. Validez pour créer l'enregistrement en base et, si un album est sélectionné, sa couverture est mise à jour automatiquement.
+
+Remarques:
+- Les fichiers doivent être committés/déployés avec l'app pour être disponibles en production.
+- Aucun serveur d'upload n'est requis ni utilisé.
+
+### Migration depuis Supabase Storage
+
+Un script de migration est fourni pour rapatrier les images existantes de Supabase vers `public/gallery` et mettre à jour les chemins dans la base.
+
+Pré-requis variables d'environnement:
+
+```
+VITE_SUPABASE_URL=...           # requis
+SUPABASE_SERVICE_ROLE_KEY=...   # recommandé pour mettre à jour la base automatiquement
+VITE_SUPABASE_ANON_KEY=...      # utilisé si pas de service role (mise à jour manuelle)
+```
+
+Exécution:
+
+```
+npm run migrate:gallery
+```
+
+Ce script:
+- Télécharge les images référencées par des URLs Supabase.
+- Les enregistre sous `public/gallery/<albumId|unclassified>/`.
+- Si `SUPABASE_SERVICE_ROLE_KEY` est fourni, met à jour `gallery_images.image_url` et `gallery_albums.cover_image` avec les chemins relatifs (ex: `/gallery/<albumId>/file.jpg`).
+- Sinon, il génère un rapport JSON `scripts/migrate-gallery-report.json` à appliquer manuellement.
+
+## �🔄 Navigation
 
 - Navigation forcée avec rechargement complet pour garantir la stabilité de la connexion Supabase
 - Titres de page dynamiques pour chaque route
@@ -106,6 +146,32 @@ npm run build
 - Mise à jour régulière des dépendances
 - Sauvegarde automatique de la base de données Supabase
 - Monitoring des performances via Vercel Analytics
+
+### Migration galerie vers stockage local
+
+La galerie photos n'utilise plus Supabase Storage. Les fichiers sont servis depuis `public/gallery` et les chemins stockés en base sont relatifs (ex: `/gallery/<albumId>/photo.jpg`).
+
+Outils fournis:
+
+- Script de migration: `scripts/migrate-gallery.js`
+	- Télécharge les images distantes (URL http/https) référencées dans `gallery_images.image_url` vers `public/gallery/<albumId|unclassified>/`
+	- Télécharge les covers d'albums (si URL distante) vers `public/gallery/<albumId>/`
+	- Met à jour la base (si `SUPABASE_SERVICE_ROLE_KEY` présent) ou génère un rapport `.json` et `.sql` sinon
+	- Options: `--dry-run` (ne fait que préparer les changements, sans téléchargement ni update DB)
+
+Utilisation:
+
+```powershell
+# PowerShell (Windows)
+$env:VITE_SUPABASE_URL="https://<your>.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"
+npm run migrate:gallery
+
+# Mode simulation (dry-run)
+npm run migrate:gallery -- --dry-run
+```
+
+Après migration, vous pouvez supprimer les fichiers du bucket Supabase si nécessaire (optionnel), et déployer le site avec les fichiers statiques désormais inclus dans `public/gallery`.
 
 ## 📝 Notes Techniques
 

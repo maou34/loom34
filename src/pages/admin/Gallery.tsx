@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { db } from '@/db/client';
 import { Plus, ImageIcon, FolderOpen, Edit, Trash2 } from "lucide-react";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from "framer-motion";
-import { GalleryUploadProgress } from "@/components/admin/gallery/GalleryUploadProgress";
+// Upload supprimé: on utilise des chemins relatifs vers /public/gallery
 import PhotoAlbum from 'react-photo-album';
 import "react-photo-album/rows.css";
 
@@ -32,14 +32,19 @@ export default function Gallery() {
   const [isCreatingAlbum, setIsCreatingAlbum] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  // Upload feedback state
+  const [dropFeedback, setDropFeedback] = useState<string | null>(null);
+  const [isDropping, setIsDropping] = useState(false);
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [uploadProgressOpen, setUploadProgressOpen] = useState(false);
-  const [uploadCurrent, setUploadCurrent] = useState(0);
-  const [uploadTotal, setUploadTotal] = useState(0);
-  const [uploadPercent, setUploadPercent] = useState(0);
-  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  // Ajout par chemin relatif
+  const [newImagePath, setNewImagePath] = useState("");
+  const [newImageTitle, setNewImageTitle] = useState("");
+
+  // Upload server URL
+  const UPLOAD_URL = (import.meta as any).env?.VITE_UPLOAD_URL || 
+    (window.location.hostname === 'localhost' ? 'http://localhost:8081' : `${window.location.protocol}//${window.location.hostname}:8081`);
 
   // Récupérer les paramètres depuis l'URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -278,96 +283,82 @@ export default function Gallery() {
     }
   });
 
-  const uploadImageMutation = useMutation({
-    mutationFn: async ({ file, albumId }: { file: File; albumId: string | null }) => {
-      if (!user?.id) {
-        throw new Error("Utilisateur non connecté");
-      }
-
-      // Vérifier la taille du fichier (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error("Le fichier est trop volumineux (max 10MB)");
-      }
-
-      // Vérifier le type de fichier
-      if (!file.type.startsWith('image/')) {
-        throw new Error("Le fichier doit être une image");
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${user.id}/${albumId || 'unclassified'}/${fileName}`;
-
-      try {
-        // Upload vers le stockage
-        const { data: uploadData, error: uploadError } = await db.storage
-          .from('images')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Erreur upload:', uploadError);
-          throw new Error(`Erreur lors de l'upload: ${uploadError.message}`);
-        }
-
-        // Obtenir l'URL publique
-        const { data: { publicUrl } } = db.storage
-          .from('images')
-          .getPublicUrl(filePath);
-
-        // Créer l'enregistrement dans la base de données
-        const { error: insertError } = await db
-          .from('gallery_images')
-          .insert({
-            image_url: publicUrl,
-            album_id: albumId,
-            title: file.name,
-            description: '',
-            category: '' // Ajout d'une valeur par défaut pour la colonne obligatoire
-          });
-
-        if (insertError) {
-          // Si l'insertion échoue, supprimer le fichier uploadé
-          await db.storage
-            .from('images')
-            .remove([filePath]);
-          throw insertError;
-        }
-
-        // Si l'image est ajoutée à un album, mettre à jour la couverture de l'album
-        if (albumId) {
-          const { error: updateError } = await db
-            .from('gallery_albums')
-            .update({ cover_image: publicUrl })
-            .eq('id', albumId);
-
-          if (updateError) {
-            console.error('Erreur mise à jour couverture:', updateError);
-          }
-        }
-      } catch (error: any) {
-        console.error('Erreur complète:', error);
-        throw new Error(`Erreur lors de l'upload: ${error.message}`);
+  const addImageByPathMutation = useMutation({
+    mutationFn: async ({ path, albumId, title }: { path: string; albumId: string | null; title: string }) => {
+      const normalized = path.startsWith('/') ? path : `/${path}`;
+      const { error: insertError } = await db
+        .from('gallery_images')
+        .insert({
+          image_url: normalized,
+          album_id: albumId,
+          title: title || normalized.split('/').pop() || 'Image',
+          description: '',
+          category: ''
+        });
+      if (insertError) throw insertError;
+      if (albumId) {
+        const { error: coverErr } = await db
+          .from('gallery_albums')
+          .update({ cover_image: normalized })
+          .eq('id', albumId);
+        if (coverErr) console.error('Erreur mise à jour couverture:', coverErr);
       }
     },
     onSuccess: () => {
+      setNewImagePath("");
+      setNewImageTitle("");
       queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
       queryClient.invalidateQueries({ queryKey: ['galleryAlbums'] });
-      toast({
-        title: "Photo uploadée",
-        description: "La photo a été uploadée avec succès.",
-      });
+      toast({ title: 'Photo ajoutée', description: 'Enregistrement ajouté avec succès.' });
     },
     onError: (error: any) => {
-      toast({
-        title: "Erreur",
-        description: "Erreur lors de l'upload de la photo: " + error.message,
-        variant: "destructive",
-      });
+      toast({ title: 'Erreur', description: error.message, variant: 'destructive' });
     }
   });
+
+  const handleDropFiles = async (files: FileList) => {
+    setIsDropping(true);
+    setDropFeedback('Import en cours...');
+    try {
+      const form = new FormData();
+      Array.from(files).forEach((file) => {
+        if (file.type?.startsWith('image/')) form.append('files', file);
+      });
+      const albumId = selectedAlbum?.id || '';
+      const res = await fetch(`${UPLOAD_URL}/upload?albumId=${encodeURIComponent(albumId)}`, {
+        method: 'POST',
+        body: form,
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Upload échoué (${res.status})`);
+      }
+      const json = await res.json().catch(() => ({ items: [] }));
+      const items: Array<{ relativePath: string; filename: string }> = json.items || [];
+      for (const it of items) {
+        const title = (it.filename || '').replace(/\.[^.]+$/, '') || 'Image';
+        await addImageByPathMutation.mutateAsync({ path: it.relativePath, albumId: selectedAlbum?.id || null, title });
+      }
+      setDropFeedback('Import terminé ✅');
+      setTimeout(() => setDropFeedback(null), 3000);
+    } catch (e: any) {
+      console.error('Erreur upload', e);
+      setDropFeedback(`Erreur: ${e.message || 'upload'}`);
+    } finally {
+      setIsDropping(false);
+    }
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const onDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.dataTransfer.files || !e.dataTransfer.files.length) return;
+    await handleDropFiles(e.dataTransfer.files);
+  };
 
   const moveImageMutation = useMutation({
     mutationFn: async ({ imageId, newAlbumId }: { imageId: string, newAlbumId: string | null }) => {
@@ -395,53 +386,7 @@ export default function Gallery() {
     }
   });
 
-  // Upload asynchrone avec 8 concurrents
-  async function uploadFilesAsync(files: File[], albumId: string | null) {
-    setUploadProgressOpen(true);
-    setUploadCurrent(0);
-    setUploadTotal(files.length);
-    setUploadPercent(0);
-    setUploadErrors([]);
-    let completed = 0;
-    let errors: string[] = [];
-    const concurrency = 8;
-    let index = 0;
-    async function next() {
-      if (index >= files.length) return;
-      const file = files[index++];
-      let uploadFile = file;
-      // Plus de conversion HEIC/HEIF : on accepte le fichier tel quel
-      try {
-        await uploadImageMutation.mutateAsync({ file: uploadFile, albumId });
-      } catch (err: any) {
-        errors.push(`Erreur upload ${file.name}: ${err?.message || err}`);
-        setUploadErrors([...errors]);
-      }
-      setUploadCurrent(++completed);
-      setUploadPercent(Math.round((completed / files.length) * 100));
-      if (completed === files.length) {
-        setTimeout(() => setUploadProgressOpen(false), 1200);
-      }
-      return next();
-    }
-    // Lancer 8 uploads en parallèle
-    await Promise.all(Array(Math.min(concurrency, files.length)).fill(0).map(next));
-  }
-
-  // Nouveau handleFileInput
-  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    await uploadFilesAsync(files, selectedAlbum?.id || null);
-  };
-
-  // Nouveau handleFileDrop
-  const handleFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-    await uploadFilesAsync(files, selectedAlbum?.id || null);
-  };
+  // Upload supprimé: plus de drag & drop, utilisation d'un champ chemin.
 
   const handleImageDragStart = (e: React.DragEvent<HTMLDivElement>, image: GalleryImage) => {
     e.dataTransfer.setData('application/json', JSON.stringify({
@@ -565,15 +510,6 @@ export default function Gallery() {
 
   return (
     <AdminLayout title="Galerie">
-      {/* Popup de progression d'upload */}
-      <GalleryUploadProgress
-        open={uploadProgressOpen}
-        current={uploadCurrent}
-        total={uploadTotal}
-        percent={uploadPercent}
-        errors={uploadErrors}
-        onClose={() => setUploadProgressOpen(false)}
-      />
       <div className="flex h-full">
         {/* Sidebar */}
         <div className="w-72 border-r p-4 space-y-4 bg-gray-50">
@@ -695,47 +631,46 @@ export default function Gallery() {
 
         {/* Main content */}
         <div className="flex-1 p-6 bg-white overflow-hidden">
-          <div
-            className="min-h-[200px] border-2 border-dashed rounded-lg p-8 mb-6 bg-gray-50 hover:bg-gray-100 transition-colors"
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.currentTarget.classList.add('bg-gray-100');
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              e.currentTarget.classList.remove('bg-gray-100');
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.currentTarget.classList.remove('bg-gray-100');
-              handleFileDrop(e);
-            }}
-          >
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <ImageIcon className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-lg text-gray-600 mb-4">
-                  Glissez-déposez vos images ici
-                </p>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,.heic,.heif"
-                  className="hidden"
-                  id="file-upload"
-                  onChange={handleFileInput}
-                />
-                <Button
-                  variant="outline"
-                  className="mt-2 hover:bg-gray-100"
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                >
-                  Ou sélectionnez des fichiers
-                  <span className="block text-xs text-gray-400 mt-1">(Formats supportés : jpg, png, webp, heic, heif...)</span>
-                </Button>
+          <div className="rounded-lg border p-6 mb-6 bg-gray-50">
+            <h3 className="text-lg font-medium mb-2">Ajouter des images</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Glissez simplement vos photos ici. Elles seront ajoutées à l'album sélectionné.
+            </p>
+            <div className="mb-4 space-y-2">
+              <div
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                className={`border-2 border-dashed rounded-md p-6 text-center transition relative ${isDropping ? 'opacity-60' : 'hover:border-brown'} ${dropFeedback?.startsWith('Erreur') ? 'border-red-400' : 'border-gray-300'}`}
+              >
+                <p className="text-sm mb-1 font-medium">Glissez-déposez vos images depuis votre ordinateur</p>
+                <p className="text-xs text-gray-500 mb-2">Cible: sous-dossier <code>{selectedAlbum?.id || 'unclassified'}</code>. Les images sont écrites côté serveur et ajoutées en base.</p>
+                {dropFeedback && <p className="text-xs mt-2 text-gray-600">{dropFeedback}</p>}
               </div>
             </div>
-          </div>          {Array.isArray(images) && images.length > 0 && (
+            {/* Fallback avancé (optionnel): ajout par chemin direct */}
+            <details className="mt-4">
+              <summary className="text-sm text-gray-500 cursor-pointer">Ajouter par chemin (option avancée)</summary>
+              <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                <Input
+                  placeholder={`/gallery/${selectedAlbum ? String(selectedAlbum.id) : 'unclassified'}/mon-fichier.jpg`}
+                  value={newImagePath}
+                  onChange={(e) => setNewImagePath(e.target.value)}
+                />
+                <Input
+                  placeholder="Titre (optionnel)"
+                  value={newImageTitle}
+                  onChange={(e) => setNewImageTitle(e.target.value)}
+                />
+                <Button
+                  onClick={() => addImageByPathMutation.mutate({ path: newImagePath, albumId: selectedAlbum?.id || null, title: newImageTitle })}
+                  disabled={!newImagePath.trim()}
+                >
+                  Ajouter
+                </Button>
+              </div>
+            </details>
+          </div>
+          {Array.isArray(images) && images.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
               <style>{`
                 .react-photo-album img {
@@ -869,7 +804,7 @@ export default function Gallery() {
                    'Aucune image dans la galerie'}
                 </h3>
                 <p className="text-gray-500">
-                  Glissez et déposez des images ici ou utilisez le bouton de sélection pour commencer.
+                  Ajoutez des fichiers dans /public/gallery puis utilisez le formulaire ci-dessus.
                 </p>
               </div>
             </div>
