@@ -4,9 +4,8 @@ import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Eye, CalendarDays } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
   Dialog, 
@@ -20,15 +19,20 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import ImageUpload from "@/components/admin/ImageUpload";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -53,11 +57,13 @@ interface Event {
 
 export default function AdminEvents() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   
   // Form state for new/edit event
@@ -77,6 +83,18 @@ export default function AdminEvents() {
     fetchEvents();
   }, []);
 
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = events.filter(event => 
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredEvents(filtered);
+    } else {
+      setFilteredEvents(events);
+    }
+  }, [searchQuery, events]);
+
   async function fetchEvents() {
     try {
       setLoading(true);
@@ -87,9 +105,10 @@ export default function AdminEvents() {
 
       if (error) throw error;
       setEvents(data || []);
+      setFilteredEvents(data || []);
     } catch (error: any) {
       console.error("Error fetching events:", error);
-      toast.error("Failed to load events: " + error.message);
+      toast.error("Erreur lors du chargement des événements: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -103,7 +122,10 @@ export default function AdminEvents() {
     if (name === "title") {
       setEventForm(prev => ({
         ...prev,
-        slug: value.toLowerCase().replace(/[^\w\s]/gi, '').replace(/\s+/g, '-')
+        slug: value.toLowerCase()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
       }));
     }
   };
@@ -134,7 +156,7 @@ export default function AdminEvents() {
       const { title, location, date, time, description, image, published, slug, registration_url } = eventForm;
       
       if (!title || !location || !date || !time || !description || !slug) {
-        toast.error("Please fill all required fields");
+        toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
       
@@ -159,12 +181,12 @@ export default function AdminEvents() {
         
       if (error) throw error;
       
-      toast.success("Event created successfully");
+      toast.success("Événement créé avec succès");
       fetchEvents();
       setDialogOpen(false);
     } catch (error: any) {
       console.error("Error creating event:", error);
-      toast.error("Failed to create event: " + error.message);
+      toast.error("Erreur lors de la création de l'événement: " + error.message);
     }
   };
 
@@ -175,7 +197,7 @@ export default function AdminEvents() {
       const { title, location, date, time, description, image, published, slug, registration_url } = eventForm;
       
       if (!title || !location || !date || !time || !description || !slug) {
-        toast.error("Please fill all required fields");
+        toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
       
@@ -199,12 +221,12 @@ export default function AdminEvents() {
         
       if (error) throw error;
       
-      toast.success("Event updated successfully");
+      toast.success("Événement mis à jour avec succès");
       fetchEvents();
       setDialogOpen(false);
     } catch (error: any) {
       console.error("Error updating event:", error);
-      toast.error("Failed to update event: " + error.message);
+      toast.error("Erreur lors de la mise à jour de l'événement: " + error.message);
     }
   };
 
@@ -219,12 +241,12 @@ export default function AdminEvents() {
         
       if (error) throw error;
       
-      toast.success("Event deleted successfully");
+      toast.success("Événement supprimé avec succès");
       fetchEvents();
       setDeleteDialogOpen(false);
     } catch (error: any) {
       console.error("Error deleting event:", error);
-      toast.error("Failed to delete event: " + error.message);
+      toast.error("Erreur lors de la suppression de l'événement: " + error.message);
     }
   };
 
@@ -252,223 +274,281 @@ export default function AdminEvents() {
 
   return (
     <AdminLayout title="Événements">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-semibold">Gestion des événements</h2>
-          <p className="text-gray-500 mt-1">Créez, modifiez et gérez vos événements</p>
-        </div>
-        <Button 
-          variant="brown"
-          className="bg-brown hover:bg-brown/90" 
-          onClick={resetForm}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel événement
-        </Button>
-      </div>
-
-      <Separator className="my-4" />
-
-      {loading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </div>
-      ) : events.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-md border border-gray-200">
-          <CalendarDays className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">Aucun événement trouvé</h3>
-          <p className="text-gray-500 mb-4">Vous n'avez pas encore créé d'événements.</p>
+      <div className="space-y-6">
+        {/* Header Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input 
+              placeholder="Rechercher un événement..." 
+              className="pl-10 bg-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <Button 
-            variant="brown"
-            className="bg-brown hover:bg-brown/90" 
+            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
             onClick={resetForm}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Créer votre premier événement
+            Nouvel événement
           </Button>
         </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Titre</TableHead>
-                <TableHead>Lieu</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.map((event) => (
-                <TableRow key={event.id}>
-                  <TableCell className="font-medium">{event.title}</TableCell>
-                  <TableCell>{event.location}</TableCell>
-                  <TableCell>{formatDate(event.date)}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      event.published
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}>
-                      {event.published ? "Publié" : "Brouillon"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end items-center space-x-2">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link to={`/events/${event.slug}`}>
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">Voir</span>
-                        </Link>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => editEvent(event)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Modifier</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => confirmDelete(event)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Supprimer</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+
+        {/* Events List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="p-6 space-y-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="text-center py-16 px-4">
+              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CalendarDays className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun événement trouvé</h3>
+              <p className="text-gray-500 mb-6">Commencez par créer votre premier événement.</p>
+              <Button onClick={resetForm} variant="outline">
+                Créer un événement
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-gray-50/50">
+                  <TableRow>
+                    <TableHead className="w-[400px]">Événement</TableHead>
+                    <TableHead>Lieu</TableHead>
+                    <TableHead>Date & Heure</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredEvents.map((event) => (
+                    <TableRow key={event.id} className="hover:bg-gray-50/50 transition-colors">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="h-10 w-10 rounded-lg bg-cover bg-center flex-shrink-0 border border-gray-200"
+                            style={{ backgroundImage: `url(${event.image})` }}
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900 line-clamp-1">{event.title}</div>
+                            <div className="text-xs text-gray-500 line-clamp-1">{event.slug}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="mr-2 h-3 w-3 text-gray-400" />
+                          {event.location}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col text-sm">
+                          <span className="flex items-center text-gray-900">
+                            <CalendarDays className="mr-2 h-3 w-3 text-gray-400" />
+                            {formatDate(event.date)}
+                          </span>
+                          <span className="flex items-center text-gray-500 mt-1">
+                            <Clock className="mr-2 h-3 w-3 text-gray-400" />
+                            {event.time}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {event.published ? (
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Publié
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-500 border-gray-200">
+                            <XCircle className="w-3 h-3 mr-1" /> Brouillon
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Ouvrir menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/events/${event.slug}`} target="_blank">
+                                <Eye className="mr-2 h-4 w-4" /> Voir l'événement
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => editEvent(event)}>
+                              <Edit className="mr-2 h-4 w-4" /> Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => confirmDelete(event)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Event Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isCreating ? "Create New Event" : "Edit Event"}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">
+              {isCreating ? "Créer un nouvel événement" : "Modifier l'événement"}
+            </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">Title</Label>
-              <Input
-                id="title"
-                name="title"
-                value={eventForm.title}
-                onChange={handleInputChange}
-                className="col-span-3"
-                placeholder="Event title"
-              />
+          
+          <div className="grid gap-6 py-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="title">Titre</Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={eventForm.title}
+                  onChange={handleInputChange}
+                  placeholder="Titre de l'événement"
+                  className="text-lg"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug (URL)</Label>
+                <Input
+                  id="slug"
+                  name="slug"
+                  value={eventForm.slug}
+                  onChange={handleInputChange}
+                  placeholder="url-de-l-evenement"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="slug" className="text-right">Slug</Label>
-              <Input
-                id="slug"
-                name="slug"
-                value={eventForm.slug}
-                onChange={handleInputChange}
-                className="col-span-3"
-                placeholder="event-slug"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">Location</Label>
-              <Input
-                id="location"
-                name="location"
-                value={eventForm.location}
-                onChange={handleInputChange}
-                className="col-span-3"
-                placeholder="Event location"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">Date</Label>
-              <div className="col-span-3">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="date">Date</Label>
                 <Input
                   id="date"
                   name="date"
                   type="date"
                   value={eventForm.date}
                   onChange={handleInputChange}
-                  className="col-span-3"
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="time" className="text-right">Heure</Label>
-              <div className="col-span-3">
+              
+              <div className="space-y-2">
+                <Label htmlFor="time">Heure</Label>
                 <Input
                   id="time"
                   name="time"
                   type="time"
                   value={eventForm.time}
                   onChange={handleInputChange}
-                  className="col-span-3"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Lieu</Label>
+                <Input
+                  id="location"
+                  name="location"
+                  value={eventForm.location}
+                  onChange={handleInputChange}
+                  placeholder="Ex: Montpellier, Le Coxx..."
                 />
               </div>
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="description" className="text-right pt-2">Description</Label>
-              <div className="col-span-3">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="registration_url">Lien d'inscription (Optionnel)</Label>
+                <Input
+                  id="registration_url"
+                  name="registration_url"
+                  value={eventForm.registration_url}
+                  onChange={handleInputChange}
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Statut de publication</Label>
+                <div className="flex items-center space-x-4 border rounded-lg p-3 bg-gray-50">
+                  <Switch
+                    id="published"
+                    checked={eventForm.published}
+                    onCheckedChange={handleSwitchChange}
+                  />
+                  <Label htmlFor="published" className="cursor-pointer font-medium">
+                    {eventForm.published ? (
+                      <span className="text-green-600 flex items-center"><CheckCircle2 className="w-4 h-4 mr-1"/> Publié</span>
+                    ) : (
+                      <span className="text-gray-500 flex items-center"><XCircle className="w-4 h-4 mr-1"/> Brouillon</span>
+                    )}
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Image de couverture</Label>
+              <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50">
+                <ImageUpload onUploadComplete={(url) => setEventForm(prev => ({ ...prev, image: url }))} />
+                {eventForm.image && (
+                  <div className="mt-4 relative aspect-video w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+                    <img src={eventForm.image} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <div className="min-h-[400px] border rounded-lg overflow-hidden">
                 <MDEditor
                   value={eventForm.description}
                   onChange={value => setEventForm(prev => ({ ...prev, description: value || '' }))}
-                  height={300}
+                  height={400}
                   preview="edit"
                   visiableDragbar={false}
-                  textareaProps={{
-                    placeholder: 'Écrivez la description de l\'événement en markdown...'
-                  }}
                 />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="image" className="text-right pt-2">Image</Label>
-              <div className="col-span-3">
-                <ImageUpload onUploadComplete={(url) => setEventForm(prev => ({ ...prev, image: url }))} />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="registration_url" className="text-right">Registration URL</Label>
-              <Input
-                id="registration_url"
-                name="registration_url"
-                value={eventForm.registration_url}
-                onChange={handleInputChange}
-                className="col-span-3"
-                placeholder="Event registration URL (optional)"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="published" className="text-right">Published</Label>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="published"
-                  checked={eventForm.published}
-                  onCheckedChange={handleSwitchChange}
-                />
-                <Label htmlFor="published">
-                  {eventForm.published ? "Published" : "Draft"}
-                </Label>
               </div>
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              Annuler
             </Button>
-            <Button variant="brown" onClick={isCreating ? handleCreateEvent : handleUpdateEvent}>
-              {isCreating ? "Create Event" : "Update Event"}
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={isCreating ? handleCreateEvent : handleUpdateEvent}
+            >
+              {isCreating ? "Créer l'événement" : "Enregistrer les modifications"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -478,15 +558,18 @@ export default function AdminEvents() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
-          <p>Are you sure you want to delete the event "{selectedEvent?.title}"? This action cannot be undone.</p>
-          <DialogFooter>
+          <p className="text-gray-600">
+            Êtes-vous sûr de vouloir supprimer l'événement <span className="font-semibold">"{selectedEvent?.title}"</span> ? 
+            Cette action est irréversible.
+          </p>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
+              Annuler
             </Button>
             <Button variant="destructive" onClick={handleDeleteEvent}>
-              Delete
+              Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>

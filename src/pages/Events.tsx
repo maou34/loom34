@@ -1,17 +1,17 @@
 import { useState, useMemo } from 'react';
 import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, MapPin, Clock, Search, Filter, Ticket } from 'lucide-react';
+import { CalendarDays, Search, Filter, X, Calendar } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Tables } from '@/db/types';
-import SectionHeading from '@/components/SectionHeading';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import useSEO from '@/hooks/useSEO';
+import { motion } from 'framer-motion';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import EventCard from '@/components/EventCard';
 
 const Events = () => {
   // SEO Configuration
@@ -23,10 +23,9 @@ const Events = () => {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [hideExpired, setHideExpired] = useState(false);
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [hideExpired, setHideExpired] = useState(true);
 
   // Fetch events from database
   const { data: events = [], isLoading } = useQuery({
@@ -58,8 +57,8 @@ const Events = () => {
         event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.location.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesLocation = !locationFilter || event.location === locationFilter;
-      const notExpired = !hideExpired || new Date(event.date) >= new Date();
+      const matchesLocation = locationFilter === 'all' || event.location === locationFilter;
+      const notExpired = !hideExpired || new Date(event.date) >= new Date(new Date().setHours(0,0,0,0));
       return matchesSearch && matchesLocation && notExpired;
     });
     filtered = filtered.sort((a, b) => {
@@ -70,155 +69,177 @@ const Events = () => {
     return filtered;
   }, [events, searchQuery, locationFilter, sortOrder, hideExpired]);
 
+  const isFiltered = searchQuery !== '' || locationFilter !== 'all';
+
   return (
-    <div className="flex flex-col min-h-screen bg-tan/10">
+    <div className="flex flex-col min-h-screen bg-gray-50 overflow-x-hidden">
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="pt-24 md:pt-36 pb-16 bg-gradient-to-b from-tan/30 to-transparent">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">
-              Nos Événements
+      {/* Hero Section - Modern & Immersive */}
+      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20">
+        {/* Abstract Background Shapes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div 
+            animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-orange/10 rounded-full blur-3xl"
+          />
+          <motion.div 
+            animate={{ rotate: -360, scale: [1, 1.2, 1] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-[10%] -left-[10%] w-[500px] h-[500px] bg-brown/10 rounded-full blur-3xl"
+          />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <span className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-orange/10 text-orange font-semibold text-sm mb-6 tracking-wider uppercase">
+              <Calendar className="w-4 h-4" />
+              Agenda
+            </span>
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 tracking-tight">
+              Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Événements</span>
             </h1>
-            <p className="text-lg text-gray-700">
+            <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Découvrez tous nos événements à venir et passés. Rejoignez-nous pour des moments inoubliables !
             </p>
-          </div>
+          </motion.div>
         </div>
       </section>
       
-      {/* Search & Filters Bar */}
-      <section className="py-8">
+      {/* Search & Filters Bar - Floating Glass */}
+      <section className="sticky top-20 z-30 py-4 pointer-events-none">
         <div className="container mx-auto px-4">
-          <div className="bg-white rounded-xl shadow-sm p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-            <div className="relative flex-1">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search size={18} className="text-gray-400" />
+          <motion.div 
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg rounded-2xl p-4 max-w-5xl mx-auto pointer-events-auto"
+          >
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  type="text"
+                  placeholder="Rechercher un événement..."
+                  className="pl-10 bg-white/50 border-gray-200 focus:border-orange focus:ring-orange/20 transition-all duration-300"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Rechercher un événement..."
-                className="pl-10 w-full h-12 border border-gray-300 rounded-lg focus:ring-brown focus:border-brown"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              
+              <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center md:justify-end">
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-full md:w-[200px] bg-white/50 border-gray-200 focus:ring-orange/20 transition-all duration-300">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-gray-500" />
+                      <SelectValue placeholder="Lieu" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-white/95 backdrop-blur-xl border-white/20 shadow-xl">
+                    <SelectItem value="all" className="cursor-pointer hover:bg-orange/10 focus:bg-orange/10 focus:text-orange">Tous les lieux</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc} value={loc} className="cursor-pointer hover:bg-orange/10 focus:bg-orange/10 focus:text-orange">{loc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant={sortOrder === 'asc' ? 'default' : 'outline'}
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className={`transition-all duration-300 ${sortOrder === 'asc' ? 'bg-brown hover:bg-brown-light text-white' : 'bg-white/50 hover:bg-white/80'}`}
+                >
+                  Date {sortOrder === 'asc' ? '↑' : '↓'}
+                </Button>
+                
+                <Button
+                  variant={hideExpired ? 'default' : 'outline'}
+                  onClick={() => setHideExpired(v => !v)}
+                  className={`transition-all duration-300 ${hideExpired ? 'bg-orange hover:bg-orange-light text-white' : 'bg-white/50 hover:bg-white/80'}`}
+                >
+                  {hideExpired ? 'À venir' : 'Tous'}
+                </Button>
+
+                {isFiltered && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setLocationFilter('all');
+                    }}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                )}
+              </div>
             </div>
-            <div>
-              <select
-                className="h-12 border border-gray-300 rounded-lg px-3 focus:ring-brown focus:border-brown min-w-[160px]"
-                value={locationFilter}
-                onChange={e => setLocationFilter(e.target.value)}
-              >
-                <option value="">Tous les lieux</option>
-                {locations.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex gap-2 items-center">
-              <Button
-                variant={sortOrder === 'asc' ? 'default' : 'outline'}
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="h-12"
-              >
-                Trier par date {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
-              <Button
-                variant={hideExpired ? 'default' : 'outline'}
-                onClick={() => setHideExpired(v => !v)}
-                className="h-12"
-              >
-                {hideExpired ? 'Afficher tous' : 'Masquer expirés'}
-              </Button>
-            </div>
-          </div>
+          </motion.div>
         </div>
       </section>
       
       {/* Events Grid */}
-      <section className="py-12">
+      <section className="py-12 pb-24">
         <div className="container mx-auto px-4">
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {Array(6).fill(0).map((_, index) => (
-                <Skeleton key={index} className="h-96 rounded-xl" />
+                <Skeleton key={index} className="h-[400px] rounded-xl" />
               ))}
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+            <div className="text-center py-20">
+              <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CalendarDays size={32} className="text-gray-400" />
               </div>
-              <h3 className="text-2xl font-semibold mb-2">Aucun Événement Disponible pour le moment - ERR04</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Aucun événement trouvé</h3>
               <p className="text-gray-600 max-w-md mx-auto">
                 {searchQuery ? 
-                  `Aucun événement ne correspond à votre recherche "${searchQuery}". Essayez d'autres mots-clés ou réinitialisez votre recherche.` : 
-                  "Il n'y a pas encore d'événements. Les événements apparaîtront ici une fois créés."}
+                  `Aucun événement ne correspond à votre recherche "${searchQuery}".` : 
+                  "Il n'y a pas encore d'événements à afficher."}
               </p>
+              {(searchQuery || locationFilter !== 'all' || hideExpired) && (
+                <Button 
+                  variant="link" 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setLocationFilter('all');
+                    setHideExpired(false);
+                  }}
+                  className="mt-4 text-orange hover:text-orange-dark"
+                >
+                  Réinitialiser tous les filtres
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredEvents.map((event) => (
-                <Link
+              {filteredEvents.map((event, index) => (
+                <motion.div
                   key={event.id}
-                  to={`/events/${event.slug}`}
-                  className="block group"
-                  style={{ textDecoration: 'none', color: 'inherit' }}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  className={!isFiltered && index === 0 ? "md:col-span-2 lg:col-span-2" : ""}
                 >
-                  <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 group-hover:ring-2 group-hover:ring-brown">
-                    <div className="h-48 overflow-hidden">
-                      <img 
-                        src={event.image} 
-                        alt={event.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold mb-2 group-hover:text-brown transition-colors">{event.title}</h3>                      <div className="text-gray-600 mb-4 line-clamp-2 prose prose-sm max-w-none">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            // Disable links inside the card to prevent nested anchor tags
-                            a: ({ children }) => <span className="text-brown font-medium">{children}</span>,
-                            // Keep other formatting but remove interactive elements
-                            button: ({ children }) => <span>{children}</span>,
-                          }}
-                        >
-                          {event.description}
-                        </ReactMarkdown>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center text-gray-500">
-                          <CalendarDays size={16} className="mr-2" />
-                          <span>{new Date(event.date).toLocaleDateString('fr-FR', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}</span>
-                        </div>
-                        <div className="flex items-center text-gray-500">
-                          <Clock size={16} className="mr-2" />
-                          <span>{event.time}</span>
-                        </div>
-                        <div className="flex items-center text-gray-500">
-                          <MapPin size={16} className="mr-2" />
-                          <span>{event.location}</span>
-                        </div>
-                      </div>
-                      {event.registration_url && (
-                        <button 
-                          className="w-full mt-4 bg-brown text-white py-2 px-4 rounded-md hover:bg-brown/90 transition-colors flex items-center justify-center"
-                          onClick={e => { e.stopPropagation(); e.preventDefault(); window.open(event.registration_url, '_blank'); }}
-                        >
-                          <Ticket size={16} className="mr-2" />
-                          S'inscrire
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+                  <EventCard
+                    title={event.title}
+                    description={event.description}
+                    date={event.date}
+                    time={event.time}
+                    location={event.location}
+                    image={event.image}
+                    slug={event.slug}
+                    registrationUrl={event.registration_url}
+                    featured={!isFiltered && index === 0}
+                    className="h-full"
+                  />
+                </motion.div>
               ))}
             </div>
           )}

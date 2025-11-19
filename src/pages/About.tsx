@@ -1,11 +1,34 @@
-import { BookOpen, Users, Calendar, MapPin } from 'lucide-react';
+import { BookOpen, Users, Calendar, MapPin, Heart, Send, Sparkles, History, Quote } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import SectionHeading from '@/components/SectionHeading';
 import { useState } from 'react';
 import { db } from '@/db/client';
 import { useToast } from '@/hooks/use-toast';
 import useSEO from '@/hooks/useSEO';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+
+const teamMembers = [
+  { name: "Stephane", role: "Président", desc: "Ours fondateur de l'association.", img: "https://mcfiles.inferi.fr/api/public/dl/k9Janer6?inline=true" },
+  { name: "Jean-Louis", role: "Vice-Président", desc: "Ours fondateur de l'association.", img: "https://mcfiles.inferi.fr/api/public/dl/NQtPsDEF?inline=true" },
+  { name: "Marc", role: "Trésorier", desc: "Ours responsable des bourses.", img: "https://mcfiles.inferi.fr/api/public/dl/MvotYu7L?inline=true" },
+  { name: "Pascal", role: "Co-Secrétaire", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/MoeBJVNs?inline=true" },
+  { name: "Florent", role: "Co-Secrétaire", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/ZlJxFuwv?inline=true" },
+  { name: "Jean-Luc", role: "Chargé en Relations Publiques", desc: "Ours à l'appel depuis 2019 !", img: "https://mcfiles.inferi.fr/api/public/dl/SCyycrc6?inline=true" },
+  { name: "Franck", role: "Chargé de communications", desc: "Un lover des Ours.", img: "https://mcfiles.inferi.fr/api/public/dl/hH8msW18?inline=true" },
+  { name: "Sylfried", role: "Adjoint Chargé de relations publiques", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/GcO8vG8l?inline=true" },
+  { name: "Henri", role: "Monsieur Culture", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/hb_-0wLM?inline=true" },
+  { name: "Étienne", role: "Administrateur", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/PIZdu2pA?inline=true" },
+];
+
+const timelineEvents = [
+  { year: "2017", date: "9 Novembre", title: "La Genèse", desc: "6 copains ont eu l'idée de créer cette association pour ajouter du moelleux et des poils dans l'univers LGBTQ de Montpellier.", icon: Sparkles },
+  { year: "2018", date: "Juillet", title: "Premier Monsieur Ours", desc: "Élection de notre Unique Monsieur Ours Languedoc-Roussillon, Cédric François.", icon: Users },
+  { year: "2024", date: "Juin", title: "L'Expansion", desc: "Participation historique à la Marche des fiertés avec notre propre char et dépassement du cap des 100 adhérents.", icon: History },
+];
 
 const About = () => {
   // SEO Configuration
@@ -75,370 +98,285 @@ const About = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-tan/10">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="pt-24 md:pt-36 pb-16 bg-gradient-to-b from-tan/30 to-transparent">
+      {/* Hero Section - Modern & Immersive */}
+      <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden pt-20">
+        {/* Abstract Background Shapes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div 
+            animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-orange/10 rounded-full blur-3xl"
+          />
+          <motion.div 
+            animate={{ rotate: -360, scale: [1, 1.2, 1] }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-[10%] -left-[10%] w-[500px] h-[500px] bg-brown/10 rounded-full blur-3xl"
+          />
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <span className="inline-block py-1 px-3 rounded-full bg-orange/10 text-orange font-semibold text-sm mb-6 tracking-wider uppercase">
+              Depuis 2017
+            </span>
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 tracking-tight">
+              L'Esprit <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">LOOM</span>
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Plus qu'une association, une communauté. Un espace de bienveillance pour les Bears et leurs admirateurs, du XS au XXXXXL.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Manifesto Section - Glass Card */}
+      <section className="py-12 relative">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900">A propos de Loom</h1>
-            <p className="text-lg text-gray-700">
-            L'association Les Ours Occitanie Méditerranée (LOOM) a été créée le 9 novembre 2017. C'est une association pour les Bears mais aussi pour tous ceux qui aiment les Ours, les poils et les tailles allant du XS à XXXXXL.
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="max-w-4xl mx-auto"
+          >
+            <div className="relative bg-white/80 backdrop-blur-md rounded-3xl p-8 md:p-12 shadow-xl border border-white/20 overflow-hidden">
+              <Quote className="absolute top-6 left-6 w-12 h-12 text-orange/20 transform -scale-x-100" />
+              <div className="relative z-10 text-center space-y-6">
+                <h2 className="text-3xl font-bold text-gray-900">Notre Vision</h2>
+                <p className="text-lg md:text-xl text-gray-700 leading-relaxed font-medium">
+                  "Créer un refuge de convivialité où chaque ours, peu importe son pelage ou sa carrure, trouve sa place. Nous célébrons la diversité, la fraternité et la joie de vivre ensemble sous le soleil de Montpellier."
+                </p>
+                <div className="flex justify-center gap-4 pt-4">
+                  <div className="flex items-center gap-2 text-brown font-semibold">
+                    <Heart className="w-5 h-5 fill-current" />
+                    <span>Inclusivité</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-300"></div>
+                  <div className="flex items-center gap-2 text-brown font-semibold">
+                    <Users className="w-5 h-5 fill-current" />
+                    <span>Fraternité</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Timeline Section - Creative Layout */}
+      <section className="py-20 bg-white relative overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Notre Histoire</h2>
+            <div className="w-20 h-1.5 bg-orange mx-auto rounded-full"></div>
+          </div>
+
+          <div className="relative max-w-5xl mx-auto">
+            {/* Central Line */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-gradient-to-b from-orange/20 via-brown/20 to-orange/20 hidden md:block"></div>
+
+            <div className="space-y-12 md:space-y-24">
+              {timelineEvents.map((event, index) => (
+                <motion.div 
+                  key={event.year}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.2 }}
+                  className={`flex flex-col md:flex-row items-center gap-8 ${index % 2 === 0 ? 'md:flex-row-reverse' : ''}`}
+                >
+                  <div className="flex-1 w-full md:w-auto">
+                    <div className={`bg-gray-50 p-8 rounded-2xl border border-gray-100 hover:shadow-lg transition-shadow duration-300 ${index % 2 === 0 ? 'md:text-left' : 'md:text-right'}`}>
+                      <div className={`flex items-center gap-3 mb-4 ${index % 2 === 0 ? 'md:justify-start' : 'md:justify-end'}`}>
+                        <span className="text-4xl font-bold text-brown/20">{event.year}</span>
+                        <span className="text-sm font-bold text-orange uppercase tracking-wider">{event.date}</span>
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">{event.title}</h3>
+                      <p className="text-gray-600">{event.desc}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="relative flex items-center justify-center w-12 h-12 shrink-0">
+                    <div className="w-12 h-12 bg-white rounded-full border-4 border-orange flex items-center justify-center shadow-lg z-10">
+                      <event.icon className="w-5 h-5 text-brown" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 hidden md:block"></div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Team Section - Polaroid Grid */}
+      <section className="py-20 bg-tan/10">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">La Tanière</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Rencontrez les bénévoles passionnés qui font vivre l'association au quotidien.
             </p>
           </div>
-        </div>
-      </section>
-      
-      {/* Mission & Vision Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Notre vision</h2>
-          <p className="text-lg text-gray-700 max-w-3xl mx-auto text-center">
-            Notre vision est de créer un espace inclusif et accueillant pour tous les membres de la communauté Bear.
-          </p>
-        </div>
-      </section>
-      
-      {/* History Timeline */}
-      <section className="py-16 bg-tan/20">
-        <div className="container mx-auto px-4">
-          <SectionHeading 
-            title="Notre Histoire" 
-            centered
-          />
-          
-          <div className="relative max-w-3xl mx-auto mt-16">
-            {/* Timeline line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-brown/30"></div>
-            
-            {/* 2017 */}
-            <div className="relative mb-16">
-              <div className="absolute left-1/2 transform -translate-x-1/2 -top-4 w-8 h-8 rounded-full border-4 border-brown bg-white z-10"></div>
-              <div className="ml-auto mr-auto md:ml-0 md:mr-[50%] md:pr-8 w-full md:w-1/2 text-right">
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                  <span className="text-brown font-bold">9 Novembre 2017</span>
-                  <h3 className="text-xl font-semibold mb-2">Création</h3>
-                  <p className="text-gray-700">
-                    6 copains ont eu l'idée de créer cette association pour ajouter du moelleux et des poils dans l'univers LGBTQ de Montpellier.
-                  </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {teamMembers.map((member, index) => (
+              <motion.div
+                key={member.name}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                whileHover={{ y: -10, rotate: index % 2 === 0 ? 2 : -2 }}
+                className="group"
+              >
+                <div className="bg-white p-4 pb-6 rounded-lg shadow-md transform transition-all duration-300 group-hover:shadow-xl border border-gray-100">
+                  <div className="aspect-square overflow-hidden rounded-md mb-4 bg-gray-100 relative">
+                    <img 
+                      src={member.img} 
+                      alt={member.name}
+                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                      <span className="text-white font-medium text-sm">{member.desc}</span>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-handwriting text-2xl font-bold text-gray-800 mb-1">{member.name}</h3>
+                    <p className="text-orange font-medium text-sm uppercase tracking-wide">{member.role}</p>
+                  </div>
                 </div>
-              </div>
-            </div>
-            
-            {/* 2018 */}
-            <div className="relative mb-16">
-              <div className="absolute left-1/2 transform -translate-x-1/2 -top-4 w-8 h-8 rounded-full border-4 border-orange bg-white z-10"></div>
-              <div className="ml-auto mr-auto md:ml-[50%] md:mr-0 md:pl-8 w-full md:w-1/2">
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                  <span className="text-orange font-bold">2018</span>
-                  <h3 className="text-xl font-semibold mb-2">Premier Monsieur Ours</h3>
-                  <p className="text-gray-700">
-                    En juillet 2018 a été élu notre Unique Monsieur Ours Languedoc-Roussillon, Cédric François.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* 2023 */}
-            <div className="relative">
-              <div className="absolute left-1/2 transform -translate-x-1/2 -top-4 w-8 h-8 rounded-full border-4 border-brown bg-white z-10"></div>
-              <div className="ml-auto mr-auto md:ml-0 md:mr-[50%] md:pr-8 w-full md:w-1/2 text-right">
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                  <span className="text-brown font-bold">2024</span>
-                  <h3 className="text-xl font-semibold mb-2">Un grand événement</h3>
-                  <p className="text-gray-700">
-                    En 2024, pour la première fois nous avons participé à la Marche des fiertés, avec notre propre char. C'est aussi l'année où nous avons dépassés les 100 adhérents.
-                  </p>
-                </div>
-              </div>
-            </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
-      
-      {/* Team Section */}
-      <section className="py-16">
+
+      {/* Contact Section - Split Layout */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <SectionHeading 
-            title="Rencontrez les Ours!" 
-            subtitle=""
-            centered
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
-            {/* Team Member 1 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/k9Janer6?inline=true" 
-                  alt="Stephane" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Stephane</h3>
-                <p className="text-orange mb-4">Président</p>
-                <p className="text-gray-600">
-                  Ours fondateur de l'association.
-                </p>
-              </div>
-            </div>
-            
-            {/* Team Member 2 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/NQtPsDEF?inline=true" 
-                  alt="Jean-Louis" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Jean-Louis</h3>
-                <p className="text-orange mb-4">Vice-Président</p>
-                <p className="text-gray-600">
-                  Ours fondateur de l'association.
-                </p>
-              </div>
-            </div>
-            
-            {/* Team Member 3 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/MvotYu7L?inline=true" 
-                  alt="Marc" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Marc</h3>
-                <p className="text-orange mb-4">Trésorier</p>
-                <p className="text-gray-600">
-                  Ours responsable des bourses.
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 4 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/MoeBJVNs?inline=true" 
-                  alt="Pascal" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Pascal</h3>
-                <p className="text-orange mb-4">Co-Secrétaire</p>
-                <p className="text-gray-600">
-                  X
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 5 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/ZlJxFuwv?inline=true" 
-                  alt="Florent" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Florent</h3>
-                <p className="text-orange mb-4">Co-Secrétaire</p>
-                <p className="text-gray-600">
-                  X
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 6 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/SCyycrc6?inline=true" 
-                  alt="Jean-Luc" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Jean-Luc</h3>
-                <p className="text-orange mb-4">Chargé en Relations Publiques</p>
-                <p className="text-gray-600">
-                  Ours à l'appel depuis 2019 !
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 7 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/hH8msW18?inline=true" 
-                  alt="Franck" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Franck</h3>
-                <p className="text-orange mb-4">Chargé de communications</p>
-                <p className="text-gray-600">
-                  Un lover des Ours.
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 8 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/GcO8vG8l?inline=true" 
-                  alt="Sylfried" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Sylfried</h3>
-                <p className="text-orange mb-4">Adjoint Chargé de relations publiques</p>
-                <p className="text-gray-600">
-                  X
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 9 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/hb_-0wLM?inline=true" 
-                  alt="Henri" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Henri</h3>
-                <p className="text-orange mb-4">Monsieur Culture</p>
-                <p className="text-gray-600">
-                  X
-                </p>
-              </div>
-            </div>
-
-            {/* Team Member 10 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden hover-lift transition-all duration-300">
-              <div className="aspect-square">
-                <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/PIZdu2pA?inline=true" 
-                  alt="Étienne" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold mb-1">Étienne</h3>
-                <p className="text-orange mb-4">Administrateur</p>
-                <p className="text-gray-600">
-                  X
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Contact Section */}
-      <section className="py-16 bg-brown text-white">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="w-20 h-1.5 bg-orange mb-6"></div>
-              <h2 className="text-3xl font-bold mb-6">Nous Contacter</h2>
-                <p className="text-tan/90 mb-8">
-                Nous serions ravis de vous entendre ! Que vous ayez des questions sur l'adhésion, 
-                les événements à venir ou comment vous impliquer, notre équipe est là pour vous aider.
-                </p>
-              
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <MapPin className="mr-4 text-orange mt-1" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Nous retrouver</h3>
-                    <p className="text-tan/90">49 Rue du faubourg St. Jaumes, Bat E, 34000 Montpellier</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-2xl font-bold mb-6">Formulaire de Contact</h3>
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-white mb-1">Nom</label>
-                    <input 
-                      type="text" 
-                      id="name" 
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-brown focus:border-brown text-gray-900"
-                      placeholder="Votre nom"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-white mb-1">Email</label>
-                    <input 
-                      type="email" 
-                      id="email" 
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-brown focus:border-brown text-gray-900"
-                      placeholder="Votre email"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <label htmlFor="subject" className="block text-sm font-medium text-white mb-1">Sujet</label>
-                  <input 
-                    type="text" 
-                    id="subject" 
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-brown focus:border-brown text-gray-900"
-                    placeholder="Sujet"
-                    required
-                  />
-                </div>
+          <div className="bg-gray-900 rounded-[2.5rem] overflow-hidden shadow-2xl">
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              {/* Contact Info & Map Visual */}
+              <div className="relative p-12 lg:p-16 flex flex-col justify-between bg-gradient-to-br from-gray-900 to-gray-800 text-white overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-orange/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-brown/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
                 
-                <div className="mb-4">
-                  <label htmlFor="message" className="block text-sm font-medium text-white mb-1">Message</label>
-                  <textarea 
-                    id="message" 
-                    name="message"
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-brown focus:border-brown text-gray-900"
-                    placeholder="Votre message"
-                    required
-                  ></textarea>
+                <div className="relative z-10">
+                  <h2 className="text-3xl md:text-4xl font-bold mb-6">Restons en contact</h2>
+                  <p className="text-gray-400 mb-12 text-lg">
+                    Une question ? Une envie de nous rejoindre ? Ou simplement pour dire bonjour ? La porte de la tanière est toujours ouverte.
+                  </p>
+                  
+                  <div className="space-y-8">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-white/10 rounded-xl">
+                        <MapPin className="w-6 h-6 text-orange" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg mb-1">Notre QG</h3>
+                        <p className="text-gray-400 leading-relaxed">
+                          49 Rue du faubourg St. Jaumes,<br />
+                          Bat E, 34000 Montpellier
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-white/10 rounded-xl">
+                        <Send className="w-6 h-6 text-orange" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg mb-1">Email</h3>
+                        <p className="text-gray-400">contactloom34@gmail.com</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="w-full bg-orange hover:bg-orange-dark text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? 'Envoi en cours...' : 'Envoyer le message'}
-                </button>
-              </form>
+
+                <div className="mt-12 pt-12 border-t border-white/10">
+                  <p className="text-sm text-gray-500">
+                    Nous répondons généralement sous 24-48h.
+                  </p>
+                </div>
+              </div>
+
+              {/* Contact Form */}
+              <div className="p-12 lg:p-16 bg-white">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label htmlFor="name" className="text-sm font-medium text-gray-700">Nom</label>
+                      <Input
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        placeholder="Votre nom"
+                        required
+                        className="bg-gray-50 border-gray-200 focus:border-orange focus:ring-orange"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        placeholder="votre@email.com"
+                        required
+                        className="bg-gray-50 border-gray-200 focus:border-orange focus:ring-orange"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label htmlFor="subject" className="text-sm font-medium text-gray-700">Sujet</label>
+                    <Input
+                      id="subject"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleInputChange}
+                      placeholder="De quoi voulez-vous parler ?"
+                      required
+                      className="bg-gray-50 border-gray-200 focus:border-orange focus:ring-orange"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="message" className="text-sm font-medium text-gray-700">Message</label>
+                    <Textarea
+                      id="message"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      placeholder="Votre message..."
+                      rows={5}
+                      required
+                      className="bg-gray-50 border-gray-200 focus:border-orange focus:ring-orange resize-none"
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full bg-orange hover:bg-orange-dark text-white h-12 text-lg font-medium transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                  >
+                    {isSubmitting ? 'Envoi en cours...' : 'Envoyer le message'}
+                  </Button>
+                </form>
+              </div>
             </div>
           </div>
         </div>

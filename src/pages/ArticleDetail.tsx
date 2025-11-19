@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, ArrowLeft, Tag } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Tag, Share2, Clock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Tables } from '@/db/types';
@@ -11,6 +11,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import useSEO from '@/hooks/useSEO';
 import { generateArticleStructuredData } from '@/lib/seo';
+import { motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ArticleDetail = () => {
   const { slug } = useParams();
@@ -66,16 +68,23 @@ const ArticleDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-tan/10">
+      <div className="flex flex-col min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex-1 container mx-auto px-4 py-24">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="h-96 bg-gray-200 rounded-lg mb-8"></div>
-            <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div className="flex-1 container mx-auto px-4 py-32">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-[400px] w-full rounded-2xl" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-4">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+              <div className="lg:col-span-1">
+                <Skeleton className="h-64 w-full rounded-xl" />
+              </div>
+            </div>
           </div>
         </div>
         <Footer />
@@ -87,50 +96,154 @@ const ArticleDetail = () => {
     return null;
   }
 
+  const formattedDate = new Date(article.date).toLocaleDateString('fr-FR', { 
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  });
+
   return (
-    <div className="flex flex-col min-h-screen bg-tan/10">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="flex-1 container mx-auto px-4 py-24">
-        <button 
-          className="inline-flex items-center text-brown hover:text-brown-dark mb-8"
-          onClick={() => navigate('/articles')}
-        >
-          <ArrowLeft size={18} className="mr-1" />
-          Retour aux articles
-        </button>
+      {/* Hero with Background Image Blur */}
+      <div className="relative h-[60vh] min-h-[500px] flex items-end pb-12 overflow-hidden">
+        <div className="absolute inset-0">
+          <img 
+            src={article.image} 
+            alt={article.title} 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+        </div>
         
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">{article.title}</h1>
-          
-          <div className="flex flex-col md:flex-row gap-8 mb-8 items-start">
-            <div className="md:w-[70%] w-full">
-              <div className="relative w-full aspect-[16/9] bg-white rounded-xl shadow-md overflow-hidden flex items-center justify-center">
-                <img 
-                  src={article.image} 
-                  alt={article.title} 
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
+        <div className="container mx-auto px-4 relative z-10 text-white">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Button 
+              variant="ghost" 
+              className="text-white hover:bg-white/20 hover:text-white mb-8 -ml-4" 
+              onClick={() => navigate('/articles')}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Retour aux articles
+            </Button>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 leading-tight max-w-4xl">
+              {article.title}
+            </h1>
+            
+            <div className="flex flex-wrap gap-6 text-lg md:text-xl font-medium text-white/90">
+              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+                <CalendarDays className="w-5 h-5" /> 
+                <span className="capitalize">{formattedDate}</span>
+              </span>
+              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+                <Tag className="w-5 h-5" /> 
+                {article.category}
+              </span>
             </div>
-            <div className="md:w-[30%] w-full flex flex-col justify-start bg-white rounded-xl shadow-md p-4 gap-4 min-h-[120px] max-w-xs mx-auto md:mx-0 mt-4 md:mt-0">
-              <div className="flex items-center text-gray-600">
-                <CalendarDays size={18} className="mr-2 text-brown" />
-                <span>{new Date(article.date).toLocaleDateString('fr-FR', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-12 -mt-20 relative z-20">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100"
+            >
+              <div className="prose prose-lg prose-orange max-w-none">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    img: ({node, ...props}) => (
+                      <img {...props} className="rounded-xl shadow-md my-8 w-full" />
+                    ),
+                    blockquote: ({node, ...props}) => (
+                      <blockquote {...props} className="border-l-4 border-orange bg-orange/5 p-4 rounded-r-lg not-italic" />
+                    )
+                  }}
+                >
+                  {article.content}
+                </ReactMarkdown>
               </div>
-              <div className="flex items-center text-gray-600">
-                <Tag size={18} className="mr-2 text-brown" />
-                <span>{article.category}</span>
-              </div>
-            </div>
+            </motion.div>
           </div>
-          
-          <div className="prose prose-neutral max-w-none text-lg text-gray-700 whitespace-pre-line">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content}</ReactMarkdown>
+
+          {/* Sidebar Info */}
+          <div className="lg:col-span-1">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="space-y-6 sticky top-24"
+            >
+              {/* Details Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-6 text-lg">Infos article</h3>
+                <ul className="space-y-6">
+                  <li className="flex items-start gap-4">
+                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
+                      <CalendarDays className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Publié le</p>
+                      <p className="text-gray-600 capitalize">{formattedDate}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
+                      <Tag className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Catégorie</p>
+                      <p className="text-gray-600">{article.category}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
+                      <Clock className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Temps de lecture</p>
+                      <p className="text-gray-600">~5 min</p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Share Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-orange" />
+                  Partager
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <Button variant="outline" className="w-full justify-start" onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                  }}>
+                    Copier le lien
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" onClick={() => {
+                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
+                  }}>
+                    Facebook
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" onClick={() => {
+                    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`, '_blank');
+                  }}>
+                    Twitter / X
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>

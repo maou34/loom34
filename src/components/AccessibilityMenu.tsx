@@ -1,5 +1,23 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { 
+  Type, 
+  Eye, 
+  MousePointer2, 
+  Palette, 
+  RotateCcw
+} from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 interface AccessibilityMenuProps {
   isOpen: boolean;
@@ -11,16 +29,19 @@ const AccessibilityMenu = ({ isOpen, onClose }: AccessibilityMenuProps) => {
   const [highContrast, setHighContrast] = useState(false);
   const [underlineLinks, setUnderlineLinks] = useState(false);
   const [simpleMode, setSimpleMode] = useState(false);
-
-  // Appliquer les paramètres dès qu'ils changent
-  useEffect(() => {
-    applyAccessibilitySettings();
-  }, [textSize, highContrast, underlineLinks, simpleMode]);
+  const [dyslexicFont, setDyslexicFont] = useState(false);
+  const [grayscaleMode, setGrayscaleMode] = useState(false);
+  const [bigCursor, setBigCursor] = useState(false);
 
   // Charger les paramètres au montage
   useEffect(() => {
     loadSavedSettings();
   }, []);
+
+  // Appliquer les paramètres dès qu'ils changent
+  useEffect(() => {
+    applyAccessibilitySettings();
+  }, [textSize, highContrast, underlineLinks, simpleMode, dyslexicFont, grayscaleMode, bigCursor]);
 
   const loadSavedSettings = () => {
     try {
@@ -28,11 +49,17 @@ const AccessibilityMenu = ({ isOpen, onClose }: AccessibilityMenuProps) => {
       const savedHighContrast = localStorage.getItem('highContrast');
       const savedUnderlineLinks = localStorage.getItem('underlineLinks');
       const savedSimpleMode = localStorage.getItem('simpleMode');
+      const savedDyslexicFont = localStorage.getItem('dyslexicFont');
+      const savedGrayscaleMode = localStorage.getItem('grayscaleMode');
+      const savedBigCursor = localStorage.getItem('bigCursor');
 
       if (savedTextSize) setTextSize(Number(savedTextSize));
       if (savedHighContrast === 'true') setHighContrast(true);
       if (savedUnderlineLinks === 'true') setUnderlineLinks(true);
       if (savedSimpleMode === 'true') setSimpleMode(true);
+      if (savedDyslexicFont === 'true') setDyslexicFont(true);
+      if (savedGrayscaleMode === 'true') setGrayscaleMode(true);
+      if (savedBigCursor === 'true') setBigCursor(true);
     } catch (error) {
       console.error('Erreur lors du chargement des paramètres:', error);
     }
@@ -45,199 +72,197 @@ const AccessibilityMenu = ({ isOpen, onClose }: AccessibilityMenuProps) => {
       localStorage.setItem('highContrast', highContrast.toString());
       localStorage.setItem('underlineLinks', underlineLinks.toString());
       localStorage.setItem('simpleMode', simpleMode.toString());
+      localStorage.setItem('dyslexicFont', dyslexicFont.toString());
+      localStorage.setItem('grayscaleMode', grayscaleMode.toString());
+      localStorage.setItem('bigCursor', bigCursor.toString());
 
       // Appliquer les styles
-      document.documentElement.style.fontSize = `${textSize}%`;
+      document.documentElement.style.setProperty('--text-size', `${textSize}%`);
       
-      // Appliquer le contraste élevé
-      if (highContrast) {
-        document.documentElement.classList.add('high-contrast');
-        document.body.style.backgroundColor = '#000';
-        document.body.style.color = '#fff';
-      } else {
-        document.documentElement.classList.remove('high-contrast');
-        document.body.style.backgroundColor = '';
-        document.body.style.color = '';
-      }
+      // Helper pour toggle les classes sur html (documentElement) pour que les sélecteurs CSS globaux fonctionnent
+      const toggleHtmlClass = (className: string, isActive: boolean) => {
+        if (isActive) document.documentElement.classList.add(className);
+        else document.documentElement.classList.remove(className);
+      };
 
-      // Appliquer le soulignement des liens
-      const links = document.getElementsByTagName('a');
-      for (let i = 0; i < links.length; i++) {
-        links[i].style.textDecoration = underlineLinks ? 'underline' : '';
-      }
+      toggleHtmlClass('high-contrast', highContrast);
+      toggleHtmlClass('underline-links', underlineLinks);
+      toggleHtmlClass('simple-mode', simpleMode);
+      toggleHtmlClass('dyslexic-font', dyslexicFont);
+      toggleHtmlClass('grayscale-mode', grayscaleMode);
+      toggleHtmlClass('big-cursor', bigCursor);
 
-      // Mode simple : désactive toute la CSS
-      const simpleStyleId = 'simple-mode-style';
-      if (simpleMode) {
-        document.documentElement.classList.add('simple-mode');
-        // Injecte une feuille de style qui force le mode simple
-        if (!document.getElementById(simpleStyleId)) {
-          const style = document.createElement('style');
-          style.id = simpleStyleId;
-          style.innerHTML = `
-            body, main, header, footer, nav, section, article, aside, div, span {
-              all: unset !important;
-              font-family: Arial, Helvetica, sans-serif !important;
-              color: #111 !important;
-              background: #fff !important;
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            body {
-              margin: 2em;
-              line-height: 1.7;
-              font-size: 1.2em;
-              background: #fff !important;
-              color: #111 !important;
-            }
-            h1, h2, h3, h4, h5, h6 {
-              font-weight: bold;
-              margin-top: 1.5em;
-              margin-bottom: 0.5em;
-              color: #000 !important;
-            }
-            a {
-              color: #0033cc !important;
-              text-decoration: underline !important;
-            }
-            ul, ol {
-              margin-left: 2em;
-            }
-            p {
-              margin-bottom: 1em;
-            }
-            button, input, select, textarea {
-              font-size: 1em;
-              color: #111 !important;
-              background: #fff !important;
-              border: 1px solid #888 !important;
-              padding: 0.3em 0.6em;
-              margin-bottom: 1em;
-            }
-          `;
-          document.head.appendChild(style);
-        }
-      } else {
-        document.documentElement.classList.remove('simple-mode');
-        const style = document.getElementById(simpleStyleId);
-        if (style) style.remove();
-      }
-
-      console.log('Paramètres appliqués:', { textSize, highContrast, underlineLinks, simpleMode });
     } catch (error) {
       console.error('Erreur lors de l\'application des paramètres:', error);
     }
   };
 
-  const handleTextSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSize = Number(e.target.value);
-    setTextSize(newSize);
+  const resetSettings = () => {
+    setTextSize(100);
+    setHighContrast(false);
+    setUnderlineLinks(false);
+    setSimpleMode(false);
+    setDyslexicFont(false);
+    setGrayscaleMode(false);
+    setBigCursor(false);
   };
-
-  const handleHighContrastChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setHighContrast(e.target.checked);
-  };
-
-  const handleUnderlineLinksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUnderlineLinks(e.target.checked);
-  };
-
-  const handleSimpleModeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSimpleMode(e.target.checked);
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${highContrast ? 'high-contrast' : ''}`}>
-      <div className={`p-6 rounded-lg shadow-xl max-w-md w-full transition-all ${highContrast ? 'bg-black border-4 border-yellow-400' : 'bg-white'}`} style={highContrast ? { color: '#ffff00' } : {}}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className={`text-xl font-bold ${highContrast ? 'text-yellow-400' : ''}`}>Options d'accessibilité</h2>
-          <button 
-            onClick={onClose} 
-            className={`hover:text-gray-700 ${highContrast ? 'text-yellow-400' : 'text-gray-500'}`}
-            aria-label="Fermer"
+    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto bg-white/95 backdrop-blur-xl border-l border-white/20 shadow-2xl">
+        <SheetHeader className="mb-6">
+          <SheetTitle className="text-2xl font-bold flex items-center gap-2 text-gray-900">
+            <Eye className="h-6 w-6 text-orange" />
+            Accessibilité
+          </SheetTitle>
+          <SheetDescription className="text-gray-500">
+            Personnalisez l'affichage du site pour une expérience adaptée à vos besoins.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="space-y-8">
+          {/* Section Affichage */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <Type className="h-4 w-4" />
+              Affichage du texte
+            </h3>
+            
+            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <Label className="text-base font-medium">Taille du texte</Label>
+                  <span className="text-sm font-bold text-orange bg-orange/10 px-2 py-1 rounded-md">{textSize}%</span>
+                </div>
+                <Slider
+                  value={[textSize]}
+                  min={75}
+                  max={150}
+                  step={5}
+                  onValueChange={(value) => setTextSize(value[0])}
+                  className="py-2"
+                />
+                <div className="flex justify-between text-xs text-gray-400 px-1">
+                  <span>A-</span>
+                  <span>A</span>
+                  <span>A+</span>
+                </div>
+              </div>
+
+              <Separator className="bg-gray-200" />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Police dyslexique</Label>
+                  <p className="text-xs text-gray-500">Police optimisée pour la lecture</p>
+                </div>
+                <Switch
+                  checked={dyslexicFont}
+                  onCheckedChange={setDyslexicFont}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Couleurs & Visuel */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Couleurs & Visuel
+            </h3>
+            
+            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Contraste élevé</Label>
+                  <p className="text-xs text-gray-500">Augmente le contraste des couleurs</p>
+                </div>
+                <Switch
+                  checked={highContrast}
+                  onCheckedChange={(checked) => {
+                    setHighContrast(checked);
+                    if (checked) setSimpleMode(false);
+                  }}
+                />
+              </div>
+
+              <Separator className="bg-gray-200" />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Monochrome</Label>
+                  <p className="text-xs text-gray-500">Convertit le site en nuances de gris</p>
+                </div>
+                <Switch
+                  checked={grayscaleMode}
+                  onCheckedChange={setGrayscaleMode}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section Navigation */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+              <MousePointer2 className="h-4 w-4" />
+              Navigation & Aide
+            </h3>
+            
+            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Curseur agrandi</Label>
+                  <p className="text-xs text-gray-500">Agrandit le curseur de la souris</p>
+                </div>
+                <Switch
+                  checked={bigCursor}
+                  onCheckedChange={setBigCursor}
+                />
+              </div>
+
+              <Separator className="bg-gray-200" />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Souligner les liens</Label>
+                  <p className="text-xs text-gray-500">Rend les liens plus visibles</p>
+                </div>
+                <Switch
+                  checked={underlineLinks}
+                  onCheckedChange={setUnderlineLinks}
+                />
+              </div>
+
+              <Separator className="bg-gray-200" />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-medium">Mode lecture simple</Label>
+                  <p className="text-xs text-gray-500">Supprime les images et simplifie la mise en page</p>
+                </div>
+                <Switch
+                  checked={simpleMode}
+                  onCheckedChange={(checked) => {
+                    setSimpleMode(checked);
+                    if (checked) setHighContrast(false);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Reset Button */}
+          <Button 
+            variant="outline" 
+            className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+            onClick={resetSettings}
           >
-            <X className="h-6 w-6" />
-          </button>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Réinitialiser les paramètres
+          </Button>
         </div>
-        
-        <div className="space-y-4 mb-6">
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${highContrast ? 'text-yellow-400' : 'text-gray-700'}`}
-            >
-              Taille du texte : {textSize}%
-            </label>
-            <input
-              type="range"
-              min="50"
-              max="200"
-              value={textSize}
-              onChange={handleTextSizeChange}
-              className="w-full"
-              aria-label="Ajuster la taille du texte"
-              style={highContrast ? { accentColor: '#ffff00' } : {}}
-            />
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="highContrast"
-              checked={highContrast}
-              onChange={handleHighContrastChange}
-              className="h-4 w-4"
-              style={highContrast ? { accentColor: '#ffff00' } : {}}
-            />
-            <label htmlFor="highContrast" className={`ml-2 block text-sm ${highContrast ? 'text-yellow-400' : 'text-gray-700'}`}
-            >
-              Contraste élevé
-            </label>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="underlineLinks"
-              checked={underlineLinks}
-              onChange={handleUnderlineLinksChange}
-              className="h-4 w-4"
-              style={highContrast ? { accentColor: '#ffff00' } : {}}
-            />
-            <label htmlFor="underlineLinks" className={`ml-2 block text-sm ${highContrast ? 'text-yellow-400' : 'text-gray-700'}`}
-            >
-              Souligner les liens
-            </label>
-          </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="simpleMode"
-              checked={simpleMode}
-              onChange={handleSimpleModeChange}
-              className="h-4 w-4"
-              style={highContrast ? { accentColor: '#ffff00' } : {}}
-            />
-            <label htmlFor="simpleMode" className={`ml-2 block text-sm ${highContrast ? 'text-yellow-400' : 'text-gray-700'}`}
-            >
-              Mode Simple (lecture adaptée)
-            </label>
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            applyAccessibilitySettings();
-            onClose();
-          }}
-          className={`w-full py-2 px-4 rounded transition-colors ${highContrast ? 'bg-yellow-400 text-black font-bold border-2 border-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-        >
-          Appliquer les modifications
-        </button>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 

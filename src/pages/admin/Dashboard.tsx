@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
-import { FileText, CalendarDays, Image as ImageIcon, Users, ArrowUpRight, MessageSquare, Heart } from "lucide-react";
+import { FileText, CalendarDays, Image as ImageIcon, Users, ArrowUpRight, MessageSquare, Heart, Activity, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 // Stats card component
 const StatsCard = ({ 
@@ -15,42 +17,46 @@ const StatsCard = ({
   count, 
   loading, 
   color,
-  path 
+  path,
+  delay
 }: { 
   icon: React.ReactNode, 
   title: string, 
   count: number,
   loading: boolean,
   color: string,
-  path: string
+  path: string,
+  delay: number
 }) => {
   return (
-    <Card className="transition-all duration-300 hover:shadow-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center">
-          <div className={`h-8 w-8 ${color} mr-3 rounded-full flex items-center justify-center`}>
-            {icon}
-          </div>
-          {loading ? (
-            <Skeleton className="h-10 w-20" />
-          ) : (
-            <div className="text-2xl font-bold">{count}</div>
-          )}
-        </div>
-      </CardContent>
-      <CardFooter className="pt-0 pb-3">
-        <Link 
-          to={path}
-          className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-        >
-          View details
-          <ArrowUpRight className="h-3 w-3 ml-1" />
-        </Link>
-      </CardFooter>
-    </Card>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+    >
+      <Link to={path}>
+        <Card className="transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-none shadow-md bg-white/80 backdrop-blur-sm overflow-hidden group h-full">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`h-12 w-12 ${color} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                {icon}
+              </div>
+              <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-gray-200 group-hover:text-gray-600 transition-colors">
+                <ArrowUpRight className="h-4 w-4" />
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+              {loading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <h3 className="text-3xl font-bold text-gray-900">{count}</h3>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+    </motion.div>
   );
 };
 
@@ -58,20 +64,26 @@ const StatsCard = ({
 const QuickActionCard = ({ 
   icon, 
   title, 
-  path 
+  path,
+  color
 }: { 
   icon: React.ReactNode, 
   title: string, 
-  path: string 
+  path: string,
+  color: string
 }) => {
   return (
-    <Link 
-      to={path} 
-      className="bg-gray-50 hover:bg-gray-100 p-4 rounded-lg border border-gray-200 
-                flex items-center transition-colors hover:shadow-sm"
-    >
-      {icon}
-      <span className="text-gray-800 font-medium ml-3">{title}</span>
+    <Link to={path} className="w-full">
+      <Button 
+        variant="outline" 
+        className="w-full h-auto py-4 justify-start px-4 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all group"
+      >
+        <div className={`h-10 w-10 rounded-lg ${color} bg-opacity-10 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform`}>
+          {icon}
+        </div>
+        <span className="font-medium text-gray-700 group-hover:text-gray-900">{title}</span>
+        <ArrowUpRight className="ml-auto h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </Button>
     </Link>
   );
 };
@@ -200,273 +212,259 @@ export default function AdminDashboard() {
   }, [ticketsData]);
 
   return (
-    <AdminLayout title="Dashboard">
-      {/* Welcome section */}
-      <div className="bg-white p-6 rounded-lg shadow-sm mb-8 border border-gray-100">
-        <h2 className="text-2xl font-semibold mb-2">Bienvenue sur le tableau de bord</h2>
-        <p className="text-gray-600">
-          Gérez le contenu de votre site, surveillez l'activité et gardez tout à jour.
-        </p>
-      </div>
-      
-      {/* Stats section */}
-      <h3 className="text-lg font-medium text-gray-800 mb-4">Vue d'ensemble</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <StatsCard 
-          icon={<FileText className="h-5 w-5 text-white" />} 
-          title="Articles" 
-          count={stats.articlesCount} 
-          loading={stats.loading}
-          color="bg-blue-500"
-          path="/admin/articles"
-        />
+    <AdminLayout title="Tableau de bord">
+      <div className="space-y-8">
+        {/* Welcome section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl"
+        >
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-64 w-64 rounded-full bg-orange-500/10 blur-3xl"></div>
+          
+          <div className="relative z-10">
+            <h2 className="text-3xl font-bold mb-2">Bienvenue sur votre espace d'administration</h2>
+            <p className="text-gray-300 max-w-2xl text-lg">
+              Gérez le contenu de LOOM, suivez l'activité de la communauté et maintenez le site à jour depuis cet espace centralisé.
+            </p>
+          </div>
+        </motion.div>
         
-        <StatsCard 
-          icon={<CalendarDays className="h-5 w-5 text-white" />} 
-          title="Événements" 
-          count={stats.eventsCount} 
-          loading={stats.loading}
-          color="bg-orange"
-          path="/admin/events"
-        />
-        
-        <StatsCard 
-          icon={<ImageIcon className="h-5 w-5 text-white" />} 
-          title="Photos" 
-          count={stats.galleryCount} 
-          loading={stats.loading}
-          color="bg-purple-500"
-          path="/admin/gallery"
-        />
-        
-        <StatsCard 
-          icon={<Users className="h-5 w-5 text-white" />} 
-          title="Utilisateurs" 
-          count={stats.usersCount} 
-          loading={stats.loading}
-          color="bg-green-500"
-          path="/admin/users"
-        />
+        {/* Stats section */}
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-orange-500" />
+              Vue d'ensemble
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            <StatsCard 
+              icon={<FileText className="h-6 w-6" />} 
+              title="Articles" 
+              count={stats.articlesCount} 
+              loading={stats.loading}
+              color="bg-blue-500"
+              path="/admin/articles"
+              delay={0.1}
+            />
+            
+            <StatsCard 
+              icon={<CalendarDays className="h-6 w-6" />} 
+              title="Événements" 
+              count={stats.eventsCount} 
+              loading={stats.loading}
+              color="bg-orange-500"
+              path="/admin/events"
+              delay={0.2}
+            />
+            
+            <StatsCard 
+              icon={<ImageIcon className="h-6 w-6" />} 
+              title="Photos" 
+              count={stats.galleryCount} 
+              loading={stats.loading}
+              color="bg-purple-500"
+              path="/admin/gallery"
+              delay={0.3}
+            />
+            
+            <StatsCard 
+              icon={<Users className="h-6 w-6" />} 
+              title="Utilisateurs" 
+              count={stats.usersCount} 
+              loading={stats.loading}
+              color="bg-green-500"
+              path="/admin/users"
+              delay={0.4}
+            />
 
-        <StatsCard 
-          icon={<MessageSquare className="h-5 w-5 text-white" />} 
-          title="Tickets" 
-          count={stats.ticketsCount} 
-          loading={stats.loading}
-          color="bg-red-500"
-          path="/admin/tickets"
-        />
+            <StatsCard 
+              icon={<MessageSquare className="h-6 w-6" />} 
+              title="Tickets" 
+              count={stats.ticketsCount} 
+              loading={stats.loading}
+              color="bg-red-500"
+              path="/admin/tickets"
+              delay={0.5}
+            />
 
-        <StatsCard 
-          icon={<Heart className="h-5 w-5 text-white" />} 
-          title="Partenaires" 
-          count={stats.partnersCount} 
-          loading={stats.loading}
-          color="bg-pink-500"
-          path="/admin/partners"
-        />
-      </div>
+            <StatsCard 
+              icon={<Heart className="h-6 w-6" />} 
+              title="Partenaires" 
+              count={stats.partnersCount} 
+              loading={stats.loading}
+              color="bg-pink-500"
+              path="/admin/partners"
+              delay={0.6}
+            />
+          </div>
+        </div>
 
-      {/* Quick Actions */}
-      <h3 className="text-lg font-medium text-gray-800 mb-4">Actions rapides</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <QuickActionCard 
-          icon={<FileText className="h-5 w-5 text-blue-500" />} 
-          title="Créer un article" 
-          path="/admin/articles"
-        />
-        
-        <QuickActionCard 
-          icon={<CalendarDays className="h-5 w-5 text-orange" />} 
-          title="Planifier un événement" 
-          path="/admin/events"
-        />
-        
-        <QuickActionCard 
-          icon={<ImageIcon className="h-5 w-5 text-purple-500" />} 
-          title="Ajouter des photos" 
-          path="/admin/gallery"
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Quick Actions */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="lg:col-span-1 space-y-6"
+          >
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Plus className="w-5 h-5 text-orange-500" />
+              Actions rapides
+            </h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+              <QuickActionCard 
+                icon={<FileText className="h-5 w-5 text-blue-600" />} 
+                title="Créer un article" 
+                path="/admin/articles"
+                color="bg-blue-500"
+              />
+              
+              <QuickActionCard 
+                icon={<CalendarDays className="h-5 w-5 text-orange-600" />} 
+                title="Planifier un événement" 
+                path="/admin/events"
+                color="bg-orange-500"
+              />
+              
+              <QuickActionCard 
+                icon={<ImageIcon className="h-5 w-5 text-purple-600" />} 
+                title="Ajouter des photos" 
+                path="/admin/gallery"
+                color="bg-purple-500"
+              />
 
-        <QuickActionCard 
-          icon={<Heart className="h-5 w-5 text-pink-500" />} 
-          title="Gérer les partenaires" 
-          path="/admin/partners"
-        />
+              <QuickActionCard 
+                icon={<Heart className="h-5 w-5 text-pink-600" />} 
+                title="Gérer les partenaires" 
+                path="/admin/partners"
+                color="bg-pink-500"
+              />
 
-        <QuickActionCard 
-          icon={<MessageSquare className="h-5 w-5 text-red-500" />} 
-          title="Voir les tickets" 
-          path="/admin/tickets"
-        />
-      </div>
+              <QuickActionCard 
+                icon={<MessageSquare className="h-5 w-5 text-red-600" />} 
+                title="Voir les tickets" 
+                path="/admin/tickets"
+                color="bg-red-500"
+              />
+            </div>
+          </motion.div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Recent Articles */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Articles récents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentActivity.loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center">
-                    <Skeleton className="h-12 w-12 rounded mr-3" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
+          {/* Recent Activity */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="lg:col-span-2 space-y-6"
+          >
+            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-orange-500" />
+              Activité récente
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Recent Articles */}
+              <Card className="border-none shadow-md bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-3 border-b border-gray-100">
+                  <CardTitle className="text-lg font-semibold flex items-center justify-between">
+                    Articles récents
+                    <Link to="/admin/articles" className="text-xs font-normal text-blue-600 hover:underline">Voir tout</Link>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {recentActivity.loading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-lg" />
+                          <div className="space-y-2 flex-1">
+                            <Skeleton className="h-3 w-full" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : recentActivity.articles.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                Aucun article créé pour le moment
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentActivity.articles.map((article: any) => (
-                  <div 
-                    key={article.id} 
-                    className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <div 
-                      className="h-12 w-12 bg-cover bg-center rounded mr-3 flex-shrink-0"
-                      style={{ backgroundImage: `url(${article.image})` }}
-                    />
-                    <div>
-                      <h4 className="font-medium text-gray-900 line-clamp-1">{article.title}</h4>
-                      <p className="text-sm text-gray-500">
-                        {new Date(article.created_at).toLocaleDateString()}
-                      </p>
+                  ) : recentActivity.articles.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      Aucun article récent
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Link 
-              to="/admin/articles" 
-              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              Voir tous les articles
-              <ArrowUpRight className="h-3 w-3 ml-1" />
-            </Link>
-          </CardFooter>
-        </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {recentActivity.articles.map((article: any) => (
+                        <div key={article.id} className="flex items-start gap-3 group">
+                          <div 
+                            className="h-10 w-10 bg-cover bg-center rounded-lg flex-shrink-0 shadow-sm"
+                            style={{ backgroundImage: `url(${article.image})` }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                              {article.title}
+                            </h4>
+                            <p className="text-xs text-gray-500">
+                              {new Date(article.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-        {/* Recent Events */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Événements récents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recentActivity.loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center">
-                    <Skeleton className="h-12 w-12 rounded mr-3" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
+              {/* Recent Events */}
+              <Card className="border-none shadow-md bg-white/80 backdrop-blur-sm">
+                <CardHeader className="pb-3 border-b border-gray-100">
+                  <CardTitle className="text-lg font-semibold flex items-center justify-between">
+                    Événements récents
+                    <Link to="/admin/events" className="text-xs font-normal text-orange-600 hover:underline">Voir tout</Link>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {recentActivity.loading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-lg" />
+                          <div className="space-y-2 flex-1">
+                            <Skeleton className="h-3 w-full" />
+                            <Skeleton className="h-3 w-1/2" />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : recentActivity.events.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                Aucun événement créé pour le moment
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentActivity.events.map((event: any) => (
-                  <div 
-                    key={event.id} 
-                    className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <div 
-                      className="h-12 w-12 bg-cover bg-center rounded mr-3 flex-shrink-0"
-                      style={{ backgroundImage: `url(${event.image})` }}
-                    />
-                    <div>
-                      <h4 className="font-medium text-gray-900 line-clamp-1">{event.title}</h4>
-                      <p className="text-sm text-gray-500">
-                        {event.date} · {event.time}
-                      </p>
+                  ) : recentActivity.events.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 text-sm">
+                      Aucun événement récent
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Link 
-              to="/admin/events" 
-              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              Voir tous les événements
-              <ArrowUpRight className="h-3 w-3 ml-1" />
-            </Link>
-          </CardFooter>
-        </Card>
-
-        {/* Recent Partners */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Partenaires récents</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats.loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center">
-                    <Skeleton className="h-12 w-12 rounded mr-3" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
+                  ) : (
+                    <div className="space-y-4">
+                      {recentActivity.events.map((event: any) => (
+                        <div key={event.id} className="flex items-start gap-3 group">
+                          <div 
+                            className="h-10 w-10 bg-cover bg-center rounded-lg flex-shrink-0 shadow-sm"
+                            style={{ backgroundImage: `url(${event.image})` }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-medium text-gray-900 truncate group-hover:text-orange-600 transition-colors">
+                              {event.title}
+                            </h4>
+                            <p className="text-xs text-gray-500">
+                              {event.date}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : recentPartners.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                Aucun partenaire ajouté pour le moment
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentPartners.map((partner: any) => (
-                  <div 
-                    key={partner.id} 
-                    className="flex items-start p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                  >
-                    <div 
-                      className="h-12 w-12 bg-cover bg-center rounded mr-3 flex-shrink-0"
-                      style={{ backgroundImage: `url(${partner.logo})` }}
-                    />
-                    <div>
-                      <h4 className="font-medium text-gray-900 line-clamp-1">{partner.name}</h4>
-                      <p className="text-sm text-gray-500">
-                        {partner.type}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter>
-            <Link 
-              to="/admin/partners" 
-              className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-            >
-              Voir tous les partenaires
-              <ArrowUpRight className="h-3 w-3 ml-1" />
-            </Link>
-          </CardFooter>
-        </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </AdminLayout>
   );

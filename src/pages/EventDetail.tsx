@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, MapPin, Clock, ArrowLeft, ExternalLink } from 'lucide-react';
+import { CalendarDays, MapPin, Clock, ArrowLeft, Ticket, Share2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Tables } from '@/db/types';
@@ -11,6 +11,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import useSEO from '@/hooks/useSEO';
 import { generateEventStructuredData } from '@/lib/seo';
+import { motion } from 'framer-motion';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const EventDetail = () => {
   const { slug } = useParams();
@@ -33,12 +35,12 @@ const EventDetail = () => {
 
   // SEO Configuration
   useSEO({
-    title: event ? `${event.title} - LOOM` : 'Événement - LOOM',
-    description: event?.description || 'Découvrez cet événement de LOOM - Les Ours Occitanie Méditerranée',
-    keywords: ['LOOM', 'Bears', 'événement', 'communauté', event?.location || ''].filter(Boolean),
+    title: event ? `${event.title} - Événement LOOM` : 'Événement - LOOM',
+    description: event?.description?.substring(0, 160) || 'Découvrez cet événement de LOOM - Les Ours Occitanie Méditerranée',
+    keywords: ['LOOM', 'Bears', 'événement', 'rencontre', 'communauté'],
     image: event?.image,
-    type: 'article',
-    publishedTime: event?.date,
+    type: 'website',
+    publishedTime: event?.created_at,
     author: 'LOOM'
   });
 
@@ -65,16 +67,23 @@ const EventDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-tan/10">
+      <div className="flex flex-col min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex-1 container mx-auto px-4 py-24">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div className="h-96 bg-gray-200 rounded-lg mb-8"></div>
-            <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div className="flex-1 container mx-auto px-4 py-32">
+          <div className="max-w-4xl mx-auto space-y-8">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-[400px] w-full rounded-2xl" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-4">
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+              <div className="lg:col-span-1">
+                <Skeleton className="h-64 w-full rounded-xl" />
+              </div>
+            </div>
           </div>
         </div>
         <Footer />
@@ -86,72 +95,157 @@ const EventDetail = () => {
     return null;
   }
 
+  const formattedDate = new Date(event.date).toLocaleDateString('fr-FR', { 
+    weekday: 'long',
+    day: 'numeric', 
+    month: 'long', 
+    year: 'numeric' 
+  });
+
   return (
-    <div className="flex flex-col min-h-screen bg-tan/10">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="flex-1 container mx-auto px-4 py-24">
-        <button 
-          className="inline-flex items-center text-brown hover:text-brown-dark mb-8"
-          onClick={() => navigate('/events')}
-        >
-          <ArrowLeft size={18} className="mr-1" />
-          Retour aux événements
-        </button>
+      {/* Hero with Background Image Blur */}
+      <div className="relative h-[60vh] min-h-[500px] flex items-end pb-12 overflow-hidden">
+        <div className="absolute inset-0">
+          <img 
+            src={event.image} 
+            alt={event.title} 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+        </div>
         
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">{event.title}</h1>
-          
-          <div className="flex flex-col md:flex-row gap-8 mb-8 items-start">
-            <div className="md:w-[70%] w-full">
-              <div className="relative w-full aspect-[9/16] bg-white rounded-xl shadow-md overflow-hidden flex items-center justify-center">
-                <img 
-                  src={event.image} 
-                  alt={event.title} 
-                  className="max-w-full max-h-full object-contain"
-                />
-              </div>
+        <div className="container mx-auto px-4 relative z-10 text-white">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Button 
+              variant="ghost" 
+              className="text-white hover:bg-white/20 hover:text-white mb-8 -ml-4" 
+              onClick={() => navigate('/events')}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Retour aux événements
+            </Button>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 leading-tight max-w-4xl">
+              {event.title}
+            </h1>
+            
+            <div className="flex flex-wrap gap-6 text-lg md:text-xl font-medium text-white/90">
+              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+                <CalendarDays className="w-5 h-5" /> 
+                <span className="capitalize">{formattedDate}</span>
+              </span>
+              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+                <MapPin className="w-5 h-5" /> 
+                {event.location}
+              </span>
             </div>
-            <div className="md:w-[30%] w-full flex flex-col justify-start bg-white rounded-xl shadow-md p-4 gap-4 min-h-[120px] max-w-xs mx-auto md:mx-0 mt-4 md:mt-0">
-              <div className="flex items-center text-gray-600">
-                <CalendarDays size={20} className="mr-2 text-brown" />
-                <span>{new Date(event.date).toLocaleDateString('fr-FR', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <Clock size={20} className="mr-2 text-brown" />
-                <span>{event.time}</span>
-              </div>
-              <div className="flex items-center text-gray-600">
-                <MapPin size={20} className="mr-2 text-brown" />
-                <span>{event.location}</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="prose prose-neutral max-w-none mb-8 text-lg whitespace-pre-line">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
-          </div>
-          
-          {event.registration_url && (
-            <div className="flex justify-center">
-              <Button 
-                size="lg"
-                onClick={() => window.open(event.registration_url, '_blank')}
-                className="flex items-center text-white bg-brown hover:bg-brown-dark"
-              >
-                S'inscrire à l'événement
-                <ExternalLink size={18} className="ml-2" />
-              </Button>
-            </div>
-          )}
+          </motion.div>
         </div>
       </div>
-      
+
+      <div className="container mx-auto px-4 py-12 -mt-20 relative z-20">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100"
+            >
+              <h2 className="text-2xl font-bold mb-8 text-gray-900 border-b pb-4">À propos de l'événement</h2>
+              <div className="prose prose-lg prose-orange max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Sidebar Info */}
+          <div className="lg:col-span-1">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="space-y-6 sticky top-24"
+            >
+              {/* Details Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-6 text-lg">Détails pratiques</h3>
+                <ul className="space-y-6">
+                  <li className="flex items-start gap-4">
+                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
+                      <CalendarDays className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Date</p>
+                      <p className="text-gray-600 capitalize">{formattedDate}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
+                      <Clock className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Heure</p>
+                      <p className="text-gray-600">{event.time}</p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
+                      <MapPin className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Lieu</p>
+                      <p className="text-gray-600">{event.location}</p>
+                    </div>
+                  </li>
+                </ul>
+
+                <div className="mt-8 pt-6 border-t border-gray-100">
+                  {event.registration_url ? (
+                    <Button className="w-full bg-brown hover:bg-brown-light text-white h-12 text-lg shadow-lg shadow-brown/20" asChild>
+                      <a href={event.registration_url} target="_blank" rel="noopener noreferrer">
+                        <Ticket className="mr-2 h-5 w-5" /> S'inscrire
+                      </a>
+                    </Button>
+                  ) : (
+                    <div className="text-center p-4 bg-gray-50 rounded-xl text-gray-500 text-sm">
+                      Aucune inscription requise pour cet événement
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Share Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Share2 className="w-5 h-5 text-orange" />
+                  Partager
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" className="w-full" onClick={() => {
+                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
+                  }}>
+                    Facebook
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                  }}>
+                    Copier
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
       <Footer />
     </div>
   );
