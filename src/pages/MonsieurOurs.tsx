@@ -28,6 +28,7 @@ const MonsieurOurs = () => {
     { year: '2022', title: 'Pierre Marty Cardin', description: 'Monsieur Ours élu en 2022' },
     { year: '2023', title: 'Lucas Milani', description: 'Monsieur Ours élu en 2023' },
     { year: '2024', title: 'Antonio Gabriel', description: 'Monsieur Ours élu en 2024' },
+    { year: '2025', title: 'Sébastien Rosier', description: 'Monsieur Ours élu en 2025' },
   ];
 
   const galleryImages: Record<string, { url: string; alt: string } | undefined> = {
@@ -36,6 +37,7 @@ const MonsieurOurs = () => {
     '2022': { url: 'https://mcfiles.inferi.fr/api/public/dl/N7p9JwUI?inline=true', alt: 'Pierre Marty Cardin' },
     '2023': { url: 'https://mcfiles.inferi.fr/api/public/dl/PqPgvVpz?inline=true', alt: 'Lucas Milani' },
     '2024': { url: 'https://mcfiles.inferi.fr/api/public/dl/_Hf8VSw_?inline=true', alt: 'Antonio Gabriel' },
+    '2025': { url: 'https://mcfiles.inferi.fr/api/public/dl/X3BHZTJW?inline=true', alt: 'Sébastien Rosier' },
   };
 
   const handleTimelineClick = (year: string) => {
