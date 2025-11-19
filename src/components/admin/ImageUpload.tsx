@@ -23,20 +23,24 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       setUploading(true);
       setProgress(0);
 
-      // Upload sur Supabase storage (hors galerie)
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${folder}/${fileName}`;
-      const { error: uploadError } = await db.storage
-        .from('images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = db.storage
-        .from('images')
-        .getPublicUrl(filePath);
+      const formData = new FormData();
+      formData.append('files', file);
+      // Use the folder prop as albumId to organize files on the server
+      formData.append('albumId', folder);
+
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      const uploadedItem = data.items[0];
+      const publicUrl = uploadedItem.relativePath;
+      
       onUploadComplete(publicUrl);
       toast.success('Image téléchargée avec succès');
     } catch (error) {

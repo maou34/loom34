@@ -80,16 +80,22 @@ export default function DragDropGallery({ onSuccess }: DragDropGalleryProps) {
 
   const handleImageUpload = async (albumId: string, file: File) => {
     try {
-      const filePath = `${albumId}/${file.name}`;
-      const { error: uploadError } = await db.storage
-        .from('images')
-        .upload(filePath, file);
+      const formData = new FormData();
+      formData.append('files', file);
+      formData.append('albumId', albumId);
 
-      if (uploadError) throw uploadError;
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-      const { data: { publicUrl } } = db.storage
-        .from('images')
-        .getPublicUrl(filePath);
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      const uploadedItem = data.items[0];
+      const publicUrl = uploadedItem.relativePath;
 
       const { error: insertError } = await db
         .from('gallery_images')

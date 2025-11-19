@@ -173,7 +173,7 @@ const Navbar = () => {
               variant="default" 
               className="hidden md:flex bg-brown hover:bg-brown-light text-white rounded-full px-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
             >
-              <Link to="/auth">
+              <Link to="/auth/login">
                 <LogIn className="mr-2 h-4 w-4" />
                 Connexion
               </Link>
@@ -245,7 +245,7 @@ const Navbar = () => {
                   className="pt-4 mt-2 border-t border-gray-100"
                 >
                   <Button asChild className="w-full bg-brown hover:bg-brown-light text-white rounded-xl py-6 shadow-md">
-                    <Link to="/auth" className="flex justify-center items-center gap-2">
+                    <Link to="/auth/login" className="flex justify-center items-center gap-2">
                       <LogIn size={20} />
                       Se connecter
                     </Link>
