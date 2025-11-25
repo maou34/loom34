@@ -47,6 +47,14 @@ function sanitizeSegment(seg) {
     .slice(0, 128) || 'unclassified';
 }
 
+function sanitizeAlbumId(seg) {
+  if (!seg) return 'unclassified';
+  const s = String(seg);
+  const safe = path.basename(s);
+  if (safe === '.' || safe === '..') return 'unclassified';
+  return safe;
+}
+
 async function ensureDir(dir) {
   await fsp.mkdir(dir, { recursive: true });
 }
@@ -70,7 +78,7 @@ async function uniquePath(dir, filename) {
 app.post('/upload', upload.array('files'), async (req, res) => {
   try {
     const albumIdRaw = ((req.query.albumId || req.body?.albumId || '').toString()).trim();
-    const albumSeg = albumIdRaw ? sanitizeSegment(albumIdRaw) : 'unclassified';
+    const albumSeg = albumIdRaw ? sanitizeAlbumId(albumIdRaw) : 'unclassified';
     const targetDir = path.join(ROOT_DIR, albumSeg);
     await ensureDir(targetDir);
 
@@ -140,7 +148,7 @@ app.post('/upload/albums', express.json(), async (req, res) => {
   try {
     const { title } = req.body;
     if (!title) return res.status(400).json({ error: 'Title required' });
-    const safeName = sanitizeSegment(title);
+    const safeName = sanitizeAlbumId(title);
     await ensureDir(path.join(ROOT_DIR, safeName));
     res.json({ id: safeName, title: safeName });
   } catch (err) {
@@ -151,7 +159,7 @@ app.post('/upload/albums', express.json(), async (req, res) => {
 // Delete album
 app.delete('/upload/albums/:id', async (req, res) => {
   try {
-    const safeName = sanitizeSegment(req.params.id);
+    const safeName = sanitizeAlbumId(req.params.id);
     const target = path.join(ROOT_DIR, safeName);
     await fsp.rm(target, { recursive: true, force: true });
     res.json({ success: true });
@@ -163,7 +171,7 @@ app.delete('/upload/albums/:id', async (req, res) => {
 // List images in album
 app.get('/upload/albums/:id/images', async (req, res) => {
   try {
-    const safeName = sanitizeSegment(req.params.id);
+    const safeName = sanitizeAlbumId(req.params.id);
     const target = path.join(ROOT_DIR, safeName);
     
     // Check if dir exists
@@ -194,7 +202,7 @@ app.delete('/upload/images', express.json(), async (req, res) => {
     const { albumId, filename } = req.body;
     if (!albumId || !filename) return res.status(400).json({ error: 'Missing params' });
     
-    const safeAlbum = sanitizeSegment(albumId);
+    const safeAlbum = sanitizeAlbumId(albumId);
     const safeFile = path.basename(filename);
     const target = path.join(ROOT_DIR, safeAlbum, safeFile);
     
