@@ -1,8 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { db } from '@/db/client';
-import { Tables } from "@/db/types";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,28 +29,28 @@ import {
   Folder, 
   FolderOpen, 
   MoreVertical, 
-  Edit, 
   Trash2, 
   Search, 
   Upload, 
-  X,
-  Move,
-  Loader2,
   CheckCircle2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type GalleryAlbum = Tables<'gallery_albums'>;
+import { UPLOAD_URL, getImageUrl } from '@/config';
+
+// Types based on filesystem API
+type GalleryAlbum = {
+  id: string;
+  title: string;
+  cover_image: string | null;
+};
+
 type GalleryImage = {
   id: string;
   image_url: string;
   title: string;
-  description: string;
-  album_id: string | null;
-  created_at: string;
-  updated_at: string;
+  album_id: string;
 };
 
 export default function Gallery() {
@@ -63,7 +61,6 @@ export default function Gallery() {
   
   // State for dialogs
   const [isCreateAlbumOpen, setIsCreateAlbumOpen] = useState(false);
-  const [isEditAlbumOpen, setIsEditAlbumOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isImageDetailsOpen, setIsImageDetailsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -74,37 +71,33 @@ export default function Gallery() {
   const [viewUnclassified, setViewUnclassified] = useState(false);
   
   // Form state
-  const [albumForm, setAlbumForm] = useState({ title: "", description: "" });
-  const [imageForm, setImageForm] = useState({ title: "", description: "", album_id: "" });
+  const [albumForm, setAlbumForm] = useState({ title: "" });
   
   // Upload state
   const [isDropping, setIsDropping] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
-  const UPLOAD_URL = (import.meta as any).env?.VITE_UPLOAD_URL || "";
 
   // --- Queries ---
 
   const { data: albums = [], isLoading: isLoadingAlbums } = useQuery<GalleryAlbum[]>({
     queryKey: ['galleryAlbums'],
     queryFn: async () => {
-      const { data, error } = await db
-        .from('gallery_albums')
-        .select('*')
-        .order('date', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      const res = await fetch(`${UPLOAD_URL}/upload/albums`);
+      if (!res.ok) throw new Error('Failed to fetch albums');
+      return res.json();
     }
   });
 
-  const { data: allImages = [] } = useQuery<GalleryImage[]>({
-    queryKey: ['galleryImages', 'all'],
+  const { data: images = [] } = useQuery<GalleryImage[]>({
+    queryKey: ['galleryImages', selectedAlbum?.id, viewUnclassified],
     queryFn: async () => {
-      const { data, error } = await db
-        .from('gallery_images')
-        .select('*');
-      if (error) throw error;
-      return data || [];
+      const albumId = viewUnclassified ? 'unclassified' : selectedAlbum?.id;
+      if (!albumId) return [];
+      const res = await fetch(`${UPLOAD_URL}/upload/albums/${albumId}/images`);
+      if (!res.ok) throw new Error('Failed to fetch images');
+      return res.json();
     },
+    enabled: !!selectedAlbum || viewUnclassified
   });
 
   // Sync URL with state
@@ -128,57 +121,36 @@ export default function Gallery() {
     }
   }, [searchParams, albums]);
 
-  // Filter images based on selection and search
-  const filteredImages = allImages.filter(img => {
-    const matchesSearch = (img.title?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-    const matchesAlbum = viewUnclassified 
-      ? img.album_id === null 
-      : selectedAlbum 
-        ? img.album_id === selectedAlbum.id 
-        : true; // If no album selected and not unclassified, show all? Or maybe just first album.
-    
-    return matchesSearch && matchesAlbum;
-  });
+  // Filter images based on search
+  const filteredImages = images.filter(img => 
+    (img.title?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  );
 
   // --- Mutations ---
 
   const createAlbumMutation = useMutation({
     mutationFn: async (title: string) => {
-      const { error } = await db.from('gallery_albums').insert({
-        title,
-        description: '',
-        date: new Date().toISOString()
+      const res = await fetch(`${UPLOAD_URL}/upload/albums`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
       });
-      if (error) throw error;
+      if (!res.ok) throw new Error('Failed to create album');
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['galleryAlbums'] });
       setIsCreateAlbumOpen(false);
-      setAlbumForm({ title: "", description: "" });
+      setAlbumForm({ title: "" });
       toast({ title: "Album créé avec succès" });
-    },
-    onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
-  });
-
-  const updateAlbumMutation = useMutation({
-    mutationFn: async (data: { id: string; title: string }) => {
-      const { error } = await db.from('gallery_albums').update({ title: data.title }).eq('id', data.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['galleryAlbums'] });
-      setIsEditAlbumOpen(false);
-      toast({ title: "Album modifié" });
     },
     onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
   });
 
   const deleteAlbumMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Unlink images first
-      await db.from('gallery_images').update({ album_id: null }).eq('album_id', id);
-      const { error } = await db.from('gallery_albums').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`${UPLOAD_URL}/upload/albums/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete album');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['galleryAlbums'] });
@@ -191,26 +163,14 @@ export default function Gallery() {
     onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
   });
 
-  const updateImageMutation = useMutation({
-    mutationFn: async (data: { id: string; title: string; album_id: string | null }) => {
-      const { error } = await db.from('gallery_images').update({
-        title: data.title,
-        album_id: data.album_id
-      }).eq('id', data.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
-      setIsImageDetailsOpen(false);
-      toast({ title: "Image mise à jour" });
-    },
-    onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
-  });
-
   const deleteImageMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await db.from('gallery_images').delete().eq('id', id);
-      if (error) throw error;
+    mutationFn: async (image: GalleryImage) => {
+      const res = await fetch(`${UPLOAD_URL}/upload/images`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ albumId: image.album_id, filename: image.id })
+      });
+      if (!res.ok) throw new Error('Failed to delete image');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
@@ -218,22 +178,6 @@ export default function Gallery() {
       toast({ title: "Image supprimée" });
     },
     onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
-  });
-
-  const addImageByPathMutation = useMutation({
-    mutationFn: async ({ path, albumId, title }: { path: string; albumId: string | null; title: string }) => {
-      const normalized = path.startsWith('/') ? path : `/${path}`;
-      const { error } = await db.from('gallery_images').insert({
-        image_url: normalized,
-        album_id: albumId,
-        title: title || normalized.split('/').pop() || 'Image',
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
-      toast({ title: "Image ajoutée" });
-    }
   });
 
   // --- Handlers ---
@@ -259,7 +203,7 @@ export default function Gallery() {
         if (file.type?.startsWith('image/')) form.append('files', file);
       });
       
-      const albumId = selectedAlbum?.id || '';
+      const albumId = selectedAlbum?.id || 'unclassified';
       const res = await fetch(`${UPLOAD_URL}/upload?albumId=${encodeURIComponent(albumId)}`, {
         method: 'POST',
         body: form,
@@ -267,19 +211,9 @@ export default function Gallery() {
       
       if (!res.ok) throw new Error(`Upload échoué (${res.status})`);
       
-      const json = await res.json().catch(() => ({ items: [] }));
-      const items: Array<{ relativePath: string; filename: string }> = json.items || [];
-      
-      for (const it of items) {
-        const title = (it.filename || '').replace(/\.[^.]+$/, '') || 'Image';
-        await addImageByPathMutation.mutateAsync({ 
-          path: it.relativePath, 
-          albumId: selectedAlbum?.id || null, 
-          title 
-        });
-      }
-      
       setUploadFeedback('Import terminé !');
+      queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
+      
       setTimeout(() => {
         setUploadFeedback(null);
         setIsUploadOpen(false);
@@ -294,11 +228,6 @@ export default function Gallery() {
 
   const openImageDetails = (img: GalleryImage) => {
     setSelectedImage(img);
-    setImageForm({
-      title: img.title || "",
-      description: img.description || "",
-      album_id: img.album_id || "unclassified"
-    });
     setIsImageDetailsOpen(true);
   };
 
@@ -328,9 +257,6 @@ export default function Gallery() {
               >
                 <FolderOpen className="w-4 h-4 mr-2 text-orange-500" />
                 Non classées
-                <Badge variant="secondary" className="ml-auto text-xs">
-                  {allImages.filter(i => !i.album_id).length}
-                </Badge>
               </Button>
 
               <Separator className="my-2" />
@@ -354,9 +280,6 @@ export default function Gallery() {
                     >
                       <Folder className={cn("w-4 h-4 mr-2", selectedAlbum?.id === album.id ? "text-orange-600" : "text-gray-400")} />
                       <span className="truncate">{album.title}</span>
-                      <Badge variant="secondary" className="ml-auto text-xs">
-                        {allImages.filter(i => i.album_id === album.id).length}
-                      </Badge>
                     </Button>
                     
                     <DropdownMenu>
@@ -369,14 +292,6 @@ export default function Gallery() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedAlbum(album);
-                          setAlbumForm({ title: album.title, description: "" });
-                          setIsEditAlbumOpen(true);
-                        }}>
-                          <Edit className="w-4 h-4 mr-2" /> Renommer
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-red-600"
                           onClick={() => {
@@ -446,7 +361,7 @@ export default function Gallery() {
                     onClick={() => openImageDetails(img)}
                   >
                     <img 
-                      src={img.image_url} 
+                      src={getImageUrl(img.image_url)} 
                       alt={img.title} 
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
@@ -492,34 +407,6 @@ export default function Gallery() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Album Dialog */}
-      <Dialog open={isEditAlbumOpen} onOpenChange={setIsEditAlbumOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Renommer l'album</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nouveau nom</Label>
-              <Input 
-                value={albumForm.title}
-                onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditAlbumOpen(false)}>Annuler</Button>
-            <Button 
-              className="bg-orange-600 hover:bg-orange-700"
-              onClick={() => selectedAlbum && updateAlbumMutation.mutate({ id: selectedAlbum.id, title: albumForm.title })}
-              disabled={!albumForm.title.trim()}
-            >
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Album Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -528,7 +415,7 @@ export default function Gallery() {
           </DialogHeader>
           <p className="text-gray-600">
             L'album <strong>{selectedAlbum?.title}</strong> sera supprimé. 
-            Les photos qu'il contient ne seront pas effacées mais déplacées dans "Non classées".
+            Les photos seront définitivement effacées.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Annuler</Button>
@@ -590,7 +477,7 @@ export default function Gallery() {
           <div className="flex-1 bg-black flex items-center justify-center p-4 relative">
             {selectedImage && (
               <img 
-                src={selectedImage.image_url} 
+                src={getImageUrl(selectedImage.image_url)} 
                 alt={selectedImage.title} 
                 className="max-w-full max-h-full object-contain"
               />
@@ -603,49 +490,20 @@ export default function Gallery() {
             
             <div className="space-y-4 flex-1">
               <div className="space-y-2">
-                <Label>Titre</Label>
-                <Input 
-                  value={imageForm.title}
-                  onChange={(e) => setImageForm({ ...imageForm, title: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Album</Label>
-                <Select 
-                  value={imageForm.album_id} 
-                  onValueChange={(val) => setImageForm({ ...imageForm, album_id: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir un album" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unclassified">Non classées</SelectItem>
-                    {albums.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Nom du fichier</Label>
+                <div className="p-2 bg-gray-100 rounded text-sm break-all">
+                  {selectedImage?.title}
+                </div>
               </div>
             </div>
 
             <div className="pt-6 mt-auto space-y-2">
               <Button 
-                className="w-full bg-orange-600 hover:bg-orange-700"
-                onClick={() => selectedImage && updateImageMutation.mutate({
-                  id: selectedImage.id,
-                  title: imageForm.title,
-                  album_id: imageForm.album_id === "unclassified" ? null : imageForm.album_id
-                })}
-              >
-                Enregistrer
-              </Button>
-              <Button 
                 variant="destructive" 
                 className="w-full"
                 onClick={() => {
                   if (confirm("Supprimer cette image ?")) {
-                    selectedImage && deleteImageMutation.mutate(selectedImage.id);
+                    selectedImage && deleteImageMutation.mutate(selectedImage);
                   }
                 }}
               >

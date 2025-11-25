@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
 import { Search, ImageIcon, Camera, ArrowRight } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Tables } from '@/db/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
@@ -13,7 +11,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useSEO from '@/hooks/useSEO';
 
-type GalleryAlbum = Tables<'gallery_albums'>;
+import { UPLOAD_URL, getImageUrl } from '@/config';
 
 const Gallery = () => {
   // SEO Configuration
@@ -27,38 +25,17 @@ const Gallery = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch albums
-  const { data: albums = [], isLoading: isLoadingAlbums, error: albumsError } = useQuery({
+  const { data: albums = [], isLoading, error } = useQuery({
     queryKey: ['albums'],
     queryFn: async () => {
-      const { data, error } = await db
-        .from('gallery_albums')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (error) throw new Error(error.message);
-      return data || [];
+      const res = await fetch(`${UPLOAD_URL}/upload/albums`);
+      if (!res.ok) throw new Error('Failed to fetch albums');
+      return res.json();
     }
   });
-
-  // Fetch images (needed for covers)
-  const { data: images = [], isLoading: isLoadingImages, error: imagesError } = useQuery({
-    queryKey: ['images'],
-    queryFn: async () => {
-      const { data, error } = await db
-        .from('gallery_images')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (error) throw new Error(error.message);
-      return data || [];
-    }
-  });
-
-  const isLoading = isLoadingAlbums || isLoadingImages;
-  const error = albumsError || imagesError;
 
   // Filter albums based on search
-  const filteredAlbums = albums.filter(album => {
+  const filteredAlbums = albums.filter((album: any) => {
     const matchesSearch = searchQuery === '' || 
       album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (album.description && album.description.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -168,12 +145,8 @@ const Gallery = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredAlbums.map((album, index) => {
-                const albumImages = images.filter(img => img.album_id === album.id);
-                let cover = album.cover_image;
-                if (!cover && albumImages.length > 0) {
-                  cover = albumImages[albumImages.length - 1].image_url;
-                }
+              {filteredAlbums.map((album: any, index: number) => {
+                let cover = album.cover_image ? getImageUrl(album.cover_image) : null;
                 
                 // Image d'un petit ours mignon par défaut
                 const CUTE_BEAR_IMAGE = 'https://www.shutterstock.com/image-vector/bears-face-symbol-logo-design-600nw-2162265087.jpg';
@@ -211,14 +184,16 @@ const Gallery = () => {
                           <div className="absolute bottom-4 left-4 right-4 text-white">
                             <div className="inline-flex items-center px-2 py-1 rounded-md bg-black/30 backdrop-blur-sm text-xs font-medium mb-2 border border-white/10">
                               <ImageIcon className="w-3 h-3 mr-1" />
-                              {albumImages.length} photos
+                              {album.image_count || 0} photos
                             </div>
                           </div>
                         </div>
                         
                         <div className="p-6 flex-1 flex flex-col">
                           <div className="text-sm text-orange font-medium mb-2">
-                            {format(new Date(album.date), 'd MMMM yyyy', { locale: fr })}
+                            {album.date && !isNaN(new Date(album.date).getTime()) 
+                              ? format(new Date(album.date), 'd MMMM yyyy', { locale: fr })
+                              : ''}
                           </div>
                           <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange transition-colors line-clamp-1">
                             {album.title}

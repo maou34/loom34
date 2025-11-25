@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { db } from '@/db/client';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { X, ArrowLeft, CalendarDays, ImageIcon, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Tables } from '@/db/types';
 import PhotoAlbum from 'react-photo-album';
 import "react-photo-album/rows.css";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,22 +13,23 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import useSEO from '@/hooks/useSEO';
 
+import { UPLOAD_URL, getImageUrl } from '@/config';
+
 const AlbumDetail = () => {
   const { albumId } = useParams();
   const navigate = useNavigate();
-  const [selectedImage, setSelectedImage] = useState<Tables<'gallery_images'> | null>(null);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
 
   // Fetch album
   const { data: album, isLoading: isLoadingAlbum } = useQuery({
     queryKey: ['galleryAlbum', albumId],
     queryFn: async () => {
-      const { data, error } = await db
-        .from('gallery_albums')
-        .select('*')
-        .eq('id', albumId)
-        .single();
-      if (error) throw error;
-      return data as Tables<'gallery_albums'>;
+      const res = await fetch(`${UPLOAD_URL}/upload/albums`);
+      if (!res.ok) throw new Error('Failed to fetch albums');
+      const albums = await res.json();
+      const found = albums.find((a: any) => a.id === albumId);
+      if (!found) throw new Error('Album not found');
+      return found;
     },
     enabled: !!albumId
   });
@@ -39,13 +38,9 @@ const AlbumDetail = () => {
   const { data: images = [], isLoading: isLoadingImages } = useQuery({
     queryKey: ['galleryImages', albumId],
     queryFn: async () => {
-      const { data, error } = await db
-        .from('gallery_images')
-        .select('*')
-        .eq('album_id', albumId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return data || [];
+      const res = await fetch(`${UPLOAD_URL}/upload/albums/${albumId}/images`);
+      if (!res.ok) throw new Error('Failed to fetch images');
+      return res.json();
     },
     enabled: !!albumId
   });
@@ -54,7 +49,7 @@ const AlbumDetail = () => {
   useSEO({
     title: album ? `${album.title} - Galerie LOOM` : 'Album - LOOM',
     description: album?.description || 'Album photo de la communauté LOOM',
-    image: album?.cover_image,
+    image: album?.cover_image ? getImageUrl(album.cover_image) : undefined,
     type: 'article'
   });
 
@@ -91,9 +86,9 @@ const AlbumDetail = () => {
   }
 
   // Determine cover image
-  let coverImage = album.cover_image;
+  let coverImage = album.cover_image ? getImageUrl(album.cover_image) : null;
   if (!coverImage && images.length > 0) {
-    coverImage = images[0].image_url;
+    coverImage = getImageUrl(images[0].image_url);
   }
   const CUTE_BEAR_IMAGE = 'https://images.unsplash.com/photo-1585672913188-927d727d65b8?q=80&w=800&auto=format&fit=crop';
   if (!coverImage) {
@@ -102,7 +97,7 @@ const AlbumDetail = () => {
 
   // Transform images for React Photo Album
   const photos = images.map((image, index) => ({
-    src: image.image_url,
+    src: getImageUrl(image.image_url),
     width: 800, // Idealement, stocker width/height en DB
     height: 600,
     alt: image.title || `Photo ${index + 1}`,

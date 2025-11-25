@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { UPLOAD_URL } from '@/config';
 
 export async function generateSitemap(): Promise<string> {
   const baseUrl = 'https://loom-lgbt.fr';
@@ -54,20 +55,21 @@ export async function generateSitemap(): Promise<string> {
     }
 
     // Récupérer les albums de galerie
-    const { data: albums } = await db
-      .from('gallery_albums')
-      .select('id, updated_at, created_at')
-      .order('created_at', { ascending: false });
-    
-    if (albums) {
-      dynamicPages = dynamicPages.concat(
-        albums.map(album => ({
-          url: `/gallery/${album.id}`,
-          priority: '0.7',
-          changefreq: 'monthly',
-          lastmod: album.updated_at ? new Date(album.updated_at).toISOString().split('T')[0] : new Date(album.created_at).toISOString().split('T')[0]
-        }))
-      );
+    try {
+      const res = await fetch(`${UPLOAD_URL}/upload/albums`);
+      if (res.ok) {
+        const albums = await res.json();
+        dynamicPages = dynamicPages.concat(
+          albums.map((album: any) => ({
+            url: `/gallery/${album.id}`,
+            priority: '0.7',
+            changefreq: 'monthly',
+            lastmod: currentDate
+          }))
+        );
+      }
+    } catch (e) {
+      console.warn('Could not fetch gallery albums for sitemap', e);
     }
   } catch (error) {
     console.error('Erreur lors de la génération de la sitemap:', error);

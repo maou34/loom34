@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
+import { UPLOAD_URL } from '@/config';
+
 type GalleryAlbum = Tables<'gallery_albums'>;
 type GalleryImage = Tables<'gallery_images'>;
 
@@ -84,7 +86,7 @@ export default function DragDropGallery({ onSuccess }: DragDropGalleryProps) {
       formData.append('files', file);
       formData.append('albumId', albumId);
 
-      const response = await fetch('/upload', {
+      const response = await fetch(`${UPLOAD_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -105,6 +107,7 @@ export default function DragDropGallery({ onSuccess }: DragDropGalleryProps) {
           image_url: publicUrl,
           title: file.name,
           description: '',
+          category: 'gallery',
           order: images.length,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

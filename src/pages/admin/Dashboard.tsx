@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { UPLOAD_URL } from '@/config';
 
 // Stats card component
 const StatsCard = ({ 
@@ -134,9 +135,16 @@ export default function AdminDashboard() {
           .select('*', { count: 'exact', head: true });
 
         // Fetch gallery count
-        const { count: galleryCount, error: galleryError } = await db
-          .from('gallery_images')
-          .select('*', { count: 'exact', head: true });
+        let galleryCount = 0;
+        try {
+          const res = await fetch(`${UPLOAD_URL}/upload/albums`);
+          if (res.ok) {
+            const albums = await res.json();
+            galleryCount = albums.reduce((acc: number, alb: any) => acc + (alb.image_count || 0), 0);
+          }
+        } catch (e) {
+          console.error('Failed to fetch gallery stats', e);
+        }
 
         // Fetch users count
         const { count: usersCount, error: usersError } = await db
@@ -150,7 +158,6 @@ export default function AdminDashboard() {
 
         if (articlesError) console.error("Error fetching articles:", articlesError);
         if (eventsError) console.error("Error fetching events:", eventsError);
-        if (galleryError) console.error("Error fetching gallery:", galleryError);
         if (usersError) console.error("Error fetching users:", usersError);
         if (partnersError) console.error("Error fetching partners:", partnersError);
 

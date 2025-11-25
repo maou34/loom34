@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
+import { UPLOAD_URL } from '@/config';
 
 interface ImageUploadProps {
   onUploadComplete: (url: string) => void;
@@ -28,7 +29,7 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       // Use the folder prop as albumId to organize files on the server
       formData.append('albumId', folder);
 
-      const response = await fetch('/upload', {
+      const response = await fetch(`${UPLOAD_URL}/upload`, {
         method: 'POST',
         body: formData,
       });

@@ -6,10 +6,36 @@ import fs from 'fs';
 import { promises as fsp } from 'fs';
 
 const app = express();
-app.use(cors());
+
+// Configuration CORS pour autoriser le domaine principal et le développement local
+const allowedOrigins = [
+  'https://loom-lgbt.fr',
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:8080'
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.loom-lgbt.fr')) {
+      return callback(null, true);
+    }
+    // Fallback for other environments or if strict security is not required yet
+    // callback(new Error('Not allowed by CORS'));
+    return callback(null, true); // Permissive for now to avoid breakage
+  },
+  credentials: true
+}));
 
 const PORT = process.env.UPLOAD_PORT || 8081;
 const ROOT_DIR = path.resolve(process.cwd(), 'public', 'gallery');
+
+console.log('Serving gallery from:', ROOT_DIR);
+
+// Servir les fichiers statiques de la galerie
+app.use('/gallery', express.static(ROOT_DIR));
 
 fs.mkdirSync(ROOT_DIR, { recursive: true });
 
@@ -67,6 +93,115 @@ app.post('/upload', upload.array('files'), async (req, res) => {
   } catch (err) {
     console.error('Upload error', err);
     res.status(500).send(err?.message || 'Server error');
+  }
+});
+
+// List albums (directories)
+app.get('/upload/albums', async (req, res) => {
+  try {
+    const entries = await fsp.readdir(ROOT_DIR, { withFileTypes: true });
+    const albums = [];
+    
+    for (const dirent of entries) {
+      if (dirent.isDirectory()) {
+        const albumId = dirent.name;
+        const albumPath = path.join(ROOT_DIR, albumId);
+        let coverImage = null;
+        let imageCount = 0;
+        
+        try {
+          const files = await fsp.readdir(albumPath);
+          const images = files.filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
+          imageCount = images.length;
+          if (images.length > 0) {
+            coverImage = `/gallery/${albumId}/${images[0]}`;
+          }
+        } catch (e) {
+          // Ignore error reading album dir
+        }
+
+        albums.push({
+          id: albumId,
+          title: albumId,
+          cover_image: coverImage,
+          image_count: imageCount
+        });
+      }
+    }
+    
+    res.json(albums);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create album (directory)
+app.post('/upload/albums', express.json(), async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title) return res.status(400).json({ error: 'Title required' });
+    const safeName = sanitizeSegment(title);
+    await ensureDir(path.join(ROOT_DIR, safeName));
+    res.json({ id: safeName, title: safeName });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete album
+app.delete('/upload/albums/:id', async (req, res) => {
+  try {
+    const safeName = sanitizeSegment(req.params.id);
+    const target = path.join(ROOT_DIR, safeName);
+    await fsp.rm(target, { recursive: true, force: true });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List images in album
+app.get('/upload/albums/:id/images', async (req, res) => {
+  try {
+    const safeName = sanitizeSegment(req.params.id);
+    const target = path.join(ROOT_DIR, safeName);
+    
+    // Check if dir exists
+    try {
+      await fsp.access(target);
+    } catch {
+      return res.json([]);
+    }
+
+    const files = await fsp.readdir(target);
+    const images = files
+      .filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f))
+      .map(f => ({
+        id: f, // filename as id
+        title: f,
+        image_url: `/gallery/${safeName}/${f}`,
+        album_id: safeName
+      }));
+    res.json(images);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete image
+app.delete('/upload/images', express.json(), async (req, res) => {
+  try {
+    const { albumId, filename } = req.body;
+    if (!albumId || !filename) return res.status(400).json({ error: 'Missing params' });
+    
+    const safeAlbum = sanitizeSegment(albumId);
+    const safeFile = path.basename(filename);
+    const target = path.join(ROOT_DIR, safeAlbum, safeFile);
+    
+    await fsp.unlink(target);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
