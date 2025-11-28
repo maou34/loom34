@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -55,6 +55,7 @@ type GalleryImage = {
 
 export default function Gallery() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -463,7 +464,25 @@ export default function Gallery() {
                 <div className="flex flex-col items-center text-gray-500">
                   <Upload className="w-10 h-10 mb-2" />
                   <p className="font-medium text-gray-900">Glissez vos images ici</p>
-                  <p className="text-sm mt-1">Destination : {selectedAlbum?.title || "Non classées"}</p>
+                  <p className="text-sm mt-1 mb-4">Destination : {selectedAlbum?.title || "Non classées"}</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Parcourir les fichiers
+                  </Button>
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        handleDropFiles(e.target.files);
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
