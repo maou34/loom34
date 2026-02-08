@@ -225,7 +225,7 @@ const Index = () => {
             >
               <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm">
                 <img 
-                  src="/gallery/images/election_2025_vainqueurs.jpg" 
+                  src="/gallery/MONTPELL'BEAR 2025 Samedi soir 28 juin/0.9173911621794534.JPG"
                   alt="Community gathering" 
                   className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
                 />

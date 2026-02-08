@@ -12,16 +12,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 
 const teamMembers = [
-  { name: "Stephane", role: "Président", desc: "Ours fondateur de l'association.", img: "https://mcfiles.inferi.fr/api/public/dl/k9Janer6?inline=true" },
-  { name: "Jean-Louis", role: "Vice-Président", desc: "Ours fondateur de l'association.", img: "https://mcfiles.inferi.fr/api/public/dl/NQtPsDEF?inline=true" },
-  { name: "Marc", role: "Trésorier", desc: "Ours responsable des bourses.", img: "https://mcfiles.inferi.fr/api/public/dl/MvotYu7L?inline=true" },
-  { name: "Pascal", role: "Secrétaire", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/MoeBJVNs?inline=true" },
-  { name: "Florent", role: "Secrétaire adjoint", desc: "Mais aussi webmaster du site LOOM.", img: "https://mcfiles.inferi.fr/api/public/dl/ZlJxFuwv?inline=true" },
-  { name: "Jean-Luc", role: "Chargé en Relations Publiques", desc: "Ours à l'appel depuis 2019 !", img: "https://mcfiles.inferi.fr/api/public/dl/SCyycrc6?inline=true" },
-  { name: "Franck", role: "Chargé de communications", desc: "Un lover des Ours.", img: "https://mcfiles.inferi.fr/api/public/dl/hH8msW18?inline=true" },
-  { name: "Pierre", role: "Chargé de communications adjoint - Insta publisher", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/GcO8vG8l?inline=true" },
-  { name: "Henri", role: "Monsieur Culture", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/hb_-0wLM?inline=true" },
-  { name: "Étienne", role: "Administrateur", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/PIZdu2pA?inline=true" },
+  { name: "Stephane", role: "Président", desc: "Ours fondateur de l'association.", img: "/gallery/images/stephane.jpg" },
+  { name: "Jean-Louis", role: "Vice-Président", desc: "Ours fondateur de l'association.", img: "/gallery/images/jean-louis.jpg" },
+  { name: "Marc", role: "Trésorier", desc: "Ours responsable des bourses.", img: "/gallery/images/marc.jpg" },
+  { name: "Pascal", role: "Secrétaire", desc: "X", img: "/gallery/images/pascal.jpg" },
+  { name: "Florent", role: "Secrétaire adjoint", desc: "Mais aussi webmaster du site LOOM.", img: "/gallery/images/florent.jpg" },
+  { name: "Jean-Luc", role: "Chargé en Relations Publiques", desc: "Ours à l'appel depuis 2019 !", img: "/gallery/images/jean-luc.jpg" },
+  { name: "Franck", role: "Chargé de communications", desc: "Un lover des Ours.", img: "/gallery/images/franck.jpg" },
+  { name: "Pierre", role: "Chargé de communications adjoint - Insta publisher", desc: "X", img: "/gallery/images/pierre.jpg" },
+  { name: "Henri", role: "Monsieur Culture", desc: "X", img: "/gallery/images/henri.jpg" },
+  { name: "Étienne", role: "Administrateur", desc: "X", img: "/gallery/images/etienne.jpg" },
 ];
 
 const timelineEvents = [
