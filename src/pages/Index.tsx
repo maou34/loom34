@@ -152,7 +152,7 @@ const Index = () => {
       y: 0,
       opacity: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100
       }
     }
@@ -193,8 +193,8 @@ const Index = () => {
               </div>
               
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900 tracking-tight">
-                Loom <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Occitanie Méditerranée</span>
+                Les <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Ours<br />Occitanie<br />Méditerranée</span>
               </h1>
               
               <p className="text-xl text-gray-600 max-w-xl leading-relaxed">
@@ -294,7 +294,7 @@ const Index = () => {
               ))
             ) : latestArticles.length === 0 ? (
               <div className="col-span-full text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-gray-500">Aucun Article Disponible pour le moment - ERR01</p>
+                <p className="text-gray-500">Aucun Article Disponible pour le moment</p>
               </div>
             ) : (
               latestArticles.map((article) => (
@@ -354,7 +354,7 @@ const Index = () => {
               ))
             ) : upcomingEvents.length === 0 ? (
               <div className="col-span-full text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <p className="text-gray-500">Aucun Évènement Disponible pour le moment - ERR02</p>
+                <p className="text-gray-500">Aucun Évènement Disponible pour le moment</p>
               </div>
             ) : (
               upcomingEvents.map((event) => (
@@ -394,8 +394,8 @@ const Index = () => {
             transition={{ duration: 0.8 }}
             className="rounded-[2.5rem] overflow-hidden bg-brown text-white relative shadow-2xl"
           >
-            <div className="absolute top-0 right-0 w-1/2 h-full bg-[url('https://mcfiles.inferi.fr/api/public/dl/hYD4NeWA?inline=true')] bg-cover bg-center hidden md:block opacity-80 mix-blend-overlay">
-              <div className="absolute inset-0 bg-gradient-to-r from-brown via-brown/80 to-transparent"></div>
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-[url('/gallery/images/election_2025_vainqueurs.jpg')] bg-cover bg-center hidden md:block opacity-90 mix-blend-overlay">
+              <div className="absolute inset-0 bg-transparent"></div>
             </div>
             
             <div className="md:w-3/5 lg:w-1/2 p-10 md:p-16 lg:p-20 relative z-10">

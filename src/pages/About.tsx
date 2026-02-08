@@ -15,19 +15,19 @@ const teamMembers = [
   { name: "Stephane", role: "Président", desc: "Ours fondateur de l'association.", img: "https://mcfiles.inferi.fr/api/public/dl/k9Janer6?inline=true" },
   { name: "Jean-Louis", role: "Vice-Président", desc: "Ours fondateur de l'association.", img: "https://mcfiles.inferi.fr/api/public/dl/NQtPsDEF?inline=true" },
   { name: "Marc", role: "Trésorier", desc: "Ours responsable des bourses.", img: "https://mcfiles.inferi.fr/api/public/dl/MvotYu7L?inline=true" },
-  { name: "Pascal", role: "Co-Secrétaire", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/MoeBJVNs?inline=true" },
-  { name: "Florent", role: "Co-Secrétaire", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/ZlJxFuwv?inline=true" },
+  { name: "Pascal", role: "Secrétaire", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/MoeBJVNs?inline=true" },
+  { name: "Florent", role: "Secrétaire adjoint", desc: "Mais aussi webmaster du site LOOM.", img: "https://mcfiles.inferi.fr/api/public/dl/ZlJxFuwv?inline=true" },
   { name: "Jean-Luc", role: "Chargé en Relations Publiques", desc: "Ours à l'appel depuis 2019 !", img: "https://mcfiles.inferi.fr/api/public/dl/SCyycrc6?inline=true" },
   { name: "Franck", role: "Chargé de communications", desc: "Un lover des Ours.", img: "https://mcfiles.inferi.fr/api/public/dl/hH8msW18?inline=true" },
-  { name: "Sylfried", role: "Adjoint Chargé de relations publiques", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/GcO8vG8l?inline=true" },
+  { name: "Pierre", role: "Chargé de communications adjoint - Insta publisher", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/GcO8vG8l?inline=true" },
   { name: "Henri", role: "Monsieur Culture", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/hb_-0wLM?inline=true" },
   { name: "Étienne", role: "Administrateur", desc: "X", img: "https://mcfiles.inferi.fr/api/public/dl/PIZdu2pA?inline=true" },
 ];
 
 const timelineEvents = [
-  { year: "2017", date: "9 Novembre", title: "La Genèse", desc: "6 copains ont eu l'idée de créer cette association pour ajouter du moelleux et des poils dans l'univers LGBTQ de Montpellier.", icon: Sparkles },
-  { year: "2018", date: "Juillet", title: "Premier Monsieur Ours", desc: "Élection de notre Unique Monsieur Ours Languedoc-Roussillon, Cédric François.", icon: Users },
   { year: "2024", date: "Juin", title: "L'Expansion", desc: "Participation historique à la Marche des fiertés avec notre propre char et dépassement du cap des 100 adhérents.", icon: History },
+  { year: "2018", date: "Juillet", title: "Premier Monsieur Ours", desc: "Élection de notre Unique Monsieur Ours Languedoc-Roussillon, Cédric François.", icon: Users },
+  { year: "2017", date: "9 Novembre", title: "La Genèse", desc: "6 copains ont eu l'idée de créer cette association pour ajouter du moelleux et des poils dans l'univers LGBTQ de Montpellier.", icon: Sparkles },
 ];
 
 const About = () => {

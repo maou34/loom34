@@ -27,21 +27,21 @@ const MonsieurOurs = () => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const timelineItems = [
-    { year: '2018', title: 'Cédric François', description: 'Monsieur Ours élu en 2018' },
-    { year: '2019', title: 'Romain Tertrais', description: 'Monsieur Ours élu en 2019' },
-    { year: '2022', title: 'Pierre Marty Cardin', description: 'Monsieur Ours élu en 2022' },
-    { year: '2023', title: 'Lucas Milani', description: 'Monsieur Ours élu en 2023' },
-    { year: '2024', title: 'Antonio Gabriel', description: 'Monsieur Ours élu en 2024' },
     { year: '2025', title: 'Sébastien Rosier', description: 'Monsieur Ours élu en 2025' },
+    { year: '2024', title: 'Antonio Gabriel', description: 'Monsieur Ours élu en 2024' },
+    { year: '2023', title: 'Lucas Milani', description: 'Monsieur Ours élu en 2023' },
+    { year: '2022', title: 'Pierre Marty Cardin', description: 'Monsieur Ours élu en 2022' },
+    { year: '2019', title: 'Romain Tertrais', description: 'Monsieur Ours élu en 2019' },
+    { year: '2018', title: 'Cédric François', description: 'Monsieur Ours élu en 2018' },
   ];
 
   const galleryImages: Record<string, { url: string; alt: string } | undefined> = {
-    '2018': { url: 'https://mcfiles.inferi.fr/api/public/dl/4yYoW18R?inline=true', alt: 'Cédric François' },
-    '2019': { url: 'https://mcfiles.inferi.fr/api/public/dl/SNG33NJI?inline=true', alt: 'Romain Tertrais' },
-    '2022': { url: 'https://mcfiles.inferi.fr/api/public/dl/N7p9JwUI?inline=true', alt: 'Pierre Marty Cardin' },
-    '2023': { url: 'https://mcfiles.inferi.fr/api/public/dl/PqPgvVpz?inline=true', alt: 'Lucas Milani' },
-    '2024': { url: 'https://mcfiles.inferi.fr/api/public/dl/_Hf8VSw_?inline=true', alt: 'Antonio Gabriel' },
     '2025': { url: 'https://mcfiles.inferi.fr/api/public/dl/X3BHZTJW?inline=true', alt: 'Sébastien Rosier' },
+    '2024': { url: 'https://mcfiles.inferi.fr/api/public/dl/_Hf8VSw_?inline=true', alt: 'Antonio Gabriel' },
+    '2023': { url: 'https://mcfiles.inferi.fr/api/public/dl/PqPgvVpz?inline=true', alt: 'Lucas Milani' },
+    '2022': { url: 'https://mcfiles.inferi.fr/api/public/dl/N7p9JwUI?inline=true', alt: 'Pierre Marty Cardin' },
+    '2019': { url: 'https://mcfiles.inferi.fr/api/public/dl/SNG33NJI?inline=true', alt: 'Romain Tertrais' },
+    '2018': { url: 'https://mcfiles.inferi.fr/api/public/dl/4yYoW18R?inline=true', alt: 'Cédric François' },
   };
 
   const handleTimelineClick = (year: string) => {
@@ -58,7 +58,7 @@ const MonsieurOurs = () => {
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://mcfiles.inferi.fr/api/public/dl/hYD4NeWA?inline=true" 
+            src="/gallery/images/election_2025_vainqueurs.jpg" 
             alt="Monsieur Ours Background" 
             className="w-full h-full object-cover"
           />
