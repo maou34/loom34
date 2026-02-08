@@ -27,8 +27,8 @@ const Footer = () => {
             {/* About Section */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 mb-2">
-                <img src="/logo.png" alt="LOOM Logo" className="h-12 w-auto brightness-0 invert opacity-90" />
-                <span className="text-xl font-bold tracking-tight">LOOM</span>
+                <img src="/loom_logo_round.png" alt="LOOM Logo" className="h-16 w-auto" />
+                <span className="text-5xl font-bold tracking-tight">LOOM</span>
               </div>
               <p className="text-gray-400 leading-relaxed">
                 Association Bear fondée en 2017. Un espace inclusif pour les Bears et tous ceux qui aiment les Ours, les poils et la convivialité, du XS au XXXXXL.

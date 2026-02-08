@@ -194,7 +194,7 @@ const Index = () => {
               
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900 tracking-tight">
                 Les <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Ours<br />Occitanie<br />Méditerranée</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Ours<br />Occitanie<br />Montpellier</span>
               </h1>
               
               <p className="text-xl text-gray-600 max-w-xl leading-relaxed">
@@ -225,7 +225,7 @@ const Index = () => {
             >
               <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm">
                 <img 
-                  src="https://mcfiles.inferi.fr/api/public/dl/IDTLBxnE?inline=true" 
+                  src="/gallery/images/election_2025_vainqueurs.jpg" 
                   alt="Community gathering" 
                   className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
                 />

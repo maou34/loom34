@@ -82,7 +82,7 @@ const Navbar = () => {
           <motion.img 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            src="/logo.png" 
+            src="/loom_logo_round.png" 
             alt="LOOM Logo" 
             className="h-12 w-auto transition-transform duration-300"
           />
