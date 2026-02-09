@@ -36,12 +36,12 @@ const MonsieurOurs = () => {
   ];
 
   const galleryImages: Record<string, { url: string; alt: string } | undefined> = {
-    '2025': { url: 'https://mcfiles.inferi.fr/api/public/dl/X3BHZTJW?inline=true', alt: 'Sébastien Rosier' },
-    '2024': { url: 'https://mcfiles.inferi.fr/api/public/dl/_Hf8VSw_?inline=true', alt: 'Antonio Gabriel' },
-    '2023': { url: 'https://mcfiles.inferi.fr/api/public/dl/PqPgvVpz?inline=true', alt: 'Lucas Milani' },
-    '2022': { url: 'https://mcfiles.inferi.fr/api/public/dl/N7p9JwUI?inline=true', alt: 'Pierre Marty Cardin' },
-    '2019': { url: 'https://mcfiles.inferi.fr/api/public/dl/SNG33NJI?inline=true', alt: 'Romain Tertrais' },
-    '2018': { url: 'https://mcfiles.inferi.fr/api/public/dl/4yYoW18R?inline=true', alt: 'Cédric François' },
+    '2025': { url: 'gallery/images/sebastien_rosier.jpg', alt: 'Sébastien Rosier' },
+    '2024': { url: 'gallery/images/antonio_gabriel.jpg', alt: 'Antonio Gabriel' },
+    '2023': { url: 'gallery/images/lucas_milani.jpg', alt: 'Lucas Milani' },
+    '2022': { url: 'gallery/images/pierre_marty_cardin.jpg', alt: 'Pierre Marty Cardin' },
+    '2019': { url: 'gallery/images/romain_tertrais.jpg', alt: 'Romain Tertrais' },
+    '2018': { url: 'gallery/images/cedric_francois.jpg', alt: 'Cédric François' },
   };
 
   const handleTimelineClick = (year: string) => {

@@ -52,7 +52,7 @@ export function preloadCriticalResources(): void {
   if (typeof window === 'undefined') return;
 
   const criticalResources = [
-    'https://mcfiles.inferi.fr/api/public/dl/IDTLBxnE?inline=true', // Logo
+    '/gallery/loom_logo_round.png', // Logo
   ];
 
   criticalResources.forEach(href => {
