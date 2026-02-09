@@ -25,7 +25,7 @@ const Partners = () => {
   useEffect(() => {
     const fetchPartners = async () => {
       setLoading(true);
-      const { data, error } = await db.from('partners').select('*').order('created_at', { ascending: false });
+      const { data, error } = await db.from('partners').select('*');
       if (!error && data) setPartners(data);
       setLoading(false);
     };
