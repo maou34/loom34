@@ -15,7 +15,7 @@ export const defaultSEO: SEOProps = {
   title: 'LOOM - Les Ours Occitanie Méditerranée',
   description: 'Association Bear fondée en 2017 à Montpellier. Rejoignez une communauté dynamique de plus de 150 personnes pour des événements, articles et moments de partage.',
   keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Méditerranée', 'Association', 'Communauté', 'LGBTQ+'],
-  image: '/gallery/loom_logo_round.png',
+  image: '/loom_logo_round.png',
   url: 'https://loom-lgbt.fr',
   type: 'website'
 };
@@ -101,7 +101,7 @@ export function generateOrganizationStructuredData() {
     "description": "Association Bear fondée en 2017 à Montpellier pour les Bears et tous ceux qui aiment les Ours.",
     "foundingDate": "2017",
     "url": "https://loom-lgbt.fr",
-    "logo": "/gallery/loom_logo_round.png",
+    "logo": "/loom_logo_round.png",
     "sameAs": [
       "https://www.instagram.com/loom_bears",
       "https://www.facebook.com/loom.bears"
@@ -143,7 +143,7 @@ export function generateArticleStructuredData(article: {
       "name": "LOOM - Les Ours Occitanie Méditerranée",
       "logo": {
         "@type": "ImageObject",
-        "url": "/gallery/loom_logo_round.png"
+        "url": "/loom_logo_round.png"
       }
     },
     "url": article.url
