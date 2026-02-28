@@ -241,7 +241,7 @@ export default function Gallery() {
             <Button 
               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
               onClick={() => {
-                setAlbumForm({ title: "", description: "" });
+                setAlbumForm({ title: "" });
                 setIsCreateAlbumOpen(true);
               }}
             >

@@ -10,13 +10,24 @@ export default defineConfig(({ mode }) => ({
     host: "localhost",
     port: 8080,
     proxy: {
-      "/upload": "http://localhost:8081",
-    },
+      '/upload': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/upload/, '/upload'),
+        // Configuration CORS
+        cors: true,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      }
+    }
   },
 
   // 🚀 Serveur PROD (vite preview + PM2)
   preview: {
-    host: "0.0.0.0",
+    host: "localhost",
     port: 4173,
     proxy: {
       '/upload': 'http://localhost:8081',
