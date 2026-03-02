@@ -29,7 +29,7 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       // Use the folder prop as albumId to organize files on the server
       formData.append('albumId', folder);
 
-      const response = await fetch(`${UPLOAD_URL}/upload`, {
+      const response = await fetch(`${UPLOAD_URL}/upload/`, {
         method: 'POST',
         body: formData,
       });
