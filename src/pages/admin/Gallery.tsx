@@ -290,7 +290,7 @@ export default function Gallery() {
     <AdminLayout title="Galerie">
       <div className="flex h-[calc(100vh-120px)] -m-6">
         {/* Sidebar */}
-        <div className="w-full border-r bg-gray-50/50 flex flex-col">
+        <div className="w-100 border-r bg-gray-50/50 flex flex-col">
           <div className="p-4">
             <Button
               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
