@@ -1,17 +1,28 @@
-import { useState, useEffect } from 'react';
-import { db } from '@/db/client';
+import { useEffect, useState } from "react";
+import { db } from "@/db/client";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Users as UsersIcon, Search, Shield, ShieldAlert, MoreHorizontal, Mail, User } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Users as UsersIcon,
+  Search,
+  Shield,
+  ShieldAlert,
+  MoreHorizontal,
+  Mail,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
-import { 
-  Dialog, 
-  DialogContent, 
+import {
+  Dialog,
+  DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,16 +44,24 @@ interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   is_admin: boolean;
-  email?: string; // Optional as it might not be in the type definition but is in the DB
+  email?: string;
   created_at: string;
 }
+
+type FormDataState = {
+  username: string;
+  full_name: string;
+  email: string;
+  password: string;
+  is_admin: boolean;
+};
 
 export default function Users() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -50,12 +69,12 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState({
-    username: '',
-    full_name: '',
-    email: '',
-    password: '',
-    is_admin: false
+  const [formData, setFormData] = useState<FormDataState>({
+    username: "",
+    full_name: "",
+    email: "",
+    password: "",
+    is_admin: false,
   });
 
   useEffect(() => {
@@ -65,10 +84,11 @@ export default function Users() {
   useEffect(() => {
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
-      const filtered = users.filter(user => 
-        (user.username?.toLowerCase() || '').includes(lowerQuery) ||
-        (user.full_name?.toLowerCase() || '').includes(lowerQuery) ||
-        (user.email?.toLowerCase() || '').includes(lowerQuery)
+      const filtered = users.filter(
+        (user) =>
+          (user.username?.toLowerCase() || "").includes(lowerQuery) ||
+          (user.full_name?.toLowerCase() || "").includes(lowerQuery) ||
+          (user.email?.toLowerCase() || "").includes(lowerQuery)
       );
       setFilteredUsers(filtered);
     } else {
@@ -80,9 +100,9 @@ export default function Users() {
     try {
       setLoading(true);
       const { data, error } = await db
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setUsers(data || []);
@@ -97,20 +117,20 @@ export default function Users() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((s) => ({ ...s, [name]: value }));
   };
 
   const handleSwitchChange = (checked: boolean) => {
-    setFormData({ ...formData, is_admin: checked });
+    setFormData((s) => ({ ...s, is_admin: checked }));
   };
 
   const resetForm = () => {
     setFormData({
-      username: '',
-      full_name: '',
-      email: '',
-      password: '',
-      is_admin: false
+      username: "",
+      full_name: "",
+      email: "",
+      password: "",
+      is_admin: false,
     });
     setIsCreating(true);
     setSelectedUser(null);
@@ -120,11 +140,11 @@ export default function Users() {
   const handleEditUser = (user: Profile) => {
     setSelectedUser(user);
     setFormData({
-      username: user.username || '',
-      full_name: user.full_name || '',
-      email: user.email || '', // Note: Email might not be editable or present
-      password: '', // Password not editable directly here
-      is_admin: user.is_admin
+      username: user.username || "",
+      full_name: user.full_name || "",
+      email: user.email || "",
+      password: "",
+      is_admin: user.is_admin,
     });
     setIsCreating(false);
     setDialogOpen(true);
@@ -137,7 +157,9 @@ export default function Users() {
         return;
       }
 
-      // 1. Create user in Supabase Auth
+      // 1) Create user in Supabase Auth
+      // IMPORTANT: on envoie seulement username/full_name dans user_metadata.
+      // is_admin ne doit PAS venir du client (sécurité).
       const { data: authData, error: authError } = await db.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -145,45 +167,33 @@ export default function Users() {
           data: {
             username: formData.username,
             full_name: formData.full_name,
-            is_admin: formData.is_admin
-          }
-        }
+          },
+        },
       });
 
       if (authError) throw authError;
 
-      // 2. Create profile (if not handled by trigger)
-      // We'll try to insert, if it fails because of trigger it might be fine, 
-      // but usually we want to ensure profile exists.
-      // If you have a trigger, this might be redundant or cause error.
-      // Based on previous code, it seems manual insert was used.
-      if (authData.user) {
-        const { error: profileError } = await db
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            username: formData.username,
-            full_name: formData.full_name,
-            email: formData.email,
-            is_admin: formData.is_admin,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-          
-        if (profileError) {
-            // Ignore duplicate key error if trigger created it
-            if (!profileError.message.includes('duplicate key')) {
-                throw profileError;
-            }
-        }
+      // 2) Le trigger (auth.users -> profiles) doit créer le profile automatiquement.
+      //    Si tu veux appliquer le statut admin à la création, on le fait ici via UPDATE profiles
+      //    (nécessite une policy RLS qui autorise les admins à modifier is_admin).
+      if (authData.user && formData.is_admin) {
+        const { error: updateErr } = await db
+          .from("profiles")
+          .update({
+            is_admin: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", authData.user.id);
+
+        if (updateErr) throw updateErr;
       }
 
       toast.success("Utilisateur créé avec succès");
       setDialogOpen(false);
-      fetchUsers();
+      await fetchUsers();
     } catch (error: any) {
       console.error("Error creating user:", error);
-      toast.error("Erreur lors de la création: " + error.message);
+      toast.error("Erreur lors de la création: " + (error?.message || "inconnue"));
     }
   };
 
@@ -192,40 +202,41 @@ export default function Users() {
 
     try {
       const { error } = await db
-        .from('profiles')
+        .from("profiles")
         .update({
           username: formData.username,
           full_name: formData.full_name,
           is_admin: formData.is_admin,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', selectedUser.id);
+        .eq("id", selectedUser.id);
 
       if (error) throw error;
 
       toast.success("Utilisateur mis à jour avec succès");
       setDialogOpen(false);
-      fetchUsers();
+      await fetchUsers();
     } catch (error: any) {
       console.error("Error updating user:", error);
-      toast.error("Erreur lors de la mise à jour: " + error.message);
+      toast.error("Erreur lors de la mise à jour: " + (error?.message || "inconnue"));
     }
   };
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
     try {
+      // RPC SQL delete_user(user_id uuid) que tu as déjà dans Supabase
       // @ts-expect-error: Allow custom RPC function name
-      const { error } = await db.rpc('delete_user', { user_id: selectedUser.id });
-      
+      const { error } = await db.rpc("delete_user", { user_id: selectedUser.id });
+
       if (error) throw error;
-      
+
       toast.success("Utilisateur supprimé avec succès");
       setDeleteDialogOpen(false);
-      fetchUsers();
+      await fetchUsers();
     } catch (error: any) {
       console.error("Error deleting user:", error);
-      toast.error("Erreur lors de la suppression: " + error.message);
+      toast.error("Erreur lors de la suppression: " + (error?.message || "inconnue"));
     }
   };
 
@@ -241,15 +252,15 @@ export default function Users() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="Rechercher un utilisateur..." 
+            <Input
+              placeholder="Rechercher un utilisateur..."
               className="pl-10 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
+          <Button
+            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
             onClick={resetForm}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -302,7 +313,7 @@ export default function Users() {
                           <Avatar className="h-9 w-9 border border-gray-200">
                             <AvatarImage src={user.avatar_url || undefined} />
                             <AvatarFallback className="bg-orange-50 text-orange-700">
-                              {user.username?.substring(0, 2).toUpperCase() || 'U'}
+                              {user.username?.substring(0, 2).toUpperCase() || "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -311,9 +322,11 @@ export default function Users() {
                           </div>
                         </div>
                       </TableCell>
+
                       <TableCell>
-                        <div className="text-sm text-gray-600">{user.full_name || '-'}</div>
+                        <div className="text-sm text-gray-600">{user.full_name || "-"}</div>
                       </TableCell>
+
                       <TableCell>
                         {user.is_admin ? (
                           <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200">
@@ -325,11 +338,13 @@ export default function Users() {
                           </Badge>
                         )}
                       </TableCell>
+
                       <TableCell>
                         <span className="text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString('fr-FR')}
+                          {new Date(user.created_at).toLocaleDateString("fr-FR")}
                         </span>
                       </TableCell>
+
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -344,7 +359,7 @@ export default function Users() {
                               <Edit className="mr-2 h-4 w-4" /> Modifier
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="text-red-600 focus:text-red-600"
                               onClick={() => confirmDelete(user)}
                             >
@@ -370,7 +385,7 @@ export default function Users() {
               {isCreating ? "Créer un utilisateur" : "Modifier l'utilisateur"}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
               <Label htmlFor="username">Nom d'utilisateur</Label>
@@ -382,7 +397,7 @@ export default function Users() {
                 placeholder="jdupont"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="full_name">Nom complet</Label>
               <Input
@@ -429,22 +444,24 @@ export default function Users() {
             <div className="flex items-center justify-between border rounded-lg p-4 bg-gray-50">
               <div className="space-y-0.5">
                 <Label className="text-base">Privilèges Administrateur</Label>
-                <p className="text-sm text-gray-500">
-                  Accès complet à toutes les fonctionnalités
-                </p>
+                <p className="text-sm text-gray-500">Accès complet à toutes les fonctionnalités</p>
               </div>
-              <Switch
-                checked={formData.is_admin}
-                onCheckedChange={handleSwitchChange}
-              />
+              <Switch checked={formData.is_admin} onCheckedChange={handleSwitchChange} />
             </div>
+
+            {isCreating && (
+              <p className="text-xs text-gray-500">
+                Note : le profil est créé automatiquement par un trigger Supabase. Le statut Admin est appliqué via
+                une mise à jour du profil (requiert les permissions/RLS adéquates).
+              </p>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
-            <Button 
+            <Button
               className="bg-orange-600 hover:bg-orange-700 text-white"
               onClick={isCreating ? handleCreateUser : handleUpdateUser}
             >
@@ -464,12 +481,11 @@ export default function Users() {
             <div className="flex items-center gap-4 p-4 bg-red-50 text-red-900 rounded-lg mb-4">
               <ShieldAlert className="h-6 w-6 flex-shrink-0" />
               <p className="text-sm">
-                Cette action supprimera définitivement le compte de <strong>{selectedUser?.username}</strong> et toutes ses données associées.
+                Cette action supprimera définitivement le compte de{" "}
+                <strong>{selectedUser?.username}</strong> et toutes ses données associées.
               </p>
             </div>
-            <p className="text-gray-600">
-              Êtes-vous sûr de vouloir continuer ?
-            </p>
+            <p className="text-gray-600">Êtes-vous sûr de vouloir continuer ?</p>
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
