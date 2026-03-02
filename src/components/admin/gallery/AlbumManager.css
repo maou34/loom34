@@ -1,0 +1,41 @@
+.album-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.album-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.album-select {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+}
+
+.album-delete {
+  background: #e53935;
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.album-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #e53935;
+  margin-top: 8px;
+}
