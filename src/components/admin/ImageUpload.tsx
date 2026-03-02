@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { db } from '@/db/client';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -12,9 +10,30 @@ interface ImageUploadProps {
   folder?: string;
 }
 
+type UploadResponse = {
+  items: Array<{
+    filename: string;
+    relativePath: string; // ex: /gallery/album/image.jpg
+  }>;
+};
+
+function toPublicUrl(relativePath: string): string {
+  if (!relativePath) return '';
+  // Si jamais l'API renvoie déjà une URL absolue
+  if (/^https?:\/\//i.test(relativePath)) return relativePath;
+
+  // Normaliser pour éviter les // dans l'URL finale
+  const base = UPLOAD_URL.replace(/\/+$/, '');
+  const rel = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+  return `${base}${rel}`;
+}
+
 export default function ImageUpload({ onUploadComplete, folder = 'images' }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+
+  // fetch ne permet pas un progress fiable sans XHR/axios,
+  // donc on affiche une barre "pseudo-indeterminate" pendant l'upload.
+  const [progress, setProgress] = useState<number | null>(null);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -22,34 +41,43 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       if (!file) return;
 
       setUploading(true);
-      setProgress(0);
+      setProgress(null);
 
       const formData = new FormData();
       formData.append('files', file);
-      // Use the folder prop as albumId to organize files on the server
       formData.append('albumId', folder);
 
-      const response = await fetch(`${UPLOAD_URL}/upload/`, {
+      const response = await fetch(`${UPLOAD_URL.replace(/\/+$/, '')}/upload/`, {
         method: 'POST',
         body: formData,
+        // conseillé si ton serveur utilise credentials:true (et future-proof si cookies un jour)
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const text = await response.text().catch(() => '');
+        throw new Error(`Upload failed (${response.status}): ${text}`);
       }
 
-      const data = await response.json();
-      const uploadedItem = data.items[0];
-      const publicUrl = uploadedItem.relativePath;
-      
+      const data = (await response.json()) as UploadResponse;
+      const uploadedItem = data.items?.[0];
+      if (!uploadedItem?.relativePath) {
+        throw new Error('Upload failed: invalid server response (missing relativePath)');
+      }
+
+      // IMPORTANT: on renvoie une URL utilisable depuis loom-lgbt.fr
+      const publicUrl = toPublicUrl(uploadedItem.relativePath);
+
       onUploadComplete(publicUrl);
       toast.success('Image téléchargée avec succès');
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Erreur lors du téléchargement de l\'image');
+      toast.error("Erreur lors du téléchargement de l'image");
     } finally {
       setUploading(false);
       setProgress(0);
+      // reset pour permettre de re-sélectionner le même fichier
+      event.target.value = '';
     }
   };
 
@@ -65,12 +93,14 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
           disabled={uploading}
         />
       </div>
+
       {uploading && (
         <div className="space-y-2">
-          <Progress value={progress} />
+          {/* Indeterminate "simple" */}
+          <Progress value={progress ?? 50} />
           <p className="text-sm text-muted-foreground">Téléchargement en cours...</p>
         </div>
       )}
     </div>
   );
-} 
+}
