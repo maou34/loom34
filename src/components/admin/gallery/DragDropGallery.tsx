@@ -86,7 +86,7 @@ export default function DragDropGallery({ onSuccess }: DragDropGalleryProps) {
       formData.append('files', file);
       formData.append('albumId', albumId);
 
-      const response = await fetch(`${UPLOAD_URL}/upload`, {
+      const response = await fetch(`${UPLOAD_URL.replace(/\/+$/, '')}/upload/?albumId=${encodeURIComponent(albumId)}`, {
         method: 'POST',
         body: formData,
       });
