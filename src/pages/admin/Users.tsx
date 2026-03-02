@@ -44,7 +44,7 @@ interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   is_admin: boolean;
-  email?: string;
+  email?: string; // peut ne pas être renvoyé si pas stocké dans profiles
   created_at: string;
 }
 
@@ -157,37 +157,22 @@ export default function Users() {
         return;
       }
 
-      // 1) Create user in Supabase Auth
-      // IMPORTANT: on envoie seulement username/full_name dans user_metadata.
-      // is_admin ne doit PAS venir du client (sécurité).
-      const { data: authData, error: authError } = await db.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            username: formData.username,
-            full_name: formData.full_name,
-          },
+      // IMPORTANT:
+      // - on n'utilise PAS db.auth.signUp ici (sinon on switch de session)
+      // - on appelle l'Edge Function admin-create-user qui utilise la Service Role Key
+      const { data, error } = await db.functions.invoke("admin-create-user", {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          username: formData.username,
+          full_name: formData.full_name,
+          is_admin: formData.is_admin,
         },
       });
 
-      if (authError) throw authError;
+      if (error) throw error;
 
-      // 2) Le trigger (auth.users -> profiles) doit créer le profile automatiquement.
-      //    Si tu veux appliquer le statut admin à la création, on le fait ici via UPDATE profiles
-      //    (nécessite une policy RLS qui autorise les admins à modifier is_admin).
-      if (authData.user && formData.is_admin) {
-        const { error: updateErr } = await db
-          .from("profiles")
-          .update({
-            is_admin: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", authData.user.id);
-
-        if (updateErr) throw updateErr;
-      }
-
+      // data ressemble à { userId: "uuid" } (selon ta function)
       toast.success("Utilisateur créé avec succès");
       setDialogOpen(false);
       await fetchUsers();
@@ -224,8 +209,8 @@ export default function Users() {
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
+
     try {
-      // RPC SQL delete_user(user_id uuid) que tu as déjà dans Supabase
       // @ts-expect-error: Allow custom RPC function name
       const { error } = await db.rpc("delete_user", { user_id: selectedUser.id });
 
@@ -448,13 +433,6 @@ export default function Users() {
               </div>
               <Switch checked={formData.is_admin} onCheckedChange={handleSwitchChange} />
             </div>
-
-            {isCreating && (
-              <p className="text-xs text-gray-500">
-                Note : le profil est créé automatiquement par un trigger Supabase. Le statut Admin est appliqué via
-                une mise à jour du profil (requiert les permissions/RLS adéquates).
-              </p>
-            )}
           </div>
 
           <DialogFooter>
@@ -481,8 +459,8 @@ export default function Users() {
             <div className="flex items-center gap-4 p-4 bg-red-50 text-red-900 rounded-lg mb-4">
               <ShieldAlert className="h-6 w-6 flex-shrink-0" />
               <p className="text-sm">
-                Cette action supprimera définitivement le compte de{" "}
-                <strong>{selectedUser?.username}</strong> et toutes ses données associées.
+                Cette action supprimera définitivement le compte de <strong>{selectedUser?.username}</strong> et toutes
+                ses données associées.
               </p>
             </div>
             <p className="text-gray-600">Êtes-vous sûr de vouloir continuer ?</p>
