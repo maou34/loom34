@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
 
 interface CreateUserFormProps {
   onSuccess: () => void;
@@ -23,46 +22,43 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.username.trim() || !formData.full_name.trim() || !formData.email.trim() || !formData.password.trim()) {
+
+    if (
+      !formData.username.trim() ||
+      !formData.full_name.trim() ||
+      !formData.email.trim() ||
+      !formData.password.trim()
+    ) {
       toast.error("Veuillez remplir tous les champs obligatoires.");
       return;
     }
+
     setLoading(true);
 
     try {
-      // Création de l'utilisateur dans Supabase Auth
-      const { error: signUpError, data: signUpData } = await db.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            username: formData.username,
-            full_name: formData.full_name,
-            is_admin: formData.is_admin
-          }
-        }
-      });
-      if (signUpError) throw signUpError;
-
-      // Ajout dans la table profiles (optionnel si trigger automatique, sinon nécessaire)
-      const { error } = await db
-        .from('profiles')
-        .insert({
-          id: signUpData.user?.id || uuidv4(),
+      // IMPORTANT:
+      // - Ne pas utiliser db.auth.signUp() ici, sinon tu switches de session.
+      // - Utiliser l'Edge Function admin-create-user (déployée) qui crée le user via service role.
+      const { error } = await db.functions.invoke("admin-create-user", {
+        body: {
+          email: formData.email,
+          password: formData.password,
           username: formData.username,
           full_name: formData.full_name,
-          email: formData.email,
-          is_admin: formData.is_admin,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+          is_admin: formData.is_admin
+        }
+      });
+
       if (error) throw error;
 
-      toast.success('Utilisateur créé avec succès');
+      // Le trigger (auth.users -> profiles) crée automatiquement public.profiles.
+      // Donc: pas d'insert manuel dans profiles ici.
+
+      toast.success("Utilisateur créé avec succès");
       onSuccess();
     } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error('Erreur lors de la création de l\'utilisateur');
+      console.error("Error creating user:", error);
+      toast.error("Erreur lors de la création de l'utilisateur");
     } finally {
       setLoading(false);
     }
@@ -127,7 +123,7 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
       </div>
 
       <Button type="submit" disabled={loading}>
-        {loading ? 'Création...' : 'Créer l\'utilisateur'}
+        {loading ? "Création..." : "Créer l'utilisateur"}
       </Button>
     </form>
   );
