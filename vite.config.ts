@@ -10,19 +10,19 @@ export default defineConfig(({ mode }) => ({
     host: "localhost",
     port: 8080,
     proxy: {
-      '/upload': {
-        target: 'http://localhost:8081',
+      "/upload": {
+        target: "http://localhost:8081",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/upload/, '/upload'),
+        rewrite: (p) => p.replace(/^\/upload/, "/upload"),
         // Configuration CORS
         cors: true,
         headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
-      }
-    }
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      },
+    },
   },
 
   // 🚀 Serveur PROD (vite preview + PM2)
@@ -30,14 +30,11 @@ export default defineConfig(({ mode }) => ({
     host: "localhost",
     port: 4173,
     proxy: {
-      '/upload': 'http://localhost:8081',
+      "/upload": "http://localhost:8081",
     },
   },
 
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-  ].filter(Boolean),
+  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
 
   resolve: {
     alias: {
@@ -46,7 +43,13 @@ export default defineConfig(({ mode }) => ({
   },
 
   optimizeDeps: {
-    include: ["react-dnd", "react-dnd-html5-backend"],
+    include: [
+      "react-dnd",
+      "react-dnd-html5-backend",
+
+      // Force pré-bundling pour éviter des imports ESM "cassés" dans certains découpages de chunks
+      "framer-motion",
+    ],
   },
 
   build: {
@@ -55,6 +58,12 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           // Vendor chunks
           "react-vendor": ["react", "react-dom", "react-router-dom"],
+
+          // IMPORTANT:
+          // Mettre framer-motion dans un chunk dédié pour éviter l'erreur runtime :
+          // "local binding for export 'AnimatePresence' not found"
+          "framer-motion": ["framer-motion"],
+
           "ui-vendor": [
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",
