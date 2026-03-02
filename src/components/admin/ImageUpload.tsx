@@ -17,13 +17,21 @@ type UploadResponse = {
   }>;
 };
 
+function uploadBase(): string {
+  // Normalise pour éviter les doubles slashes
+  return UPLOAD_URL.replace(/\/+$/, '');
+}
+
+function uploadPostUrl(): string {
+  // IMPORTANT: /upload/ (slash final) pour éviter 301 Cloudflare sur /upload
+  return `${uploadBase()}/upload/`;
+}
+
 function toPublicUrl(relativePath: string): string {
   if (!relativePath) return '';
-  // Si jamais l'API renvoie déjà une URL absolue
   if (/^https?:\/\//i.test(relativePath)) return relativePath;
 
-  // Normaliser pour éviter les // dans l'URL finale
-  const base = UPLOAD_URL.replace(/\/+$/, '');
+  const base = uploadBase();
   const rel = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
   return `${base}${rel}`;
 }
@@ -31,8 +39,7 @@ function toPublicUrl(relativePath: string): string {
 export default function ImageUpload({ onUploadComplete, folder = 'images' }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
 
-  // fetch ne permet pas un progress fiable sans XHR/axios,
-  // donc on affiche une barre "pseudo-indeterminate" pendant l'upload.
+  // fetch ne donne pas un vrai progress; on simule une barre indéterminée
   const [progress, setProgress] = useState<number | null>(null);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,10 +54,13 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       formData.append('files', file);
       formData.append('albumId', folder);
 
-      const response = await fetch(`${UPLOAD_URL.replace(/\/+$/, '')}/upload/`, {
+      // Debug (à retirer après validation)
+      console.log('UPLOAD_URL=', UPLOAD_URL);
+      console.log('UPLOAD endpoint=', uploadPostUrl());
+
+      const response = await fetch(uploadPostUrl(), {
         method: 'POST',
         body: formData,
-        // conseillé si ton serveur utilise credentials:true (et future-proof si cookies un jour)
         credentials: 'include',
       });
 
@@ -61,14 +71,14 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
 
       const data = (await response.json()) as UploadResponse;
       const uploadedItem = data.items?.[0];
+
       if (!uploadedItem?.relativePath) {
         throw new Error('Upload failed: invalid server response (missing relativePath)');
       }
 
-      // IMPORTANT: on renvoie une URL utilisable depuis loom-lgbt.fr
       const publicUrl = toPublicUrl(uploadedItem.relativePath);
-
       onUploadComplete(publicUrl);
+
       toast.success('Image téléchargée avec succès');
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -76,7 +86,6 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
     } finally {
       setUploading(false);
       setProgress(0);
-      // reset pour permettre de re-sélectionner le même fichier
       event.target.value = '';
     }
   };
@@ -96,7 +105,6 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
 
       {uploading && (
         <div className="space-y-2">
-          {/* Indeterminate "simple" */}
           <Progress value={progress ?? 50} />
           <p className="text-sm text-muted-foreground">Téléchargement en cours...</p>
         </div>

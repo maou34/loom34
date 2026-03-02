@@ -5,39 +5,38 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { 
-  Plus, 
-  Image as ImageIcon, 
-  Folder, 
-  FolderOpen, 
-  MoreVertical, 
-  Trash2, 
-  Search, 
-  Upload, 
-  CheckCircle2
+import {
+  Plus,
+  Image as ImageIcon,
+  Folder,
+  FolderOpen,
+  MoreVertical,
+  Trash2,
+  Search,
+  Upload,
+  CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-import { UPLOAD_URL, getImageUrl } from '@/config';
+import { UPLOAD_URL, getImageUrl } from "@/config";
 
 // Types based on filesystem API
 type GalleryAlbum = {
@@ -53,27 +52,42 @@ type GalleryImage = {
   album_id: string;
 };
 
+function baseUploadUrl() {
+  // évite les doubles slashes
+  return UPLOAD_URL.replace(/\/+$/, "");
+}
+
+/**
+ * IMPORTANT: toujours utiliser /upload/ (slash final),
+ * sinon Cloudflare redirige /upload -> /upload/ (301) et ça casse CORS sur POST.
+ */
+function uploadEndpoint(pathname: string) {
+  const base = baseUploadUrl();
+  const p = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${base}${p}`;
+}
+
 export default function Gallery() {
   const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // State for dialogs
   const [isCreateAlbumOpen, setIsCreateAlbumOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isImageDetailsOpen, setIsImageDetailsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
+
   // Selection state
   const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum | null>(null);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [viewUnclassified, setViewUnclassified] = useState(false);
-  
+
   // Form state
   const [albumForm, setAlbumForm] = useState({ title: "" });
-  
+
   // Upload state
   const [isDropping, setIsDropping] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
@@ -81,36 +95,38 @@ export default function Gallery() {
   // --- Queries ---
 
   const { data: albums = [], isLoading: isLoadingAlbums } = useQuery<GalleryAlbum[]>({
-    queryKey: ['galleryAlbums'],
+    queryKey: ["galleryAlbums"],
     queryFn: async () => {
-      const res = await fetch(`${UPLOAD_URL}/upload/albums`);
-      if (!res.ok) throw new Error('Failed to fetch albums');
+      const res = await fetch(uploadEndpoint("/upload/albums"), { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch albums");
       return res.json();
-    }
+    },
   });
 
   const { data: images = [] } = useQuery<GalleryImage[]>({
-    queryKey: ['galleryImages', selectedAlbum?.id, viewUnclassified],
+    queryKey: ["galleryImages", selectedAlbum?.id, viewUnclassified],
     queryFn: async () => {
-      const albumId = viewUnclassified ? 'unclassified' : selectedAlbum?.id;
+      const albumId = viewUnclassified ? "unclassified" : selectedAlbum?.id;
       if (!albumId) return [];
-      const res = await fetch(`${UPLOAD_URL}/upload/albums/${albumId}/images`);
-      if (!res.ok) throw new Error('Failed to fetch images');
+      const res = await fetch(uploadEndpoint(`/upload/albums/${albumId}/images`), {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to fetch images");
       return res.json();
     },
-    enabled: !!selectedAlbum || viewUnclassified
+    enabled: !!selectedAlbum || viewUnclassified,
   });
 
   // Sync URL with state
   useEffect(() => {
-    const albumId = searchParams.get('albumId');
-    const unclassified = searchParams.get('view') === 'unclassified';
+    const albumId = searchParams.get("albumId");
+    const unclassified = searchParams.get("view") === "unclassified";
 
     if (unclassified) {
       setViewUnclassified(true);
       setSelectedAlbum(null);
     } else if (albumId && albums.length > 0) {
-      const album = albums.find(a => a.id === albumId);
+      const album = albums.find((a) => a.id === albumId);
       if (album) {
         setSelectedAlbum(album);
         setViewUnclassified(false);
@@ -123,62 +139,70 @@ export default function Gallery() {
   }, [searchParams, albums]);
 
   // Filter images based on search
-  const filteredImages = images.filter(img => 
-    (img.title?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  const filteredImages = images.filter((img) =>
+    (img.title?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
   // --- Mutations ---
 
   const createAlbumMutation = useMutation({
     mutationFn: async (title: string) => {
-      const res = await fetch(`${UPLOAD_URL}/upload/albums`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title })
+      const res = await fetch(uploadEndpoint("/upload/albums"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to create album');
+      if (!res.ok) throw new Error("Failed to create album");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['galleryAlbums'] });
+      queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
       setIsCreateAlbumOpen(false);
       setAlbumForm({ title: "" });
       toast({ title: "Album créé avec succès" });
     },
-    onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
+    onError: (err: any) =>
+      toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
   const deleteAlbumMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`${UPLOAD_URL}/upload/albums/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete album');
+      const res = await fetch(uploadEndpoint(`/upload/albums/${id}`), {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete album");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['galleryAlbums'] });
-      queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
+      queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
+      queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
       setIsDeleteDialogOpen(false);
       setSelectedAlbum(null);
       setSearchParams({});
       toast({ title: "Album supprimé" });
     },
-    onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
+    onError: (err: any) =>
+      toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
   const deleteImageMutation = useMutation({
     mutationFn: async (image: GalleryImage) => {
-      const res = await fetch(`${UPLOAD_URL}/upload/images`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ albumId: image.album_id, filename: image.id })
+      const res = await fetch(uploadEndpoint("/upload/images"), {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: image.album_id, filename: image.id }),
+        credentials: "include",
       });
-      if (!res.ok) throw new Error('Failed to delete image');
+      if (!res.ok) throw new Error("Failed to delete image");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
+      queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
       setIsImageDetailsOpen(false);
       toast({ title: "Image supprimée" });
     },
-    onError: (err: any) => toast({ title: "Erreur", description: err.message, variant: "destructive" })
+    onError: (err: any) =>
+      toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
   // --- Handlers ---
@@ -192,35 +216,40 @@ export default function Gallery() {
   const handleUnclassifiedSelect = () => {
     setViewUnclassified(true);
     setSelectedAlbum(null);
-    setSearchParams({ view: 'unclassified' });
+    setSearchParams({ view: "unclassified" });
   };
 
   const handleDropFiles = async (files: FileList) => {
     setIsDropping(true);
-    setUploadFeedback('Import en cours...');
+    setUploadFeedback("Import en cours...");
     try {
       const form = new FormData();
       Array.from(files).forEach((file) => {
-        if (file.type?.startsWith('image/')) form.append('files', file);
+        if (file.type?.startsWith("image/")) form.append("files", file);
       });
-      
-      const albumId = selectedAlbum?.id || 'unclassified';
-      const res = await fetch(`${UPLOAD_URL}/upload?albumId=${encodeURIComponent(albumId)}`, {
-        method: 'POST',
+
+      const albumId = selectedAlbum?.id || "unclassified";
+
+      // FIX CORS: slash final AVANT le ?
+      const url = uploadEndpoint(`/upload/?albumId=${encodeURIComponent(albumId)}`);
+
+      const res = await fetch(url, {
+        method: "POST",
         body: form,
+        credentials: "include",
       });
-      
+
       if (!res.ok) throw new Error(`Upload échoué (${res.status})`);
-      
-      setUploadFeedback('Import terminé !');
-      queryClient.invalidateQueries({ queryKey: ['galleryImages'] });
-      
+
+      setUploadFeedback("Import terminé !");
+      queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
+
       setTimeout(() => {
         setUploadFeedback(null);
         setIsUploadOpen(false);
       }, 1500);
     } catch (e: any) {
-      console.error('Erreur upload', e);
+      console.error("Erreur upload", e);
       setUploadFeedback(`Erreur: ${e.message}`);
     } finally {
       setIsDropping(false);
@@ -238,7 +267,7 @@ export default function Gallery() {
         {/* Sidebar */}
         <div className="w-64 border-r bg-gray-50/50 flex flex-col">
           <div className="p-4">
-            <Button 
+            <Button
               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
               onClick={() => {
                 setAlbumForm({ title: "" });
@@ -248,12 +277,15 @@ export default function Gallery() {
               <Plus className="w-4 h-4 mr-2" /> Nouvel Album
             </Button>
           </div>
-          
+
           <ScrollArea className="flex-1 px-3">
             <div className="space-y-1 pb-4">
               <Button
                 variant={viewUnclassified ? "secondary" : "ghost"}
-                className={cn("w-full justify-start font-normal", viewUnclassified && "bg-white shadow-sm")}
+                className={cn(
+                  "w-full justify-start font-normal",
+                  viewUnclassified && "bg-white shadow-sm"
+                )}
                 onClick={handleUnclassifiedSelect}
               >
                 <FolderOpen className="w-4 h-4 mr-2 text-orange-500" />
@@ -261,7 +293,7 @@ export default function Gallery() {
               </Button>
 
               <Separator className="my-2" />
-              
+
               {isLoadingAlbums ? (
                 <div className="space-y-2 px-2">
                   <Skeleton className="h-8 w-full" />
@@ -269,31 +301,36 @@ export default function Gallery() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                albums.map(album => (
+                albums.map((album) => (
                   <div key={album.id} className="group flex items-center relative">
                     <Button
                       variant={selectedAlbum?.id === album.id ? "secondary" : "ghost"}
                       className={cn(
-                        "w-full justify-start font-normal pr-8", 
+                        "w-full justify-start font-normal pr-8",
                         selectedAlbum?.id === album.id && "bg-white shadow-sm"
                       )}
                       onClick={() => handleAlbumSelect(album)}
                     >
-                      <Folder className={cn("w-4 h-4 mr-2", selectedAlbum?.id === album.id ? "text-orange-600" : "text-gray-400")} />
+                      <Folder
+                        className={cn(
+                          "w-4 h-4 mr-2",
+                          selectedAlbum?.id === album.id ? "text-orange-600" : "text-gray-400"
+                        )}
+                      />
                       <span className="truncate">{album.title}</span>
                     </Button>
-                    
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           className="h-6 w-6 p-0 absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <MoreVertical className="h-3 w-3" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => {
                             setSelectedAlbum(album);
@@ -323,12 +360,12 @@ export default function Gallery() {
                 {filteredImages.length} photos
               </Badge>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input 
-                  placeholder="Rechercher..." 
+                <Input
+                  placeholder="Rechercher..."
                   className="pl-10 h-9"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -356,14 +393,14 @@ export default function Gallery() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filteredImages.map((img) => (
-                  <div 
-                    key={img.id} 
+                  <div
+                    key={img.id}
                     className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:shadow-md transition-all"
                     onClick={() => openImageDetails(img)}
                   >
-                    <img 
-                      src={getImageUrl(img.image_url)} 
-                      alt={img.title} 
+                    <img
+                      src={getImageUrl(img.image_url)}
+                      alt={img.title}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                     />
@@ -388,7 +425,7 @@ export default function Gallery() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Nom de l'album</Label>
-              <Input 
+              <Input
                 value={albumForm.title}
                 onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value })}
                 placeholder="Ex: Soirée Halloween 2024"
@@ -396,8 +433,10 @@ export default function Gallery() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateAlbumOpen(false)}>Annuler</Button>
-            <Button 
+            <Button variant="outline" onClick={() => setIsCreateAlbumOpen(false)}>
+              Annuler
+            </Button>
+            <Button
               className="bg-orange-600 hover:bg-orange-700"
               onClick={() => createAlbumMutation.mutate(albumForm.title)}
               disabled={!albumForm.title.trim()}
@@ -415,12 +454,14 @@ export default function Gallery() {
             <DialogTitle>Supprimer l'album ?</DialogTitle>
           </DialogHeader>
           <p className="text-gray-600">
-            L'album <strong>{selectedAlbum?.title}</strong> sera supprimé. 
-            Les photos seront définitivement effacées.
+            L'album <strong>{selectedAlbum?.title}</strong> sera supprimé. Les photos seront
+            définitivement effacées.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Annuler</Button>
-            <Button 
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
               variant="destructive"
               onClick={() => selectedAlbum && deleteAlbumMutation.mutate(selectedAlbum.id)}
             >
@@ -437,13 +478,18 @@ export default function Gallery() {
             <DialogTitle>Importer des photos</DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <div 
+            <div
               className={cn(
                 "border-2 border-dashed rounded-xl p-8 text-center transition-colors",
-                isDropping ? "border-orange-500 bg-orange-50" : "border-gray-200 hover:border-orange-400 hover:bg-gray-50",
+                isDropping
+                  ? "border-orange-500 bg-orange-50"
+                  : "border-gray-200 hover:border-orange-400 hover:bg-gray-50",
                 uploadFeedback && "border-green-500 bg-green-50"
               )}
-              onDragOver={(e) => { e.preventDefault(); setIsDropping(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDropping(true);
+              }}
               onDragLeave={() => setIsDropping(false)}
               onDrop={(e) => {
                 e.preventDefault();
@@ -464,16 +510,15 @@ export default function Gallery() {
                 <div className="flex flex-col items-center text-gray-500">
                   <Upload className="w-10 h-10 mb-2" />
                   <p className="font-medium text-gray-900">Glissez vos images ici</p>
-                  <p className="text-sm mt-1 mb-4">Destination : {selectedAlbum?.title || "Non classées"}</p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => fileInputRef.current?.click()}
-                  >
+                  <p className="text-sm mt-1 mb-4">
+                    Destination : {selectedAlbum?.title || "Non classées"}
+                  </p>
+                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                     Parcourir les fichiers
                   </Button>
-                  <input 
-                    type="file" 
-                    multiple 
+                  <input
+                    type="file"
+                    multiple
                     accept="image/*"
                     className="hidden"
                     ref={fileInputRef}
@@ -495,9 +540,9 @@ export default function Gallery() {
         <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden flex flex-col md:flex-row h-[600px] md:h-[500px]">
           <div className="flex-1 bg-black flex items-center justify-center p-4 relative">
             {selectedImage && (
-              <img 
-                src={getImageUrl(selectedImage.image_url)} 
-                alt={selectedImage.title} 
+              <img
+                src={getImageUrl(selectedImage.image_url)}
+                alt={selectedImage.title}
                 className="max-w-full max-h-full object-contain"
               />
             )}
@@ -506,19 +551,17 @@ export default function Gallery() {
             <DialogHeader className="mb-4">
               <DialogTitle>Détails de l'image</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4 flex-1">
               <div className="space-y-2">
                 <Label>Nom du fichier</Label>
-                <div className="p-2 bg-gray-100 rounded text-sm break-all">
-                  {selectedImage?.title}
-                </div>
+                <div className="p-2 bg-gray-100 rounded text-sm break-all">{selectedImage?.title}</div>
               </div>
             </div>
 
             <div className="pt-6 mt-auto space-y-2">
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 className="w-full"
                 onClick={() => {
                   if (confirm("Supprimer cette image ?")) {
