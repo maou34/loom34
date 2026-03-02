@@ -42,7 +42,7 @@ const Navbar = () => {
     { name: 'Articles', path: '/articles' },    
     { name: 'Événements', path: '/events' },
     { name: 'Monsieur Ours', path: '/monsieur-ours' },
-    // { name: 'Photos', path: '/gallery' },
+    { name: 'Photos', path: '/gallery' },
     { name: 'Nos Partenaires', path: '/partners' },
     { name: 'Boutique', path: 'https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom#shop', external: true },
     { name: 'Adhésion', path: 'https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025', external: true },
