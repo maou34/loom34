@@ -68,7 +68,7 @@ const Index = () => {
     const eventDate = new Date(event.date);
     eventDate.setHours(0, 0, 0, 0);
     return eventDate >= today;
-  }).slice(0, 2);
+  }).slice(0, 4);
 
   // Partners automatic scroll effect
   useEffect(() => {
