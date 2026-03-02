@@ -5,14 +5,21 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useSEO from '@/hooks/useSEO';
 import { formatAlbumDate } from "@/utils/date";
 
 import { UPLOAD_URL, getImageUrl } from '@/config';
+
+// --- NEW: albums à masquer (public) ---
+const HIDDEN_ALBUM_IDS = new Set(["images", "unclassified", "tip*"]);
+// const HIDDEN_ALBUM_PREFIXES = ["tip"];
+
+function isHiddenAlbumId(id: string) {
+  if (HIDDEN_ALBUM_IDS.has(id)) return true;
+  // return HIDDEN_ALBUM_PREFIXES.some((prefix) => id.startsWith(prefix));
+}
 
 const Gallery = () => {
   // SEO Configuration
@@ -35,9 +42,12 @@ const Gallery = () => {
     }
   });
 
+  // NEW: masquer images, unclassified et tip*
+  const visibleAlbums = (albums as any[]).filter((album: any) => !isHiddenAlbumId(String(album?.id ?? "")));
+
   // Filter albums based on search
-  const filteredAlbums = albums.filter((album: any) => {
-    const matchesSearch = searchQuery === '' || 
+  const filteredAlbums = visibleAlbums.filter((album: any) => {
+    const matchesSearch = searchQuery === '' ||
       album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (album.description && album.description.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch;
@@ -75,7 +85,7 @@ const Gallery = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Navbar />
-      
+
       {/* Hero Section */}
       <div className="relative h-[50vh] min-h-[400px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
@@ -94,21 +104,21 @@ const Gallery = () => {
               <Camera className="w-5 h-5 mr-2" />
               <span className="font-medium">Souvenirs & Moments</span>
             </div>
-            
+
             <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gray-900 tracking-tight">
               Galerie <span className="text-orange">Communautaire</span>
             </h1>
-            
+
             <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Explorez les archives photographiques des Ours ! Retrouvez les meilleurs moments de nos événements passés.
             </p>
           </motion.div>
         </div>
       </div>
-      
+
       {/* Search Section */}
       <div className="container mx-auto px-4 -mt-8 relative z-20 mb-16">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
@@ -128,7 +138,7 @@ const Gallery = () => {
           </div>
         </motion.div>
       </div>
-      
+
       {/* Albums Grid */}
       <section className="pb-24">
         <div className="container mx-auto px-4">
@@ -139,8 +149,8 @@ const Gallery = () => {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Aucun album trouvé</h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                {searchQuery ? 
-                  `Aucun résultat pour "${searchQuery}". Essayez d'autres termes.` : 
+                {searchQuery ?
+                  `Aucun résultat pour "${searchQuery}". Essayez d'autres termes.` :
                   "La galerie est vide pour le moment."}
               </p>
             </div>
@@ -148,7 +158,7 @@ const Gallery = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredAlbums.map((album: any, index: number) => {
                 let cover = album.cover_image ? getImageUrl(album.cover_image) : null;
-                
+
                 // Image d'un petit ours mignon par défaut
                 const CUTE_BEAR_IMAGE = 'https://www.shutterstock.com/image-vector/bears-face-symbol-logo-design-600nw-2162265087.jpg';
 
@@ -181,7 +191,7 @@ const Gallery = () => {
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-                          
+
                           <div className="absolute bottom-4 left-4 right-4 text-white">
                             <div className="inline-flex items-center px-2 py-1 rounded-md bg-black/30 backdrop-blur-sm text-xs font-medium mb-2 border border-white/10">
                               <ImageIcon className="w-3 h-3 mr-1" />
@@ -189,7 +199,7 @@ const Gallery = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="p-6 flex-1 flex flex-col">
                           <div className="text-sm text-orange font-medium mb-2">
                             {album.date ? formatAlbumDate(album.date) : ''}
@@ -200,7 +210,7 @@ const Gallery = () => {
                           <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">
                             {album.description || "Aucune description disponible."}
                           </p>
-                          
+
                           <div className="flex items-center text-brown font-medium text-sm group-hover:translate-x-2 transition-transform">
                             Voir l'album <ArrowRight className="w-4 h-4 ml-1" />
                           </div>
@@ -214,11 +224,11 @@ const Gallery = () => {
           )}
         </div>
       </section>
-      
+
       {/* Call to Action */}
       <section className="py-20 bg-brown relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-50" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-50" />
         </div>
         <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
@@ -233,7 +243,7 @@ const Gallery = () => {
               Si vous avez capturé des moments spéciaux lors de nos événements, nous serions ravis de les voir !
               Partagez vos photos avec nous pour qu'elles apparaissent dans notre galerie communautaire.
             </p>
-            <Button 
+            <Button
               asChild
               className="bg-orange hover:bg-orange-dark text-white h-14 px-8 rounded-full text-lg shadow-xl shadow-black/20"
             >
@@ -244,7 +254,7 @@ const Gallery = () => {
           </motion.div>
         </div>
       </section>
-      
+
       <Footer />
     </div>
   );

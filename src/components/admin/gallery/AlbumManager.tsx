@@ -17,13 +17,13 @@ type AlbumManagerProps = {
  * - unclassified
  * - tout ce qui commence par "tip"
  */
-const HIDDEN_ALBUM_IDS = new Set<string>(["images", "unclassified"]);
-const HIDDEN_PREFIXES = ["tip"];
+const HIDDEN_ALBUM_IDS = new Set<string>(["images", "unclassified", "tip*"]);
+// const HIDDEN_PREFIXES = ["tip"];
 
 function isHiddenAlbum(album: Album): boolean {
   const id = String(album?.id ?? "");
   if (HIDDEN_ALBUM_IDS.has(id)) return true;
-  return HIDDEN_PREFIXES.some((p) => id.startsWith(p));
+  //return HIDDEN_PREFIXES.some((p) => id.startsWith(p));
 }
 
 export default function AlbumManager({ onSelectAlbum }: AlbumManagerProps) {
