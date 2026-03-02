@@ -10,6 +10,7 @@ import { fr } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useSEO from '@/hooks/useSEO';
+import { formatAlbumDate } from "@/utils/date";
 
 import { UPLOAD_URL, getImageUrl } from '@/config';
 
@@ -191,9 +192,7 @@ const Gallery = () => {
                         
                         <div className="p-6 flex-1 flex flex-col">
                           <div className="text-sm text-orange font-medium mb-2">
-                            {album.date && !isNaN(new Date(album.date).getTime()) 
-                              ? format(new Date(album.date), 'd MMMM yyyy', { locale: fr })
-                              : ''}
+                            {album.date ? formatAlbumDate(album.date) : ''}
                           </div>
                           <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange transition-colors line-clamp-1">
                             {album.title}

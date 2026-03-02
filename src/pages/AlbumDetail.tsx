@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import useSEO from '@/hooks/useSEO';
+import { formatAlbumDate } from "@/utils/date";
 
 import { UPLOAD_URL, getImageUrl } from '@/config';
 
@@ -141,7 +142,7 @@ const AlbumDetail = () => {
             
             <div className="flex items-center gap-3 text-orange-300 mb-4 font-medium">
                 <CalendarDays className="w-5 h-5" />
-                <span>{format(new Date(album.date), 'd MMMM yyyy', { locale: fr })}</span>
+                <span>{formatAlbumDate(album.date)}</span>
                 <span className="text-white/50">•</span>
                 <ImageIcon className="w-5 h-5" />
                 <span>{images.length} photos</span>
