@@ -157,10 +157,19 @@ export default function Users() {
         return;
       }
 
+      const { data: sessionData, error: sessionErr } = await db.auth.getSession();
+      if (sessionErr) throw sessionErr;
+
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        toast.error("Session introuvable. Reconnecte-toi puis réessaie.");
+        return;
+      }
+
       // IMPORTANT:
       // - on n'utilise PAS db.auth.signUp ici (sinon on switch de session)
       // - on appelle l'Edge Function admin-create-user qui utilise la Service Role Key
-      const { data, error } = await db.functions.invoke("admin-create-user", {
+      const { error } = await db.functions.invoke("admin-create-user", {
         body: {
           email: formData.email,
           password: formData.password,
@@ -168,11 +177,13 @@ export default function Users() {
           full_name: formData.full_name,
           is_admin: formData.is_admin,
         },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (error) throw error;
 
-      // data ressemble à { userId: "uuid" } (selon ta function)
       toast.success("Utilisateur créé avec succès");
       setDialogOpen(false);
       await fetchUsers();

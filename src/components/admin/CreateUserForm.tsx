@@ -36,6 +36,15 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
     setLoading(true);
 
     try {
+      const { data: sessionData, error: sessionErr } = await db.auth.getSession();
+      if (sessionErr) throw sessionErr;
+
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        toast.error("Session introuvable. Reconnecte-toi puis réessaie.");
+        return;
+      }
+
       // IMPORTANT:
       // - Ne pas utiliser db.auth.signUp() ici, sinon tu switches de session.
       // - Utiliser l'Edge Function admin-create-user (déployée) qui crée le user via service role.
@@ -46,13 +55,13 @@ export function CreateUserForm({ onSuccess }: CreateUserFormProps) {
           username: formData.username,
           full_name: formData.full_name,
           is_admin: formData.is_admin
-        }
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (error) throw error;
-
-      // Le trigger (auth.users -> profiles) crée automatiquement public.profiles.
-      // Donc: pas d'insert manuel dans profiles ici.
 
       toast.success("Utilisateur créé avec succès");
       onSuccess();

@@ -17,12 +17,15 @@ export type Profile = {
 type AuthContextType = {
   user: User | null;
   profile: Profile | null;
+  session: Session | null;
+  accessToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   error: AuthError | null;
+  refreshProfile: () => Promise<void>;
 };
 
 // Context
@@ -35,85 +38,129 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<AuthError | null>(null);
 
-  // Initialisation
+  const refreshProfile = async (s?: Session | null) => {
+    const currentSession = s ?? session;
+    const userId = currentSession?.user?.id;
+
+    if (!userId) {
+      setProfile(null);
+      return;
+    }
+
+    const { data, error: profileError } = await db
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Error fetching profile:", profileError);
+      // On ne toast pas ici pour éviter du bruit à chaque refresh/onglet
+      setProfile(null);
+      return;
+    }
+
+    setProfile(data || null);
+  };
+
+  // Initialisation + listener login/logout
   useEffect(() => {
     let mounted = true;
+
     async function init() {
-      setIsLoading(true);
-      const { data: { session } } = await db.auth.getSession();
-      setSession(session);
-      if (session?.user) {
-        const { data, error: profileError } = await db
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        if (mounted) setProfile(data || null);
-      } else {
+      try {
+        setIsLoading(true);
+
+        const {
+          data: { session: initialSession },
+          error: sessionError,
+        } = await db.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (!mounted) return;
+
+        setSession(initialSession);
+        await refreshProfile(initialSession);
+      } catch (e) {
+        console.error("Auth init error:", e);
+        setSession(null);
         setProfile(null);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
+
     init();
-    // Listener pour login/logout
-    const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        db.from('profiles').select('*').eq('id', session.user.id).single().then(({ data }) => setProfile(data || null));
-      } else {
-        setProfile(null);
-      }
+
+    const {
+      data: { subscription },
+    } = db.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      // Important: toujours rafraîchir le profile en fonction de la nouvelle session
+      await refreshProfile(newSession);
     });
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setError(null);
     try {
       const { data, error } = await db.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
       setSession(data.session);
-      if (data.session?.user) {
-        const { data: profileData } = await db
-          .from('profiles')
-          .select('*')
-          .eq('id', data.session.user.id)
-          .single();
-        setProfile(profileData || null);
-      }
+
+      // On rafraîchit le profile à partir de la session retournée
+      await refreshProfile(data.session);
+
       toast.success("Connexion réussie");
-    } catch (error) {
-      setError(error as AuthError);
+    } catch (e) {
+      const authErr = e as AuthError;
+      setError(authErr);
       toast.error("Échec de la connexion. Veuillez vérifier vos identifiants.");
-      throw error;
+      throw authErr;
     }
   };
 
   const signOut = async () => {
+    setError(null);
     try {
-      await db.auth.signOut();
+      const { error } = await db.auth.signOut();
+      if (error) throw error;
+
       setSession(null);
       setProfile(null);
       toast.success("Déconnexion réussie");
-    } catch (error) {
-      setError(error as AuthError);
+    } catch (e) {
+      const authErr = e as AuthError;
+      setError(authErr);
       toast.error("Erreur lors de la déconnexion");
+      throw authErr;
     }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user: session?.user || null,
-      profile,
-      isLoading,
-      isAuthenticated: !!session?.user,
-      isAdmin: !!profile?.is_admin,
-      signIn,
-      signOut,
-      error
-    }}>
+    <AuthContext.Provider
+      value={{
+        user: session?.user || null,
+        profile,
+        session,
+        accessToken: session?.access_token ?? null,
+        isLoading,
+        isAuthenticated: !!session?.user,
+        isAdmin: !!profile?.is_admin,
+        signIn,
+        signOut,
+        error,
+        refreshProfile: async () => refreshProfile(),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -123,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
