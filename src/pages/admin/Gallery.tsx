@@ -67,6 +67,15 @@ function uploadEndpoint(pathname: string) {
   return `${base}${p}`;
 }
 
+// Albums à masquer dans la sidebar
+const HIDDEN_ALBUM_IDS = new Set(["images", "unclassified"]);
+const HIDDEN_ALBUM_PREFIXES = ["tip"]; // masquera tip*, tip-2025, tipTest, etc.
+
+function isHiddenAlbumId(id: string) {
+  if (HIDDEN_ALBUM_IDS.has(id)) return true;
+  return HIDDEN_ALBUM_PREFIXES.some((prefix) => id.startsWith(prefix));
+}
+
 export default function Gallery() {
   const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +94,9 @@ export default function Gallery() {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [viewUnclassified, setViewUnclassified] = useState(false);
 
+  // NEW: album réellement ciblé par la suppression (évite les soucis de state)
+  const [albumToDelete, setAlbumToDelete] = useState<GalleryAlbum | null>(null);
+
   // Form state
   const [albumForm, setAlbumForm] = useState({ title: "" });
 
@@ -102,6 +114,8 @@ export default function Gallery() {
       return res.json();
     },
   });
+
+  const visibleAlbums = albums.filter((a) => !isHiddenAlbumId(a.id));
 
   const { data: images = [] } = useQuery<GalleryImage[]>({
     queryKey: ["galleryImages", selectedAlbum?.id, viewUnclassified],
@@ -125,18 +139,18 @@ export default function Gallery() {
     if (unclassified) {
       setViewUnclassified(true);
       setSelectedAlbum(null);
-    } else if (albumId && albums.length > 0) {
-      const album = albums.find((a) => a.id === albumId);
+    } else if (albumId && visibleAlbums.length > 0) {
+      const album = visibleAlbums.find((a) => a.id === albumId);
       if (album) {
         setSelectedAlbum(album);
         setViewUnclassified(false);
       }
-    } else if (!albumId && !unclassified && albums.length > 0) {
+    } else if (!albumId && !unclassified && visibleAlbums.length > 0) {
       // Default to first album if nothing selected
-      setSelectedAlbum(albums[0]);
+      setSelectedAlbum(visibleAlbums[0]);
       setViewUnclassified(false);
     }
-  }, [searchParams, albums]);
+  }, [searchParams, visibleAlbums]);
 
   // Filter images based on search
   const filteredImages = images.filter((img) =>
@@ -172,14 +186,25 @@ export default function Gallery() {
         method: "DELETE",
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to delete album");
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Failed to delete album (${res.status})`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
       queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
+
       setIsDeleteDialogOpen(false);
-      setSelectedAlbum(null);
-      setSearchParams({});
+
+      // si on supprimait l'album en cours, on reset la sélection
+      if (selectedAlbum && albumToDelete && selectedAlbum.id === albumToDelete.id) {
+        setSelectedAlbum(null);
+        setSearchParams({});
+      }
+
+      setAlbumToDelete(null);
       toast({ title: "Album supprimé" });
     },
     onError: (err: any) =>
@@ -301,7 +326,7 @@ export default function Gallery() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : (
-                albums.map((album) => (
+                visibleAlbums.map((album) => (
                   <div key={album.id} className="group flex items-center relative">
                     <Button
                       variant={selectedAlbum?.id === album.id ? "secondary" : "ghost"}
@@ -333,7 +358,7 @@ export default function Gallery() {
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => {
-                            setSelectedAlbum(album);
+                            setAlbumToDelete(album);
                             setIsDeleteDialogOpen(true);
                           }}
                         >
@@ -454,16 +479,23 @@ export default function Gallery() {
             <DialogTitle>Supprimer l'album ?</DialogTitle>
           </DialogHeader>
           <p className="text-gray-600">
-            L'album <strong>{selectedAlbum?.title}</strong> sera supprimé. Les photos seront
+            L'album <strong>{albumToDelete?.title}</strong> sera supprimé. Les photos seront
             définitivement effacées.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setAlbumToDelete(null);
+              }}
+            >
               Annuler
             </Button>
             <Button
               variant="destructive"
-              onClick={() => selectedAlbum && deleteAlbumMutation.mutate(selectedAlbum.id)}
+              onClick={() => albumToDelete && deleteAlbumMutation.mutate(albumToDelete.id)}
+              disabled={!albumToDelete}
             >
               Supprimer
             </Button>
@@ -555,7 +587,9 @@ export default function Gallery() {
             <div className="space-y-4 flex-1">
               <div className="space-y-2">
                 <Label>Nom du fichier</Label>
-                <div className="p-2 bg-gray-100 rounded text-sm break-all">{selectedImage?.title}</div>
+                <div className="p-2 bg-gray-100 rounded text-sm break-all">
+                  {selectedImage?.title}
+                </div>
               </div>
             </div>
 
