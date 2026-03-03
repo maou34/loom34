@@ -83,6 +83,8 @@ export default defineConfig(({ mode }) => ({
       },
     },
 
+    sourcemap: true,
+
     chunkSizeWarningLimit: 600,
 
     minify: "terser",

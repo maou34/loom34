@@ -1,179 +1,180 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect, Suspense, lazy } from "react";
-import { AuthProvider } from "../../contexts/AuthContext";
-import React from "react";
+import { ReactNode, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronLeft,
+  LayoutDashboard,
+  FileText,
+  CalendarDays,
+  Image as ImageIcon,
+  LogOut,
+  Menu,
+  X,
+  Users,
+  MessageSquare
+} from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-// Immediate pages (critical for initial load)
-import Index from "../../pages/Index";
-import NotFound from "../../pages/NotFound";
-import Unauthorized from "../../pages/Unauthorized";
-
-// Lazy loaded pages
-const About = lazy(() => import("../../pages/About"));
-const Events = lazy(() => import("../../pages/Events"));
-const MonsieurOurs = lazy(() => import("../../pages/MonsieurOurs"));
-const Gallery = lazy(() => import("../../pages/Gallery"));
-const Partners = lazy(() => import("../../pages/Partners"));
-const Login = lazy(() => import("../../pages/auth/Login"));
-const Register = lazy(() => import("../../pages/auth/Register"));
-const Profile = lazy(() => import("../../pages/auth/Profile"));
-const AdminDashboard = lazy(() => import("../../pages/admin/Dashboard"));
-const AdminArticles = lazy(() => import("../../pages/admin/Articles"));
-const AdminEvents = lazy(() => import("../../pages/admin/Events"));
-const AdminGallery = lazy(() => import("../../pages/admin/Gallery"));
-const AdminUsers = lazy(() => import("../../pages/admin/Users"));
-const AdminTickets = lazy(() => import("../../pages/admin/Tickets"));
-const AdminSEO = lazy(() => import("../../pages/admin/SEO"));
-const AdminPartners = lazy(() => import("../../pages/admin/Partners"));
-const ArticleDetail = lazy(() => import("../../pages/ArticleDetail"));
-const EventDetail = lazy(() => import("../../pages/EventDetail"));
-const Articles = lazy(() => import("../../pages/Articles"));
-const Terms = lazy(() => import("../../pages/Terms"));
-const LegalNotice = lazy(() => import("../../pages/LegalNotice"));
-const AlbumDetail = lazy(() => import("../../pages/AlbumDetail"));
-
-// Components
-import RequireAuth from "../../components/auth/RequireAuth";
-import RequireAdmin from "../../components/auth/RequireAdmin";
-import ExternalRedirect from "../../components/ExternalRedirect";
-import PageLoader from "../../components/PageLoader";
-import { LOOMOrganizationSchema } from "../../components/SEOStructuredData";
-import { AutoBreadcrumbs } from "../../components/InternalLinks";
-
-const queryClient = new QueryClient();
-
-// HelloAsso URLs - Direct links without host prefixing
-const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
-const MEMBERSHIP_URL =
-  "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
-
-// Mapping des routes vers leurs titres
-const PAGE_TITLES: { [key: string]: string } = {
-  "/": "LOOM - Les Ours Occitanie Méditerranée",
-  "/about": "LOOM - À propos",
-  "/events": "LOOM - Événements",
-  "/articles": "LOOM - Articles",
-  "/monsieur-ours": "LOOM - Monsieur Ours",
-  "/gallery": "LOOM - Galerie Photos",
-  "/partners": "LOOM - Nos Partenaires",
-  "/auth/login": "LOOM - Connexion",
-  "/auth/register": "LOOM - Inscription",
-  "/auth/profile": "LOOM - Mon Profil",
-  "/admin/dashboard": "LOOM Admin - Tableau de bord",
-  "/admin/articles": "LOOM Admin - Articles",
-  "/admin/events": "LOOM Admin - Événements",
-  "/admin/gallery": "LOOM Admin - Galerie",
-  "/admin/users": "LOOM Admin - Utilisateurs",
-  "/admin/tickets": "LOOM Admin - Tickets",
-  "/admin/seo": "LOOM Admin - SEO & Référencement",
-  "/admin/partners": "LOOM Admin - Partenaires",
-  "/terms": "LOOM - Conditions d'utilisation",
-  "/legal-notice": "LOOM - Mentions légales",
-  "/unauthorized": "LOOM - Accès non autorisé",
+type AdminLayoutProps = {
+  children: ReactNode;
+  title: string;
 };
 
-// Composant qui met à jour le titre à chaque navigation (SANS hard reload)
-function RouteReload() {
+export default function AdminLayout({ children, title }: AdminLayoutProps) {
+  const { signOut, profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
 
-  React.useEffect(() => {
-    // Gestion des titres dynamiques pour les pages avec paramètres
-    let pageTitle = PAGE_TITLES[location.pathname] || "LOOM - Les Ours Occitanie Méditerranée";
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
-    // Gestion spéciale pour les pages avec slug
-    if (location.pathname.startsWith("/articles/")) {
-      pageTitle = "LOOM - Article";
-    } else if (location.pathname.startsWith("/events/")) {
-      pageTitle = "LOOM - Événement";
-    }
+  const menuItems = [
+    {
+      title: "Tableau de bord",
+      href: "/admin/dashboard",
+      icon: <LayoutDashboard className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Articles",
+      href: "/admin/articles",
+      icon: <FileText className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Événements",
+      href: "/admin/events",
+      icon: <CalendarDays className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Photos",
+      href: "/admin/gallery",
+      icon: <ImageIcon className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Utilisateurs",
+      href: "/admin/users",
+      icon: <Users className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Tickets",
+      href: "/admin/tickets",
+      icon: <MessageSquare className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Partenaires",
+      href: "/admin/partners",
+      icon: <Users className="h-5 w-5 mr-2" />,
+    },
+  ];
 
-    document.title = pageTitle;
-  }, [location.pathname]);
-
-  return null;
-}
-
-const App = () => {
-  // Scroll to top on initial mount
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  const NavigationLinks = () => (
+    <div className="space-y-1">
+      {menuItems.map((item) => (
+        <Link
+          key={item.href}
+          to={item.href}
+          className={`flex items-center px-4 py-2 text-sm rounded-md ${
+            location.pathname === item.href
+              ? "bg-brown text-white font-medium"
+              : "text-gray-700 hover:bg-tan/20"
+          }`}
+          onClick={() => {
+            setOpen(false);
+            window.location.href = item.href;
+          }}
+        >
+          {item.icon}
+          {item.title}
+        </Link>
+      ))}
+    </div>
+  );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          {/* Données structurées globales de l'organisation */}
-          <LOOMOrganizationSchema />
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Mobile header */}
+      <header className="bg-white shadow-sm py-4 px-4 md:hidden flex items-center justify-between">
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="md:hidden">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[240px] sm:w-[300px]">
+            <div className="flex flex-col h-full">
+              <div className="py-4 px-2">
+                <h2 className="text-lg font-bold text-brown mb-1">Panneau d'administration</h2>
+                <p className="text-sm text-gray-500">
+                  Connecté en tant que {profile?.full_name || profile?.username || "Admin"}
+                </p>
+              </div>
+              <div className="flex-1">
+                <NavigationLinks />
+              </div>
+              <div className="py-4 px-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-red-500 hover:bg-red-50 hover:text-red-600"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-5 w-5 mr-2" />
+                  Se déconnecter
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+        <h1 className="text-lg font-semibold">{title}</h1>
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/" className="flex items-center">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Retour
+          </Link>
+        </Button>
+      </header>
 
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <RouteReload />
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
+      {/* Desktop layout */}
+      <div className="flex-1 flex flex-col md:flex-row">
+        {/* Sidebar (desktop) */}
+        <aside className="hidden md:flex md:w-64 flex-col bg-white border-r">
+          <div className="p-6">
+            <h1 className="text-xl font-bold text-brown">Panneau d'administration</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {profile?.full_name || profile?.username || "Admin"}
+            </p>
+          </div>
+          <nav className="flex-1 px-4 py-2">
+            <NavigationLinks />
+          </nav>
+          <div className="p-4 border-t">
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-red-500 hover:bg-red-50 hover:text-red-600"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-5 w-5 mr-2" />
+              Se déconnecter
+            </Button>
+            <Button variant="ghost" className="mt-2 w-full justify-start" onClick={() => window.location.href = "/"}>
+                <ChevronLeft className="h-5 w-5 mr-2" />
+              Retour au site
+            </Button>
+          </div>
+        </aside>
 
-                {/* Main Pages */}
-                <Route path="/about" element={<About />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/articles" element={<Articles />} />
-                <Route path="/articles/:slug" element={<ArticleDetail />} />
-                <Route path="/events/:slug" element={<EventDetail />} />
-                <Route path="/monsieur-ours" element={<MonsieurOurs />} />
-                <Route path="/gallery" element={<Gallery />} />
-                <Route path="/gallery/:albumId" element={<AlbumDetail />} />
-                <Route path="/partners" element={<Partners />} />
-
-                {/* External Redirects - Using ExternalRedirect component */}
-                <Route path="/shop" element={<ExternalRedirect url={SHOP_URL} />} />
-                <Route path="/membership" element={<ExternalRedirect url={MEMBERSHIP_URL} />} />
-
-                {/* Auth Routes */}
-                <Route path="/auth/login" element={<Login />} />
-                <Route path="/auth/register" element={<Register />} />
-                <Route path="/login" element={<Navigate to="/auth/login" replace />} />
-                <Route path="/register" element={<Navigate to="/auth/register" replace />} />
-
-                {/* Protected User Routes */}
-                <Route element={<RequireAuth />}>
-                  <Route path="/auth/profile" element={<Profile />} />
-                </Route>
-
-                {/* Admin Routes - Using RequireAuth and RequireAdmin as route wrappers */}
-                <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-
-                <Route element={<RequireAuth />}>
-                  <Route element={<RequireAdmin />}>
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    <Route path="/admin/articles" element={<AdminArticles />} />
-                    <Route path="/admin/events" element={<AdminEvents />} />
-                    <Route path="/admin/gallery" element={<AdminGallery />} />
-                    <Route path="/admin/users" element={<AdminUsers />} />
-                    <Route path="/admin/tickets" element={<AdminTickets />} />
-                    <Route path="/admin/seo" element={<AdminSEO />} />
-                    <Route path="/admin/partners" element={<AdminPartners />} />
-                  </Route>
-                </Route>
-
-                {/* Privacy Policy and Terms Routes */}
-                <Route path="/terms" element={<Terms />} />
-                <Route path="/legal-notice" element={<LegalNotice />} />
-                <Route path="/unauthorized" element={<Unauthorized />} />
-
-                {/* Catch-all route */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+        {/* Main content */}
+        <main className="flex-1 p-4 md:p-8">
+          <div className="hidden md:block mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          </div>
+          <div className="bg-white shadow rounded-lg p-4 md:p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </div>
   );
-};
-
-export default App;
+}

@@ -43,6 +43,7 @@ import ExternalRedirect from "./components/ExternalRedirect";
 import PageLoader from "./components/PageLoader";
 import { LOOMOrganizationSchema } from "./components/SEOStructuredData";
 import { AutoBreadcrumbs } from "./components/InternalLinks";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <RouteReload />
+            <ErrorBoundary>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -169,6 +171,7 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </ErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </TooltipProvider>
