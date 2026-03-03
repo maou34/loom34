@@ -72,9 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
 
         const {
-          data: { session: initialSession },
+          data: { session: initialSession},
           error: sessionError,
         } = await db.auth.getSession();
+
+        console.log("initialSession", initialSession);
 
         if (sessionError) throw sessionError;
 
