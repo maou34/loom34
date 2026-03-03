@@ -1,3 +1,2 @@
 [functions.admin-create-user]
 verify_jwt = false
-project_id = "abqhawhalbrqgtepaclc"
