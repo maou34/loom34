@@ -48,7 +48,8 @@ const queryClient = new QueryClient();
 
 // HelloAsso URLs - Direct links without host prefixing
 const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
-const MEMBERSHIP_URL = "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
+const MEMBERSHIP_URL =
+  "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
 
 // Mapping des routes vers leurs titres
 const PAGE_TITLES: { [key: string]: string } = {
@@ -61,21 +62,24 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
   "/auth/register": "LOOM - Inscription",
-  "/auth/profile": "LOOM - Mon Profil", "/admin/dashboard": "LOOM Admin - Tableau de bord",
+  "/auth/profile": "LOOM - Mon Profil",
+  "/admin/dashboard": "LOOM Admin - Tableau de bord",
   "/admin/articles": "LOOM Admin - Articles",
   "/admin/events": "LOOM Admin - Événements",
   "/admin/gallery": "LOOM Admin - Galerie",
   "/admin/users": "LOOM Admin - Utilisateurs",
-  "/admin/tickets": "LOOM Admin - Tickets", "/admin/seo": "LOOM Admin - SEO & Référencement",
+  "/admin/tickets": "LOOM Admin - Tickets",
+  "/admin/seo": "LOOM Admin - SEO & Référencement",
+  "/admin/partners": "LOOM Admin - Partenaires",
   "/terms": "LOOM - Conditions d'utilisation",
   "/legal-notice": "LOOM - Mentions légales",
-  "/unauthorized": "LOOM - Accès non autorisé"
+  "/unauthorized": "LOOM - Accès non autorisé",
 };
 
-// Composant qui force le rechargement complet à chaque navigation
+// Composant qui met à jour le titre à chaque navigation (SANS hard reload)
 function RouteReload() {
   const location = useLocation();
-  const isFirstRender = React.useRef(true);
+
   React.useEffect(() => {
     // Gestion des titres dynamiques pour les pages avec paramètres
     let pageTitle = PAGE_TITLES[location.pathname] || "LOOM - Les Ours Occitanie Méditerranée";
@@ -87,20 +91,14 @@ function RouteReload() {
       pageTitle = "LOOM - Événement";
     }
 
-    // Mise à jour du titre de la page
     document.title = pageTitle;
+  }, [location.pathname]);
 
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    window.location.href = location.pathname + location.search + location.hash;
-  }, [location]);
   return null;
 }
 
 const App = () => {
-  // Scroll to top on route change
+  // Scroll to top on initial mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -161,6 +159,7 @@ const App = () => {
                     <Route path="/admin/partners" element={<AdminPartners />} />
                   </Route>
                 </Route>
+
                 {/* Privacy Policy and Terms Routes */}
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/legal-notice" element={<LegalNotice />} />
