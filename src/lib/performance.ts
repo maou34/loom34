@@ -65,16 +65,32 @@ export function preloadCriticalResources(): void {
 }
 
 // Service Worker registration for PWA capabilities
-export function registerServiceWorker(): void {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+export function registerServiceWorker() {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('SW registered: ', registration);
-      })
-      .catch(registrationError => {
-        console.log('SW registration failed: ', registrationError);
-      });
+  // Désactiver le SW en production pour éviter les pages blanches/caches incohérents
+  if (import.meta.env.PROD) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => reg.unregister());
+    });
+    return;
+  }
+
+  // DEV uniquement
+  navigator.serviceWorker.register("/sw.js").catch((err) => {
+    console.error("SW registration failed:", err);
   });
 }
+// export function registerServiceWorker(): void {
+//   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker.register('/sw.js')
+//       .then(registration => {
+//         console.log('SW registered: ', registration);
+//       })
+//       .catch(registrationError => {
+//         console.log('SW registration failed: ', registrationError);
+//       });
+//   });
+// }
