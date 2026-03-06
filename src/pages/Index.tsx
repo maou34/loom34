@@ -18,7 +18,7 @@ import { InternalLinks } from '@/components/InternalLinks';
 const Index = () => {
   // SEO Configuration avec composant dédié
   const seoDescription = 'Rejoignez LOOM, l\'association Bear fondée en 2017 à Montpellier. Plus de 150 membres, 50+ événements par an. Découvrez notre communauté dynamique et nos activités.';
-  
+
   // SEO Configuration (hook existant maintenu pour compatibilité)
   useSEO({
     title: 'LOOM - Les Ours Occitanie Méditerranée | Communauté Bear de Montpellier',
@@ -40,7 +40,7 @@ const Index = () => {
         .eq('published', true)
         .order('date', { ascending: false })
         .limit(3);
-      
+
       if (error) throw error;
       return data as Tables<'articles'>[];
     }
@@ -56,7 +56,7 @@ const Index = () => {
         .eq('published', true)
         .order('date', { ascending: true })
         .limit(10);
-      
+
       if (error) throw error;
       return data as Tables<'events'>[];
     }
@@ -81,7 +81,7 @@ const Index = () => {
 
     // Set initially
     handleScroll();
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -93,28 +93,28 @@ const Index = () => {
 
     const scrollWidth = partnersContainer.scrollWidth;
     const clientWidth = partnersContainer.clientWidth;
-    
+
     if (scrollWidth <= clientWidth) return; // No need to scroll if all items fit
 
     let scrollPosition = 0;
     const speed = 1; // pixels per frame
-    
+
     const scroll = () => {
       if (!partnersContainer) return;
-      
+
       scrollPosition += speed;
-      
+
       // Reset position when we've scrolled the full width
       if (scrollPosition >= scrollWidth / 2) {
         scrollPosition = 0;
       }
-      
+
       partnersContainer.scrollLeft = scrollPosition;
       requestAnimationFrame(scroll);
     };
-    
+
     const animationId = requestAnimationFrame(scroll);
-    
+
     return () => cancelAnimationFrame(animationId);
   }, [isVisible]);
 
@@ -135,7 +135,7 @@ const Index = () => {
   // HelloAsso URLs
   const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
   const MEMBERSHIP_URL = "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
-  
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -161,13 +161,13 @@ const Index = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50/50">
       {/* SEO optimisé pour la page d'accueil */}
-      <SEOHomePage 
+      <SEOHomePage
         title="Communauté Bear de Montpellier"
         description={seoDescription}
       />
-      
+
       <Navbar />
-      
+
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden">
         {/* Background Elements */}
@@ -178,7 +178,7 @@ const Index = () => {
 
         <div className="container mx-auto px-4">
           <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
@@ -191,16 +191,16 @@ const Index = () => {
                 </span>
                 Bienvenue chez Loom !
               </div>
-              
+
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900 tracking-tight">
-                Les <br/>
+                Les <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Ours<br />Occitanie<br />Montpellier</span>
               </h1>
-              
+
               <p className="text-xl text-gray-600 max-w-xl leading-relaxed">
                 Association Bear fondée en 2017. Un espace inclusif pour les Bears et tous ceux qui aiment les Ours, les poils et la convivialité, du XS au XXXXXL.
               </p>
-              
+
               <div className="flex flex-wrap gap-4 pt-4">
                 <Button
                   className="bg-brown hover:bg-brown-dark text-white px-8 py-6 rounded-full text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
@@ -208,32 +208,34 @@ const Index = () => {
                 >
                   Nous Rejoindre
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="border-2 border-brown/20 text-brown hover:bg-brown/5 px-8 py-6 rounded-full text-lg"
                 >
                   <Link to="/about">En Savoir Plus</Link>
                 </Button>
               </div>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, rotate: 2 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
               className="lg:w-1/2 relative"
             >
               <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm">
-                <img 
-                  src="/gallery/MONTPELL'BEAR 2025 Samedi soir 28 juin/0.9173911621794534.JPG"
-                  alt="Community gathering" 
-                  className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
-                />
+                <Link to="/articles/montpell-bears-2026">
+                  <img
+                    src="/gallery/images/montpell_bears_2026-full.jpeg"
+                    alt="Community gathering"
+                    className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
+                  />
+                </Link>
                 <div className="absolute inset-0 bg-gradient-to-t from-brown/40 via-transparent to-transparent"></div>
               </div>
-              
+
               {/* Floating Stats Cards */}
-              <motion.div 
+              <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.6 }}
@@ -247,8 +249,8 @@ const Index = () => {
                   <p className="text-gray-900 font-bold text-2xl">150+</p>
                 </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.8 }}
@@ -266,15 +268,15 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Latest Articles Section */}
       <section className={`py-16 md:py-24 transition-opacity duration-700 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
         <div className="container mx-auto px-4">
-          <SectionHeading 
-            title="Nos derniers Articles" 
+          <SectionHeading
+            title="Nos derniers Articles"
           />
-          
-          <motion.div 
+
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
@@ -299,7 +301,7 @@ const Index = () => {
             ) : (
               latestArticles.map((article) => (
                 <motion.div key={article.id} variants={itemVariants}>
-                  <ArticleCard 
+                  <ArticleCard
                     title={article.title}
                     excerpt={article.excerpt}
                     date={article.date}
@@ -311,7 +313,7 @@ const Index = () => {
               ))
             )}
           </motion.div>
-          
+
           <div className="mt-12 text-center">
             <Link to="/articles">
               <Button variant="outline" rightIcon={<ChevronRight size={18} />} className="rounded-full px-8 hover:bg-tan/20 border-brown/20 text-brown">
@@ -321,7 +323,7 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Upcoming Events Section */}
       <section className="py-16 md:py-24 bg-gradient-to-b from-tan/20 to-white/50 relative overflow-hidden">
         {/* Decorative background */}
@@ -330,11 +332,11 @@ const Index = () => {
         </div>
 
         <div className="container mx-auto px-4">
-          <SectionHeading 
-            title="Nos prochains événements" 
+          <SectionHeading
+            title="Nos prochains événements"
           />
-          
-          <motion.div 
+
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
@@ -359,7 +361,7 @@ const Index = () => {
             ) : (
               upcomingEvents.map((event) => (
                 <motion.div key={event.id} variants={itemVariants}>
-                  <EventCard 
+                  <EventCard
                     title={event.title}
                     description={event.description}
                     date={event.date}
@@ -373,7 +375,7 @@ const Index = () => {
               ))
             )}
           </motion.div>
-          
+
           <div className="mt-12 text-center">
             <Link to="/events">
               <Button rightIcon={<CalendarDays size={18} />} className="rounded-full px-8 bg-brown hover:bg-brown-dark shadow-lg hover:shadow-xl transition-all">
@@ -383,11 +385,11 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       {/* Monsieur Ours Spotlight */}
       <section className="py-16 md:py-24">
         <div className="container mx-auto px-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -397,18 +399,18 @@ const Index = () => {
             <div className="absolute top-0 right-0 w-1/2 h-full bg-[url('/gallery/images/election_2025_vainqueurs.jpg')] bg-cover bg-center hidden md:block opacity-90 mix-blend-overlay">
               <div className="absolute inset-0 bg-transparent"></div>
             </div>
-            
+
             <div className="md:w-3/5 lg:w-1/2 p-10 md:p-16 lg:p-20 relative z-10">
               <div className="inline-block mb-6">
                 <div className="w-16 h-1.5 bg-orange rounded-full mb-2"></div>
               </div>
               <h2 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">Monsieur Ours</h2>
               <p className="text-tan/90 text-xl mb-10 leading-relaxed">
-               Chaque année, lors de la Montpell Bear's, Monsieur Ours et ses oursons sont élus par la communauté Bear présente lors de cet événement.
+                Chaque année, lors de la Montpell Bear's, Monsieur Ours et ses oursons sont élus par la communauté Bear présente lors de cet événement.
               </p>
               <Link to="/monsieur-ours">
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   rightIcon={<ChevronRight size={18} />}
                   className="bg-white text-brown hover:bg-tan hover:text-brown-dark border-none rounded-full px-8 py-6 text-lg shadow-lg transition-all transform hover:scale-105"
                 >
@@ -419,16 +421,16 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
-      
+
       {/* Features Section */}
       <section className="py-16 md:py-24 bg-white relative">
         <div className="container mx-auto px-4">
-          <SectionHeading 
-            title="Notre communauté" 
+          <SectionHeading
+            title="Notre communauté"
             centered
           />
-          
-          <motion.div 
+
+          <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -445,7 +447,7 @@ const Index = () => {
                 Rejoignez une communauté dynamique de plus de 150 personnes !
               </p>
             </motion.div>
-            
+
             {/* Feature 2 */}
             <motion.div variants={itemVariants} className="bg-gray-50 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 group">
               <div className="rounded-2xl bg-orange/10 w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-orange group-hover:text-white transition-colors duration-300">
@@ -456,7 +458,7 @@ const Index = () => {
                 Rejoignez la communauté et participez à nos événements tout au long de l'année!
               </p>
             </motion.div>
-            
+
             {/* Feature 3 */}
             <motion.div variants={itemVariants} className="bg-gray-50 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 group">
               <div className="rounded-2xl bg-yellow/10 w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-yellow group-hover:text-brown-dark transition-colors duration-300">
@@ -467,7 +469,7 @@ const Index = () => {
                 Aidez nous en achetant nos produits dérivés et nos goodies!
               </p>
             </motion.div>
-            
+
             {/* Feature 4 */}
             <motion.div variants={itemVariants} className="bg-gray-50 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100 group">
               <div className="rounded-2xl bg-tan/30 w-16 h-16 flex items-center justify-center mb-6 group-hover:bg-tan group-hover:text-brown-dark transition-colors duration-300">
@@ -481,7 +483,7 @@ const Index = () => {
           </motion.div>
         </div>
       </section>
-      
+
       {/* Navigation rapide et SEO - Section de liens internes */}
       <section className="py-20 md:py-28 bg-gradient-to-b from-white to-tan/20 relative overflow-hidden">
         {/* Decorative elements */}
@@ -491,12 +493,12 @@ const Index = () => {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <SectionHeading 
-            title="Explorez LOOM" 
+          <SectionHeading
+            title="Explorez LOOM"
             subtitle="Plongez au cœur de notre univers et découvrez tout ce que nous avons à offrir"
             centered
           />
-          
+
           <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {[
               { path: '/about', name: 'À propos', icon: <Users className="w-6 h-6" />, description: 'Découvrez notre histoire, nos valeurs et l\'équipe qui fait vivre l\'association.' },
@@ -532,7 +534,7 @@ const Index = () => {
               </motion.div>
             ))}
           </div>
-          
+
           {/* Section liens rapides pour le SEO (conservée mais stylisée plus discrètement) */}
           <div className="mt-16 text-center opacity-80">
             <p className="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wider">Accès Rapide</p>
@@ -556,7 +558,7 @@ const Index = () => {
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section - Updated to only have "Become a Member" button */}
       <section className="py-20 md:py-32 bg-gradient-to-br from-brown via-brown-dark to-black text-white relative overflow-hidden">
         {/* Decorative circles */}
