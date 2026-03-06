@@ -224,14 +224,14 @@ const Index = () => {
               className="lg:w-1/2 relative"
             >
               <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm">
+                <img
+                  src="/gallery/images/montpell_bears_2026-full.jpeg"
+                  alt="Community gathering"
+                  className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
+                />
                 <Link to="/articles/montpell-bears-2026">
-                  <img
-                    src="/gallery/images/montpell_bears_2026-full.jpeg"
-                    alt="Community gathering"
-                    className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
-                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-brown/40 via-transparent to-transparent"></div>
                 </Link>
-                <div className="absolute inset-0 bg-gradient-to-t from-brown/40 via-transparent to-transparent"></div>
               </div>
 
               {/* Floating Stats Cards */}
