@@ -22,7 +22,7 @@ Allow: /about
 Allow: /monsieur-ours
 
 # Sitemap
-Sitemap: https://loom-lgbt.fr/sitemap.xml
+Sitemap: https://lgbt-loom.fr/sitemap.xml
 
 # Disallow admin pages
 Disallow: /admin/

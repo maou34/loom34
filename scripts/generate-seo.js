@@ -3,7 +3,7 @@ import { join } from 'path';
 
 // Générer la sitemap manuellement (version simplifiée pour le script)
 function generateSitemap() {
-  const baseUrl = 'https://loom-lgbt.frs.fr';
+  const baseUrl = 'https://lgbt-loom.frs.fr';
   const currentDate = new Date().toISOString().split('T')[0];
   
   const pages = [
@@ -35,7 +35,7 @@ ${pages.map(page => `  <url>
 }
 
 function generateRobotsTxt() {
-  const baseUrl = 'https://loom-lgbt.frs.fr';
+  const baseUrl = 'https://lgbt-loom.frs.fr';
   
   return `User-agent: Googlebot
 Allow: /
@@ -78,7 +78,7 @@ Disallow: /src/
 Disallow: /node_modules/
 
 # Informations de contact
-# Contact: webmaster@loom-lgbt.frs.fr`;
+# Contact: webmaster@lgbt-loom.frs.fr`;
 }
 
 async function generateSEOFiles() {

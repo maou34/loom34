@@ -42,8 +42,8 @@ const LegalNotice = () => {
               <div className="space-y-4 text-gray-700">
                 <p>
                   Le présent site, accessible à l'URL{' '}
-                  <a href="https://loom-lgbt.fr" className="text-orange-600 hover:text-orange-800 underline">
-                    https://loom-lgbt.fr
+                  <a href="https://lgbt-loom.fr" className="text-orange-600 hover:text-orange-800 underline">
+                    https://lgbt-loom.fr
                   </a>{' '}
                   (le « Site »), est édité par :
                 </p>

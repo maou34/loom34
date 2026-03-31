@@ -16,7 +16,7 @@ export const defaultSEO: SEOProps = {
   description: 'Association Bear fondée en 2017 à Montpellier. Rejoignez une communauté dynamique de plus de 150 personnes pour des événements, articles et moments de partage.',
   keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Montpellier', 'Association', 'Communauté', 'LGBTQ+'],
   image: '/loom_logo_round.png',
-  url: 'https://loom-lgbt.fr',
+  url: 'https://lgbt-loom.fr',
   type: 'website'
 };
 
@@ -100,7 +100,7 @@ export function generateOrganizationStructuredData() {
     "alternateName": "LOOM",
     "description": "Association Bear fondée en 2017 à Montpellier pour les Bears et tous ceux qui aiment les Ours.",
     "foundingDate": "2017",
-    "url": "https://loom-lgbt.fr",
+    "url": "https://lgbt-loom.fr",
     "logo": "/loom_logo_round.png",
     "sameAs": [
       "https://www.instagram.com/loom_bears",
@@ -179,7 +179,7 @@ export function generateEventStructuredData(event: {
     "organizer": {
       "@type": "Organization",
       "name": "LOOM - Les Ours Occitanie Montpellier",
-      "url": "https://loom-lgbt.fr"
+      "url": "https://lgbt-loom.fr"
     },
     "offers": event.price ? {
       "@type": "Offer",

@@ -9,12 +9,12 @@ const app = express();
 
 /**
  * CORS
- * - Autorise explicitement loom-lgbt.fr + environnements locaux
- * - Autorise aussi les sous-domaines *.loom-lgbt.fr
+ * - Autorise explicitement lgbt-loom.fr + environnements locaux
+ * - Autorise aussi les sous-domaines *.lgbt-loom.fr
  * - IMPORTANT: ne renvoie qu'UNE seule origine (jamais une liste)
  */
 const allowedOrigins = new Set([
-  'https://loom-lgbt.fr',
+  'https://lgbt-loom.fr',
   'http://localhost:5173',
   'http://localhost:4173',
   'http://localhost:8080',
@@ -27,11 +27,11 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     try {
-      // Autoriser les sous-domaines *.loom-lgbt.fr (https uniquement)
+      // Autoriser les sous-domaines *.lgbt-loom.fr (https uniquement)
       const url = new URL(origin);
       const isSubdomain =
         url.protocol === 'https:' &&
-        (url.hostname === 'loom-lgbt.fr' || url.hostname.endsWith('.loom-lgbt.fr'));
+        (url.hostname === 'lgbt-loom.fr' || url.hostname.endsWith('.lgbt-loom.fr'));
 
       if (allowedOrigins.has(origin) || isSubdomain) {
         return callback(null, true);

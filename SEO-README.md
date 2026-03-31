@@ -160,7 +160,7 @@ Accédez à `/admin/seo` pour :
 
 Pour toute question concernant le SEO :
 - 📧 Email: contactloom34@gmail.com
-- 🌐 Site: https://loom-lgbt.fr
+- 🌐 Site: https://lgbt-loom.fr
 - 📱 Instagram: @loom_ours_34
 
 ---

@@ -96,7 +96,7 @@ const SEOStructuredData: React.FC<SEOStructuredDataProps> = ({ type, data }) => 
           publisher: {
             '@type': 'Organization',
             name: 'LOOM - Les Ours Occitanie Montpellier',
-            logo: 'https://loom-lgbt.fr/logo.png'
+            logo: 'https://lgbt-loom.fr/logo.png'
           }
         };
 
@@ -168,8 +168,8 @@ const SEOStructuredData: React.FC<SEOStructuredDataProps> = ({ type, data }) => 
 export const LOOMOrganizationData: OrganizationData = {
   name: 'LOOM - Les Ours Occitanie Montpellier',
   description: 'Association Bear fondée en 2017. Association pour les Bears et tous ceux qui aiment les Ours, les poils et les tailles allant du XS au XXXXXL.',
-  url: 'https://loom-lgbt.fr',
-  logo: 'https://loom-lgbt.fr/logo.png',
+  url: 'https://lgbt-loom.fr',
+  logo: 'https://lgbt-loom.fr/logo.png',
   contactPoint: {
     telephone: '+33767179100',
     email: 'contactloom34@gmail.com',
@@ -200,8 +200,8 @@ export const useArticleStructuredData = (article: any) => {
     author: 'LOOM - Les Ours Occitanie Montpellier',
     datePublished: article.created_at,
     dateModified: article.updated_at || article.created_at,
-    image: article.image_url || 'https://loom-lgbt.fr/placeholder.svg',
-    url: `https://loom-lgbt.fr/articles/${article.slug}`
+    image: article.image_url || 'https://lgbt-loom.fr/placeholder.svg',
+    url: `https://lgbt-loom.fr/articles/${article.slug}`
   };
 };
 
@@ -216,8 +216,8 @@ export const useEventStructuredData = (event: any) => {
       name: event.location || 'Montpellier',
       address: event.address || '49 Rue du faubourg St. Jaumes, Bat E, 34000 Montpellier'
     },
-    image: event.image_url || 'https://loom-lgbt.fr/placeholder.svg',
-    url: `https://loom-lgbt.fr/events/${event.slug}`,
+    image: event.image_url || 'https://lgbt-loom.fr/placeholder.svg',
+    url: `https://lgbt-loom.fr/events/${event.slug}`,
     organizer: 'LOOM - Les Ours Occitanie Montpellier'
   };
 };

@@ -44,8 +44,8 @@ const Terms = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="mb-2">
                     L'édition et la direction de la publication du site{' '}
-                    <a href="https://loom-lgbt.fr" className="text-orange-600 hover:text-orange-800 underline">
-                      https://loom-lgbt.fr
+                    <a href="https://lgbt-loom.fr" className="text-orange-600 hover:text-orange-800 underline">
+                      https://lgbt-loom.fr
                     </a>{' '}
                     est assurée par LES OURS OCCITANIE MEDITERRANEE, domicilié 49 Rue du faubourg St. Jaumes, Bat E 34000 Montpellier.
                   </p>
@@ -55,7 +55,7 @@ const Terms = () => {
                   </ul>
                 </div>
                 <p>
-                  L'hébergeur du site https://loom-lgbt.fr est la société Inferi, dont le siège social est situé au Montpellier, avec le numéro de téléphone : +33642245188.
+                  L'hébergeur du site https://lgbt-loom.fr est la société Inferi, dont le siège social est situé au Montpellier, avec le numéro de téléphone : +33642245188.
                 </p>
               </div>
             </section>
@@ -68,8 +68,8 @@ const Terms = () => {
               <div className="text-gray-700 space-y-4">
                 <p>
                   Le site{' '}
-                  <a href="https://loom-lgbt.fr" className="text-orange-600 hover:text-orange-800 underline">
-                    https://loom-lgbt.fr
+                  <a href="https://lgbt-loom.fr" className="text-orange-600 hover:text-orange-800 underline">
+                    https://lgbt-loom.fr
                   </a>{' '}
                   permet à l'Utilisateur un accès gratuit aux services suivants :
                 </p>
@@ -140,8 +140,8 @@ const Terms = () => {
               <div className="text-gray-700 space-y-4">
                 <p>
                   Les sources des informations diffusées sur le site{' '}
-                  <a href="https://loom-lgbt.fr" className="text-orange-600 hover:text-orange-800 underline">
-                    https://loom-lgbt.fr
+                  <a href="https://lgbt-loom.fr" className="text-orange-600 hover:text-orange-800 underline">
+                    https://lgbt-loom.fr
                   </a>{' '}
                   sont réputées fiables mais le site ne garantit pas qu'il soit exempt de défauts, d'erreurs ou d'omissions.
                 </p>
@@ -151,7 +151,7 @@ const Terms = () => {
                   </p>
                 </div>
                 <p>
-                  Le site https://loom-lgbt.fr ne peut être tenu pour responsable d'éventuels virus qui pourraient infecter l'ordinateur ou tout matériel informatique de l'Internaute, suite à une utilisation, à l'accès, ou au téléchargement provenant de ce site.
+                  Le site https://lgbt-loom.fr ne peut être tenu pour responsable d'éventuels virus qui pourraient infecter l'ordinateur ou tout matériel informatique de l'Internaute, suite à une utilisation, à l'accès, ou au téléchargement provenant de ce site.
                 </p>
                 <p>
                   La responsabilité du site ne peut être engagée en cas de force majeure ou du fait imprévisible et insurmontable d'un tiers.
@@ -168,8 +168,8 @@ const Terms = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p>
                     Des liens hypertextes peuvent être présents sur le site. L'Utilisateur est informé qu'en cliquant sur ces liens, il sortira du site{' '}
-                    <a href="https://loom-lgbt.fr" className="text-orange-600 hover:text-orange-800 underline">
-                      https://loom-lgbt.fr
+                    <a href="https://lgbt-loom.fr" className="text-orange-600 hover:text-orange-800 underline">
+                      https://lgbt-loom.fr
                     </a>. Ce dernier n'a pas de contrôle sur les pages web sur lesquelles aboutissent ces liens et ne saurait, en aucun cas, être responsable de leur contenu.
                   </p>
                 </div>
@@ -190,11 +190,11 @@ const Terms = () => {
                     <strong>Qu'est-ce qu'un cookie ?</strong>
                   </p>
                   <p>
-                    Les cookies sont de petits fichiers stockés temporairement sur le disque dur de l'ordinateur de l'Utilisateur par votre navigateur et qui sont nécessaires à l'utilisation du site https://loom-lgbt.fr. Les cookies ne contiennent pas d'information personnelle et ne peuvent pas être utilisés pour identifier quelqu'un. Un cookie contient un identifiant unique, généré aléatoirement et donc anonyme.
+                    Les cookies sont de petits fichiers stockés temporairement sur le disque dur de l'ordinateur de l'Utilisateur par votre navigateur et qui sont nécessaires à l'utilisation du site https://lgbt-loom.fr. Les cookies ne contiennent pas d'information personnelle et ne peuvent pas être utilisés pour identifier quelqu'un. Un cookie contient un identifiant unique, généré aléatoirement et donc anonyme.
                   </p>
                 </div>
                 <p>
-                  L'information contenue dans les cookies est utilisée pour améliorer le site https://loom-lgbt.fr.
+                  L'information contenue dans les cookies est utilisée pour améliorer le site https://lgbt-loom.fr.
                 </p>
                 <p>
                   En naviguant sur le site, L'Utilisateur les accepte. L'Utilisateur pourra désactiver ces cookies par l'intermédiaire des paramètres figurant au sein de son logiciel de navigation.

@@ -20,7 +20,7 @@ const SEOPage: React.FC<SEOPageProps> = ({
   title,
   description = "LOOM - Les Ours Occitanie Montpellier. Association Bear fondée en 2017 pour les Bears et tous ceux qui aiment les Ours, les poils et les tailles allant du XS au XXXXXL.",
   keywords = ['LOOM', 'Ours', 'Bear', 'Occitanie', 'Montpellier', 'Association', 'Montpellier', 'LGBTQ+', 'Communauté'],
-  image = 'https://loom-lgbt.frs.fr/logo.png',
+  image = 'https://lgbt-loom.frs.fr/logo.png',
   article = false,
   author = 'LOOM - Les Ours Occitanie Montpellier',
   publishedDate,
@@ -30,7 +30,7 @@ const SEOPage: React.FC<SEOPageProps> = ({
   nofollow = false
 }) => {
   const location = useLocation();
-  const baseUrl = 'https://loom-lgbt.frs.fr';
+  const baseUrl = 'https://lgbt-loom.frs.fr';
   const currentUrl = canonicalUrl || `${baseUrl}${location.pathname}`;
   const fullTitle = title ? `${title} | LOOM` : 'LOOM - Les Ours Occitanie Montpellier';
 

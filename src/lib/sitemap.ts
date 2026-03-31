@@ -2,7 +2,7 @@ import { db } from '../db';
 import { UPLOAD_URL } from '@/config';
 
 export async function generateSitemap(): Promise<string> {
-  const baseUrl = 'https://loom-lgbt.fr';
+  const baseUrl = 'https://lgbt-loom.fr';
   const currentDate = new Date().toISOString().split('T')[0];
   
   // Pages statiques
@@ -97,7 +97,7 @@ ${allPages.map(page => `  <url>
 }
 
 export function generateRobotsTxt(): string {
-  const baseUrl = 'https://loom-lgbt.fr';
+  const baseUrl = 'https://lgbt-loom.fr';
   
   return `User-agent: *
 Allow: /

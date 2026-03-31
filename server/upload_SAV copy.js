@@ -9,7 +9,7 @@ const app = express();
 
 // Configuration CORS pour autoriser le domaine principal et le développement local
 const allowedOrigins = [
-  'https://loom-lgbt.fr',
+  'https://lgbt-loom.fr',
   'http://localhost:5173',
   'http://localhost:4173',
   'http://localhost:8080',
@@ -20,7 +20,7 @@ app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.loom-lgbt.fr')) {
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.lgbt-loom.fr')) {
       return callback(null, true);
     }
     // Fallback for other environments or if strict security is not required yet
