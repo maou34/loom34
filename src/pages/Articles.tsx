@@ -17,7 +17,7 @@ const Articles = () => {
   // SEO Configuration
   useSEO({
     title: 'Articles - LOOM | Actualités et nouvelles de la communauté Bear',
-    description: 'Découvrez les derniers articles de LOOM - Les Ours Occitanie Méditerranée. Actualités, événements passés, témoignages et nouvelles de notre communauté Bear.',
+    description: 'Découvrez les derniers articles de LOOM - Les Ours Occitanie Montpellier. Actualités, événements passés, témoignages et nouvelles de notre communauté Bear.',
     keywords: ['LOOM articles', 'actualités Bears', 'communauté Bear', 'Montpellier', 'nouvelles LGBTQ+', 'événements Bears'],
     type: 'website'
   });

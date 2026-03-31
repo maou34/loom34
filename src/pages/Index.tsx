@@ -21,9 +21,9 @@ const Index = () => {
 
   // SEO Configuration (hook existant maintenu pour compatibilité)
   useSEO({
-    title: 'LOOM - Les Ours Occitanie Méditerranée | Communauté Bear de Montpellier',
+    title: 'LOOM - Les Ours Occitanie Montpellier | Communauté Bear de Montpellier',
     description: seoDescription,
-    keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Méditerranée', 'Association', 'Communauté', 'LGBTQ+', 'événements', 'Bear community'],
+    keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Montpellier', 'Association', 'Communauté', 'LGBTQ+', 'événements', 'Bear community'],
     type: 'website'
   });
 

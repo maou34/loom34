@@ -36,7 +36,7 @@ const EventDetail = () => {
   // SEO Configuration
   useSEO({
     title: event ? `${event.title} - Événement LOOM` : 'Événement - LOOM',
-    description: event?.description?.substring(0, 160) || 'Découvrez cet événement de LOOM - Les Ours Occitanie Méditerranée',
+    description: event?.description?.substring(0, 160) || 'Découvrez cet événement de LOOM - Les Ours Occitanie Montpellier',
     keywords: ['LOOM', 'Bears', 'événement', 'rencontre', 'communauté'],
     image: event?.image,
     type: 'website',

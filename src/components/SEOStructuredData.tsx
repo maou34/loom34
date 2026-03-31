@@ -95,7 +95,7 @@ const SEOStructuredData: React.FC<SEOStructuredDataProps> = ({ type, data }) => 
           url: data.url,
           publisher: {
             '@type': 'Organization',
-            name: 'LOOM - Les Ours Occitanie Méditerranée',
+            name: 'LOOM - Les Ours Occitanie Montpellier',
             logo: 'https://loom-lgbt.fr/logo.png'
           }
         };
@@ -166,7 +166,7 @@ const SEOStructuredData: React.FC<SEOStructuredDataProps> = ({ type, data }) => 
 
 // Données structurées prédéfinies pour LOOM
 export const LOOMOrganizationData: OrganizationData = {
-  name: 'LOOM - Les Ours Occitanie Méditerranée',
+  name: 'LOOM - Les Ours Occitanie Montpellier',
   description: 'Association Bear fondée en 2017. Association pour les Bears et tous ceux qui aiment les Ours, les poils et les tailles allant du XS au XXXXXL.',
   url: 'https://loom-lgbt.fr',
   logo: 'https://loom-lgbt.fr/logo.png',
@@ -197,7 +197,7 @@ export const useArticleStructuredData = (article: any) => {
   return {
     headline: article.title,
     description: article.excerpt || article.description,
-    author: 'LOOM - Les Ours Occitanie Méditerranée',
+    author: 'LOOM - Les Ours Occitanie Montpellier',
     datePublished: article.created_at,
     dateModified: article.updated_at || article.created_at,
     image: article.image_url || 'https://loom-lgbt.fr/placeholder.svg',
@@ -218,7 +218,7 @@ export const useEventStructuredData = (event: any) => {
     },
     image: event.image_url || 'https://loom-lgbt.fr/placeholder.svg',
     url: `https://loom-lgbt.fr/events/${event.slug}`,
-    organizer: 'LOOM - Les Ours Occitanie Méditerranée'
+    organizer: 'LOOM - Les Ours Occitanie Montpellier'
   };
 };
 

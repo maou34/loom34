@@ -34,7 +34,7 @@ const About = () => {
   // SEO Configuration
   useSEO({
     title: 'À propos - LOOM | Découvrez notre association Bear de Montpellier',
-    description: 'Découvrez LOOM - Les Ours Occitanie Méditerranée, association Bear fondée en 2017. Notre mission, nos valeurs et comment nous rejoindre dans notre communauté inclusive.',
+    description: 'Découvrez LOOM - Les Ours Occitanie Montpellier, association Bear fondée en 2017. Notre mission, nos valeurs et comment nous rejoindre dans notre communauté inclusive.',
     keywords: ['LOOM', 'Bears', 'association', 'Montpellier', 'à propos', 'histoire', 'mission', 'valeurs', 'communauté LGBTQ+'],
     type: 'website'
   });

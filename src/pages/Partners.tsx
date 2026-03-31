@@ -14,7 +14,7 @@ const Partners = () => {
   // SEO Configuration
   useSEO({
     title: 'Nos Partenaires - LOOM | Commerces et établissements partenaires',
-    description: 'Découvrez les partenaires de LOOM - Les Ours Occitanie Méditerranée. Bars, restaurants, saunas et commerces qui soutiennent notre communauté Bear avec des avantages exclusifs.',
+    description: 'Découvrez les partenaires de LOOM - Les Ours Occitanie Montpellier. Bars, restaurants, saunas et commerces qui soutiennent notre communauté Bear avec des avantages exclusifs.',
     keywords: ['LOOM partenaires', 'commerces gay-friendly', 'bars Bears', 'restaurants Montpellier', 'saunas gay', 'avantages membres'],
     type: 'website'
   });

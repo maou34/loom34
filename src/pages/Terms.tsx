@@ -7,7 +7,7 @@ const Terms = () => {
   // SEO Configuration
   useSEO({
     title: 'Conditions générales d\'utilisation - LOOM | CGU',
-    description: 'Consultez les conditions générales d\'utilisation du site de LOOM - Les Ours Occitanie Méditerranée.',
+    description: 'Consultez les conditions générales d\'utilisation du site de LOOM - Les Ours Occitanie Montpellier.',
     keywords: ['conditions générales utilisation', 'CGU', 'LOOM', 'mentions légales'],
     type: 'website'
   });

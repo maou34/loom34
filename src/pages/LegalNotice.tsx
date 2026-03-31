@@ -6,8 +6,8 @@ import useSEO from '@/hooks/useSEO';
 const LegalNotice = () => {
   // SEO Configuration
   useSEO({
-    title: 'Mentions Légales - LOOM | Les Ours Occitanie Méditerranée',
-    description: 'Mentions légales du site LOOM - Les Ours Occitanie Méditerranée. Informations légales sur l\'association, l\'hébergement et les responsabilités.',
+    title: 'Mentions Légales - LOOM | Les Ours Occitanie Montpellier',
+    description: 'Mentions légales du site LOOM - Les Ours Occitanie Montpellier. Informations légales sur l\'association, l\'hébergement et les responsabilités.',
     keywords: ['LOOM', 'mentions légales', 'association', 'Montpellier', 'ours', 'bears', 'LGBT'],
     type: 'website'
   });
@@ -29,7 +29,7 @@ const LegalNotice = () => {
             <div className="prose prose-lg max-w-none">
               <p className="text-gray-700 leading-relaxed">
                 Conformément aux dispositions de la loi n° 2004-575 du 21 juin 2004 pour la confiance en l'économie numérique, 
-                il est précisé aux utilisateurs du site LOOM - Les Ours Occitanie Méditerranée l'identité des différents 
+                il est précisé aux utilisateurs du site LOOM - Les Ours Occitanie Montpellier l'identité des différents 
                 intervenants dans le cadre de sa réalisation et de son suivi.
               </p>
             </div>
@@ -49,7 +49,7 @@ const LegalNotice = () => {
                 </p>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="font-semibold mb-2">
-                    L'association Les Ours Occitanie Méditerranée LOOM
+                    L'association Les Ours Occitanie Montpellier LOOM
                   </p>
                   <ul className="space-y-1">
                     <li>• Enregistrée auprès de la préfecture/sous-préfecture de 34 - Préfecture Montpellier</li>

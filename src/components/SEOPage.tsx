@@ -18,11 +18,11 @@ interface SEOPageProps {
 
 const SEOPage: React.FC<SEOPageProps> = ({
   title,
-  description = "LOOM - Les Ours Occitanie Méditerranée. Association Bear fondée en 2017 pour les Bears et tous ceux qui aiment les Ours, les poils et les tailles allant du XS au XXXXXL.",
-  keywords = ['LOOM', 'Ours', 'Bear', 'Occitanie', 'Méditerranée', 'Association', 'Montpellier', 'LGBTQ+', 'Communauté'],
+  description = "LOOM - Les Ours Occitanie Montpellier. Association Bear fondée en 2017 pour les Bears et tous ceux qui aiment les Ours, les poils et les tailles allant du XS au XXXXXL.",
+  keywords = ['LOOM', 'Ours', 'Bear', 'Occitanie', 'Montpellier', 'Association', 'Montpellier', 'LGBTQ+', 'Communauté'],
   image = 'https://loom-lgbt.frs.fr/logo.png',
   article = false,
-  author = 'LOOM - Les Ours Occitanie Méditerranée',
+  author = 'LOOM - Les Ours Occitanie Montpellier',
   publishedDate,
   modifiedDate,
   canonicalUrl,
@@ -32,7 +32,7 @@ const SEOPage: React.FC<SEOPageProps> = ({
   const location = useLocation();
   const baseUrl = 'https://loom-lgbt.frs.fr';
   const currentUrl = canonicalUrl || `${baseUrl}${location.pathname}`;
-  const fullTitle = title ? `${title} | LOOM` : 'LOOM - Les Ours Occitanie Méditerranée';
+  const fullTitle = title ? `${title} | LOOM` : 'LOOM - Les Ours Occitanie Montpellier';
 
   return (
     <Helmet>
@@ -53,7 +53,7 @@ const SEOPage: React.FC<SEOPageProps> = ({
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
       <meta property="og:url" content={currentUrl} />
-      <meta property="og:site_name" content="LOOM - Les Ours Occitanie Méditerranée" />
+      <meta property="og:site_name" content="LOOM - Les Ours Occitanie Montpellier" />
       <meta property="og:locale" content="fr_FR" />
       
       {/* Métadonnées Twitter Card */}
@@ -86,7 +86,7 @@ const SEOPage: React.FC<SEOPageProps> = ({
       
       {/* Métadonnées de contact et organisation */}
       <meta name="contact" content="contactloom34@gmail.com" />
-      <meta name="author" content="LOOM - Les Ours Occitanie Méditerranée" />
+      <meta name="author" content="LOOM - Les Ours Occitanie Montpellier" />
       <meta name="revisit-after" content="7 days" />
       
       {/* DNS prefetch pour améliorer les performances */}
@@ -104,7 +104,7 @@ const SEOPage: React.FC<SEOPageProps> = ({
 // Composants SEO spécialisés pour chaque type de page
 export const SEOHomePage: React.FC<{ title?: string; description?: string }> = ({ 
   title, 
-  description = "LOOM - Les Ours Occitanie Méditerranée. Rejoignez notre communauté Bear à Montpellier. Événements, articles, galerie photos et plus encore." 
+  description = "LOOM - Les Ours Occitanie Montpellier. Rejoignez notre communauté Bear à Montpellier. Événements, articles, galerie photos et plus encore." 
 }) => (
   <SEOPage
     title={title}
@@ -149,7 +149,7 @@ export const SEOEventPage: React.FC<{
 
 export const SEOGalleryPage: React.FC<{ title?: string; description?: string }> = ({ 
   title = "Galerie Photos", 
-  description = "Découvrez nos plus beaux moments en images. Galerie photos des événements et sorties de LOOM - Les Ours Occitanie Méditerranée." 
+  description = "Découvrez nos plus beaux moments en images. Galerie photos des événements et sorties de LOOM - Les Ours Occitanie Montpellier." 
 }) => (
   <SEOPage
     title={title}
@@ -160,7 +160,7 @@ export const SEOGalleryPage: React.FC<{ title?: string; description?: string }> 
 
 export const SEOAboutPage: React.FC<{ title?: string; description?: string }> = ({ 
   title = "À propos", 
-  description = "Découvrez l'histoire de LOOM - Les Ours Occitanie Méditerranée. Association Bear fondée en 2017 à Montpellier pour rassembler la communauté." 
+  description = "Découvrez l'histoire de LOOM - Les Ours Occitanie Montpellier. Association Bear fondée en 2017 à Montpellier pour rassembler la communauté." 
 }) => (
   <SEOPage
     title={title}

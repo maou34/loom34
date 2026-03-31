@@ -22,7 +22,7 @@ const INTERNAL_LINKS: InternalLink[] = [
   {
     href: '/',
     label: 'Accueil LOOM',
-    description: 'Découvrez Les Ours Occitanie Méditerranée',
+    description: 'Découvrez Les Ours Occitanie Montpellier',
     category: 'primary'
   },
   {

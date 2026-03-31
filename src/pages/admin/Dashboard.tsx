@@ -220,25 +220,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout title="Tableau de bord">
-      <div className="space-y-8">
-        {/* Welcome section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-gray-900 to-gray-800 p-8 text-white shadow-xl"
-        >
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-64 w-64 rounded-full bg-orange-500/10 blur-3xl"></div>
-          
-          <div className="relative z-10">
-            <h2 className="text-3xl font-bold mb-2">Bienvenue sur votre espace d'administration</h2>
-            <p className="text-gray-300 max-w-2xl text-lg">
-              Gérez le contenu de LOOM, suivez l'activité de la communauté et maintenez le site à jour depuis cet espace centralisé.
-            </p>
-          </div>
-        </motion.div>
-        
+      <div className="space-y-8">    
         {/* Stats section */}
         <div>
           <div className="flex items-center justify-between mb-6">

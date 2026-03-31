@@ -51,9 +51,9 @@ export default function Login() {
     <div className="flex justify-center items-center min-h-screen bg-slate-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Login</CardTitle>
+          <CardTitle className="text-2xl font-bold">Connexion</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Entrez vos identifiants de connexion
           </CardDescription>
         </CardHeader>
         
@@ -78,12 +78,12 @@ export default function Login() {
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Mot de passe</Label>
                 <a
                   href="/auth/reset-password"
                   className="text-sm text-blue-600 hover:text-blue-800"
                 >
-                  Forgot password?
+                  Mot de passe oublié ?
                 </a>
               </div>
               <Input
@@ -108,18 +108,8 @@ export default function Login() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
+              {isLoading ? 'Connexion en cours...' : 'Se connecter'}
             </Button>
-            
-            <div className="text-center text-sm">
-              Don't have an account?{' '}
-              <a
-                href="/auth/register"
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Sign up
-              </a>
-            </div>
           </CardFooter>
         </form>
       </Card>

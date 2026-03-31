@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Ce document détaille toutes les optimisations SEO mises en place pour le site LOOM - Les Ours Occitanie Méditerranée.
+Ce document détaille toutes les optimisations SEO mises en place pour le site LOOM - Les Ours Occitanie Montpellier.
 
 ## 📋 Optimisations implémentées
 
@@ -114,7 +114,7 @@ Accédez à `/admin/seo` pour :
 - **Mots-clés cibles**: 
   - Primaires: "LOOM", "Bears Montpellier", "Association Bears"
   - Secondaires: "Communauté LGBTQ+ Montpellier", "Événements Bears"
-  - Longue traîne: "Les Ours Occitanie Méditerranée"
+  - Longue traîne: "Les Ours Occitanie Montpellier"
 
 ### Surveillance recommandée
 - Position des mots-clés principaux

@@ -12,9 +12,9 @@ export interface SEOProps {
 }
 
 export const defaultSEO: SEOProps = {
-  title: 'LOOM - Les Ours Occitanie Méditerranée',
+  title: 'LOOM - Les Ours Occitanie Montpellier',
   description: 'Association Bear fondée en 2017 à Montpellier. Rejoignez une communauté dynamique de plus de 150 personnes pour des événements, articles et moments de partage.',
-  keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Méditerranée', 'Association', 'Communauté', 'LGBTQ+'],
+  keywords: ['LOOM', 'Bears', 'Ours', 'Montpellier', 'Occitanie', 'Montpellier', 'Association', 'Communauté', 'LGBTQ+'],
   image: '/loom_logo_round.png',
   url: 'https://loom-lgbt.fr',
   type: 'website'
@@ -36,7 +36,7 @@ export function updatePageSEO(seoProps: Partial<SEOProps>) {
   updateMetaTag('og:type', seo.type || 'website', 'property');
   updateMetaTag('og:url', seo.url || window.location.href, 'property');
   updateMetaTag('og:image', seo.image || defaultSEO.image!, 'property');
-  updateMetaTag('og:site_name', 'LOOM - Les Ours Occitanie Méditerranée', 'property');
+  updateMetaTag('og:site_name', 'LOOM - Les Ours Occitanie Montpellier', 'property');
   
   // Twitter Card tags
   updateMetaTag('twitter:card', 'summary_large_image', 'name');
@@ -96,7 +96,7 @@ export function generateOrganizationStructuredData() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "LOOM - Les Ours Occitanie Méditerranée",
+    "name": "LOOM - Les Ours Occitanie Montpellier",
     "alternateName": "LOOM",
     "description": "Association Bear fondée en 2017 à Montpellier pour les Bears et tous ceux qui aiment les Ours.",
     "foundingDate": "2017",
@@ -140,7 +140,7 @@ export function generateArticleStructuredData(article: {
     },
     "publisher": {
       "@type": "Organization",
-      "name": "LOOM - Les Ours Occitanie Méditerranée",
+      "name": "LOOM - Les Ours Occitanie Montpellier",
       "logo": {
         "@type": "ImageObject",
         "url": "/loom_logo_round.png"
@@ -178,7 +178,7 @@ export function generateEventStructuredData(event: {
     "url": event.url,
     "organizer": {
       "@type": "Organization",
-      "name": "LOOM - Les Ours Occitanie Méditerranée",
+      "name": "LOOM - Les Ours Occitanie Montpellier",
       "url": "https://loom-lgbt.fr"
     },
     "offers": event.price ? {

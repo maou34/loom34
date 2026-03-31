@@ -136,7 +136,7 @@ const Footer = () => {
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-gray-500 text-sm text-center md:text-left">
-              <p>© {new Date().getFullYear()} LOOM - Les Ours Occitanie Méditerranée.</p>
+              <p>© {new Date().getFullYear()} LOOM - Les Ours Occitanie Montpellier.</p>
               <div className="flex items-center justify-center md:justify-start mt-1 gap-1">
                 <span>Made with</span>
                 <Heart className="h-3 w-3 text-red-500 fill-red-500 animate-pulse" />

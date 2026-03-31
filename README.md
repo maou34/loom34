@@ -1,8 +1,8 @@
-# LOOM - Les Ours Occitanie Méditerranée
+# LOOM - Les Ours Occitanie Montpellier
 
 ## 🚀 Vue d'ensemble
 
-LOOM est une application web moderne pour l'association Les Ours Occitanie Méditerranée, construite avec React et TypeScript.
+LOOM est une application web moderne pour l'association Les Ours Occitanie Montpellier, construite avec React et TypeScript.
 
 ## 🛠️ Stack Technique
 

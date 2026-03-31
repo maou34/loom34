@@ -20,6 +20,8 @@ const Gallery = lazy(() => import("./pages/Gallery"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
+const ResetPasswordRequest = lazy(() => import("./pages/auth/ResetPasswordRequest"));
+const UpdatePassword = lazy(() => import("./pages/auth/UpdatePassword"));
 const Profile = lazy(() => import("./pages/auth/Profile"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminArticles = lazy(() => import("./pages/admin/Articles"));
@@ -54,7 +56,7 @@ const MEMBERSHIP_URL =
 
 // Mapping des routes vers leurs titres
 const PAGE_TITLES: { [key: string]: string } = {
-  "/": "LOOM - Les Ours Occitanie Méditerranée",
+  "/": "LOOM - Les Ours Occitanie Montpellier",
   "/about": "LOOM - À propos",
   "/events": "LOOM - Événements",
   "/articles": "LOOM - Articles",
@@ -63,6 +65,8 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
   "/auth/register": "LOOM - Inscription",
+  "/auth/reset-password": "LOOM - Réinitialisation du mot de passe",
+  "/auth/update-password": "LOOM - Nouveau mot de passe",
   "/auth/profile": "LOOM - Mon Profil",
   "/admin/dashboard": "LOOM Admin - Tableau de bord",
   "/admin/articles": "LOOM Admin - Articles",
@@ -83,7 +87,7 @@ function RouteReload() {
 
   React.useEffect(() => {
     // Gestion des titres dynamiques pour les pages avec paramètres
-    let pageTitle = PAGE_TITLES[location.pathname] || "LOOM - Les Ours Occitanie Méditerranée";
+    let pageTitle = PAGE_TITLES[location.pathname] || "LOOM - Les Ours Occitanie Montpellier";
 
     // Gestion spéciale pour les pages avec slug
     if (location.pathname.startsWith("/articles/")) {
@@ -138,8 +142,12 @@ const App = () => {
                 {/* Auth Routes */}
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/register" element={<Register />} />
+                <Route path="/auth/reset-password" element={<ResetPasswordRequest />} />
+                <Route path="/auth/update-password" element={<UpdatePassword />} />
                 <Route path="/login" element={<Navigate to="/auth/login" replace />} />
                 <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+                <Route path="/reset-password" element={<Navigate to="/auth/reset-password" replace />} />
+                <Route path="/update-password" element={<Navigate to="/auth/update-password" replace />} />
 
                 {/* Protected User Routes */}
                 <Route element={<RequireAuth />}>

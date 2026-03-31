@@ -36,7 +36,7 @@ const ArticleDetail = () => {
   // SEO Configuration
   useSEO({
     title: article ? `${article.title} - LOOM` : 'Article - LOOM',
-    description: article?.excerpt || 'Découvrez cet article de LOOM - Les Ours Occitanie Méditerranée',
+    description: article?.excerpt || 'Découvrez cet article de LOOM - Les Ours Occitanie Montpellier',
     keywords: article?.category ? ['LOOM', 'Bears', article.category, 'article', 'communauté'] : ['LOOM', 'Bears', 'article'],
     image: article?.image,
     type: 'article',

@@ -25,7 +25,7 @@ const Gallery = () => {
   // SEO Configuration
   useSEO({
     title: 'Galerie Photos - LOOM | Souvenirs et moments de notre communauté Bear',
-    description: 'Découvrez la galerie photos de LOOM - Les Ours Occitanie Méditerranée. Revivez nos événements, soirées et moments de convivialité en images.',
+    description: 'Découvrez la galerie photos de LOOM - Les Ours Occitanie Montpellier. Revivez nos événements, soirées et moments de convivialité en images.',
     keywords: ['LOOM photos', 'galerie Bears', 'événements photos', 'souvenirs LOOM', 'communauté Bear', 'Montpellier'],
     type: 'website'
   });

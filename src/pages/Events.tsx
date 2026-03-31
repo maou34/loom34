@@ -17,7 +17,7 @@ const Events = () => {
   // SEO Configuration
   useSEO({
     title: 'Événements - LOOM | Calendrier des activités de la communauté Bear',
-    description: 'Découvrez tous les événements de LOOM - Les Ours Occitanie Méditerranée. Soirées, activités, rencontres et moments de convivialité de notre communauté Bear.',
+    description: 'Découvrez tous les événements de LOOM - Les Ours Occitanie Montpellier. Soirées, activités, rencontres et moments de convivialité de notre communauté Bear.',
     keywords: ['LOOM événements', 'activités Bears', 'soirées Bear', 'Montpellier', 'calendrier LGBTQ+', 'rencontres Bears'],
     type: 'website'
   });
