@@ -44,8 +44,8 @@ const Navbar = () => {
     { name: 'Monsieur Ours', path: '/monsieur-ours' },
     { name: 'Photos', path: '/gallery' },
     { name: 'Nos Partenaires', path: '/partners' },
-    { name: 'Boutique', path: 'https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom#shop', external: true },
-    { name: 'Adhésion', path: 'https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025', external: true },
+    { name: 'Boutique', path: 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu', external: true },
+    { name: 'Adhésion', path: 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026', external: true },
   ];
   
   const isActive = (path: string) => {

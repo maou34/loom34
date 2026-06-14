@@ -21,7 +21,7 @@ const MonsieurOurs = () => {
     type: 'website'
   });
 
-  const MEMBERSHIP_URL = "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
+  const MEMBERSHIP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
   
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);

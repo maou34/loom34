@@ -133,8 +133,8 @@ const Index = () => {
   ];
 
   // HelloAsso URLs
-  const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
-  const MEMBERSHIP_URL = "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
+  const SHOP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu";
+  const MEMBERSHIP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
 
   const containerVariants = {
     hidden: { opacity: 0 },

@@ -50,9 +50,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 const queryClient = new QueryClient();
 
 // HelloAsso URLs - Direct links without host prefixing
-const SHOP_URL = "https://www.helloasso.com/associations/your-association/boutiques/shop";
+const SHOP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu";
 const MEMBERSHIP_URL =
-  "https://www.helloasso.com/associations/association-les-ours-occitanie-mediterranee-loom/adhesions/adhesion-2024-2025";
+  "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
 
 // Mapping des routes vers leurs titres
 const PAGE_TITLES: { [key: string]: string } = {
