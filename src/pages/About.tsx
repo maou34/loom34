@@ -19,7 +19,7 @@ const teamMembers = [
   { name: "Florent", role: "Secrétaire adjoint", desc: "Mais aussi webmaster du site LOOM.", img: "/gallery/images/florent.jpg" },
   { name: "Jean-Luc", role: "Chargé en Relations Publiques", desc: "Ours à l'appel depuis 2019 !", img: "/gallery/images/jean-luc.jpg" },
   { name: "Franck", role: "Chargé de communications", desc: "Un lover des Ours.", img: "/gallery/images/franck.jpg" },
-  { name: "Pierre", role: "Chargé de communications adjoint - Insta publisher", desc: "X", img: "/gallery/images/pierre.jpg" },
+  { name: "Pierre", role: "Chargé de communications adjoint - Insta publisher", desc: "X", img: "/gallery/images/pierre.jpeg" },
   { name: "Henri", role: "Monsieur Culture", desc: "X", img: "/gallery/images/henri.jpg" },
   { name: "Étienne", role: "Administrateur", desc: "X", img: "/gallery/images/etienne.jpg" },
 ];
