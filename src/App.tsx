@@ -31,6 +31,7 @@ const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
 const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const AdminPartners = lazy(() => import("./pages/admin/Partners"));
+const AdminHomeSettings = lazy(() => import("./pages/admin/HomeSettings"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
@@ -41,7 +42,7 @@ const AlbumDetail = lazy(() => import("./pages/AlbumDetail"));
 // Components
 import RequireAuth from "./components/auth/RequireAuth";
 import RequireAdmin from "./components/auth/RequireAdmin";
-import ExternalRedirect from "./components/ExternalRedirect";
+import SettingsRedirect from "./components/SettingsRedirect";
 import PageLoader from "./components/PageLoader";
 import { LOOMOrganizationSchema } from "./components/SEOStructuredData";
 import { AutoBreadcrumbs } from "./components/InternalLinks";
@@ -76,6 +77,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/tickets": "LOOM Admin - Tickets",
   "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/admin/partners": "LOOM Admin - Partenaires",
+  "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
   "/terms": "LOOM - Conditions d'utilisation",
   "/legal-notice": "LOOM - Mentions légales",
   "/unauthorized": "LOOM - Accès non autorisé",
@@ -135,9 +137,9 @@ const App = () => {
                 <Route path="/gallery/:albumId" element={<AlbumDetail />} />
                 <Route path="/partners" element={<Partners />} />
 
-                {/* External Redirects - Using ExternalRedirect component */}
-                <Route path="/shop" element={<ExternalRedirect url={SHOP_URL} />} />
-                <Route path="/membership" element={<ExternalRedirect url={MEMBERSHIP_URL} />} />
+                {/* External Redirects - URLs configurable depuis /admin/home-settings */}
+                <Route path="/shop" element={<SettingsRedirect settingKey="shop_url" fallbackUrl={SHOP_URL} />} />
+                <Route path="/membership" element={<SettingsRedirect settingKey="membership_url" fallbackUrl={MEMBERSHIP_URL} />} />
 
                 {/* Auth Routes */}
                 <Route path="/auth/login" element={<Login />} />
@@ -167,6 +169,7 @@ const App = () => {
                     <Route path="/admin/tickets" element={<AdminTickets />} />
                     <Route path="/admin/seo" element={<AdminSEO />} />
                     <Route path="/admin/partners" element={<AdminPartners />} />
+                    <Route path="/admin/home-settings" element={<AdminHomeSettings />} />
                   </Route>
                 </Route>
 

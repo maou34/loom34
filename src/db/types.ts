@@ -300,6 +300,33 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          id: number
+          hero_image: string | null
+          hero_link: string | null
+          shop_url: string | null
+          membership_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          hero_image?: string | null
+          hero_link?: string | null
+          shop_url?: string | null
+          membership_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          hero_image?: string | null
+          hero_link?: string | null
+          shop_url?: string | null
+          membership_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, User, LogIn, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { db } from '@/db/client';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +22,17 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut, isAdmin } = useAuth();
-  
+
+  // Fetch site settings (external nav links)
+  const { data: siteSettings } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data, error } = await db.from('site_settings').select('*').eq('id', 1).maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
@@ -44,8 +56,16 @@ const Navbar = () => {
     { name: 'Monsieur Ours', path: '/monsieur-ours' },
     { name: 'Photos', path: '/gallery' },
     { name: 'Nos Partenaires', path: '/partners' },
-    { name: 'Boutique', path: 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu', external: true },
-    { name: 'Adhésion', path: 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026', external: true },
+    {
+      name: 'Boutique',
+      path: siteSettings?.shop_url || 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu',
+      external: true
+    },
+    {
+      name: 'Adhésion',
+      path: siteSettings?.membership_url || 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026',
+      external: true
+    },
   ];
   
   const isActive = (path: string) => {

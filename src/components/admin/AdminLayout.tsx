@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Users,
-  MessageSquare
+  MessageSquare,
+  Home
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -67,6 +68,11 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       title: "Partenaires",
       href: "/admin/partners",
       icon: <Users className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Page d'accueil et menu",
+      href: "/admin/home-settings",
+      icon: <Home className="h-5 w-5 mr-2" />,
     },
   ];
 

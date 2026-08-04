@@ -61,6 +61,20 @@ const Index = () => {
       return data as Tables<'events'>[];
     }
   });
+
+  // Fetch site settings (hero image/link of the homepage)
+  const { data: siteSettings } = useQuery({
+    queryKey: ['siteSettings'],
+    queryFn: async () => {
+      const { data, error } = await db.from('site_settings').select('*').eq('id', 1).maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const heroImage = siteSettings?.hero_image || '/gallery/images/montpell_bears_2026-full.jpeg';
+  const heroLink = siteSettings?.hero_link || '/articles/montpell-bears-2026';
+  const isHeroLinkExternal = /^https?:\/\//i.test(heroLink);
   // Filter upcoming events
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -133,8 +147,8 @@ const Index = () => {
   ];
 
   // HelloAsso URLs
-  const SHOP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu";
-  const MEMBERSHIP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
+  const SHOP_URL = siteSettings?.shop_url || "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu";
+  const MEMBERSHIP_URL = siteSettings?.membership_url || "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -225,13 +239,19 @@ const Index = () => {
             >
               <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm">
                 <img
-                  src="/gallery/images/montpell_bears_2026-full.jpeg"
+                  src={heroImage}
                   alt="Community gathering"
                   className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
                 />
-                <Link to="/articles/montpell-bears-2026">
-                  <div className="absolute inset-0 bg-gradient-to-t from-brown/40 via-transparent to-transparent"></div>
-                </Link>
+                {isHeroLinkExternal ? (
+                  <a href={heroLink} target="_blank" rel="noopener noreferrer">
+                    <div className="absolute inset-0 bg-gradient-to-t from-brown/40 via-transparent to-transparent"></div>
+                  </a>
+                ) : (
+                  <Link to={heroLink}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-brown/40 via-transparent to-transparent"></div>
+                  </Link>
+                )}
               </div>
 
               {/* Floating Stats Cards */}
