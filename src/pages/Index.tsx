@@ -247,7 +247,7 @@ const Index = () => {
               initial={{ opacity: 0, scale: 0.9, rotate: 2 }}
               animate={{ opacity: 1, scale: 1, rotate: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="lg:w-1/2 relative"
+              className="w-full lg:w-1/2 relative"
             >
               <div
                 className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm"
