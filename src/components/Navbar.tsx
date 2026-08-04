@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogIn, LogOut, Settings } from 'lucide-react';
+import { Menu, X, User, LogIn, LogOut, Settings, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/db/client';
@@ -22,6 +23,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut, isAdmin } = useAuth();
+  const { canInstall, promptInstall } = useInstallPrompt();
 
   // Fetch site settings (external nav links)
   const { data: siteSettings } = useQuery({
@@ -146,6 +148,17 @@ const Navbar = () => {
 
         {/* User Actions & Mobile Toggle */}
         <div className="flex items-center gap-4">
+          {canInstall && (
+            <Button
+              variant="ghost"
+              onClick={promptInstall}
+              className="hidden md:flex items-center gap-2 text-brown hover:bg-tan/20 rounded-full"
+            >
+              <Download className="h-4 w-4" />
+              Installer l'app
+            </Button>
+          )}
+
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -256,7 +269,23 @@ const Navbar = () => {
                   )}
                 </motion.div>
               ))}
-              
+
+              {canInstall && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: navLinks.length * 0.05 }}
+                >
+                  <button
+                    onClick={promptInstall}
+                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-brown transition-all"
+                  >
+                    <Download size={20} />
+                    Installer l'application
+                  </button>
+                </motion.div>
+              )}
+
               {!user && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}

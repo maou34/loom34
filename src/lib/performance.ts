@@ -68,15 +68,16 @@ export function preloadCriticalResources(): void {
 export function registerServiceWorker() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-  // Désactiver le SW en production pour éviter les pages blanches/caches incohérents
+  // PROD : SW minimal sans cache (juste pour l'installabilité PWA), afin
+  // d'éviter les pages blanches/caches incohérents causés par l'ancien sw.js.
   if (import.meta.env.PROD) {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      regs.forEach((reg) => reg.unregister());
+    navigator.serviceWorker.register("/sw-install.js").catch((err) => {
+      console.error("SW registration failed:", err);
     });
     return;
   }
 
-  // DEV uniquement
+  // DEV uniquement : sw.js complet (cache runtime, logs, fallback offline)
   navigator.serviceWorker.register("/sw.js").catch((err) => {
     console.error("SW registration failed:", err);
   });
