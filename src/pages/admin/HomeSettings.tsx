@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Tables } from "@/db/types";
@@ -12,6 +13,7 @@ import { toast } from "sonner";
 import { ImageIcon, Trash2, Link2, ShoppingBag, Heart } from "lucide-react";
 
 export default function AdminHomeSettings() {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<Tables<'site_settings'>>>({});
@@ -40,6 +42,7 @@ export default function AdminHomeSettings() {
     try {
       const { error } = await db.from('site_settings').upsert({ id: 1, ...form });
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['siteSettings'] });
       toast.success("Réglages enregistrés avec succès");
     } catch (error: any) {
       console.error("Error saving site settings:", error);
