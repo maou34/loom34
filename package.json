@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "migrate:gallery": "node scripts/migrate-gallery.js",
     "compress:gallery": "node scripts/compress-gallery.js",
+    "pull:gallery": "node scripts/pull-gallery.js",
     "server:upload": "node server/upload.js",
     "seo:generate": "node scripts/generate-seo.js",
     "seo:validate": "node scripts/validate-seo.js"
