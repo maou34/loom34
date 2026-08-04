@@ -40,6 +40,11 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       icon: <LayoutDashboard className="h-5 w-5 mr-2" />,
     },
     {
+      title: "Page d'accueil et menu",
+      href: "/admin/home-settings",
+      icon: <Home className="h-5 w-5 mr-2" />,
+    },
+    {
       title: "Articles",
       href: "/admin/articles",
       icon: <FileText className="h-5 w-5 mr-2" />,
@@ -68,11 +73,6 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       title: "Partenaires",
       href: "/admin/partners",
       icon: <Users className="h-5 w-5 mr-2" />,
-    },
-    {
-      title: "Page d'accueil et menu",
-      href: "/admin/home-settings",
-      icon: <Home className="h-5 w-5 mr-2" />,
     },
   ];
 
