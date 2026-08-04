@@ -14,6 +14,8 @@ npm run preview            # Serve the production build on :4173
 npm run server:upload      # Runs the separate Express image-upload server (server/upload.js), :8081
 
 npm run migrate:gallery    # One-off script: migrates images from Supabase Storage to public/gallery
+npm run compress:gallery   # Re-compresses images already in public/gallery (resize + re-encode); dry-run by default, `-- --write` to apply
+npm run pull:gallery        # Downloads every image from the upload server (prod by default) into public/gallery/ locally
 npm run seo:generate        # Regenerates public/sitemap.xml (scripts/generate-seo.js)
 npm run seo:validate        # Validates SEO output (scripts/validate-seo.js)
 ```
@@ -46,11 +48,15 @@ Admin user creation goes through the `admin-create-user` Supabase Edge Function 
 
 Images are static files served from `public/gallery/` by a standalone Express server (`server/upload.js`, run via `npm run server:upload`), not Supabase Storage. The DB (`gallery_images`, `gallery_albums`, plus `image`/`logo` columns elsewhere) only stores relative paths (e.g. `/gallery/<albumId>/file.jpg`); `src/config.ts` resolves `UPLOAD_URL` based on hostname (prod: `upload.lgbt-loom.fr`, dev: `localhost:8081`) and `getImageUrl()`/`ImageUpload.tsx` build the full URL. In dev, Vite proxies `/upload` to the upload server (see `vite.config.ts`). Uploaded files must be committed to `public/gallery/` to exist in production — there's no runtime persistence otherwise. `server/upload_SAV copy.js` is a stray backup file, not wired into any script.
 
+Uploads are compressed server-side before being written to disk: `server/imageCompression.js` (resize to 2400px max on the longest side, `withoutEnlargement`, JPEG/WebP re-encoded at quality 82, PNG at max compression, EXIF orientation baked in via `.rotate()` then stripped) is shared by `server/upload.js` (new uploads) and `scripts/compress-gallery.js` (one-off retroactive pass over everything already in `public/gallery`, dry-run by default — `-- --write` to apply). `scripts/pull-gallery.js` is the counterpart for going the other way: it downloads every image from a running upload server (prod by default, override with `PULL_UPLOAD_URL`) into local `public/gallery/`, incrementally by default (skips files already present locally; `--force` re-downloads everything).
+
+`.gitignore` only tracks `public/gallery/images/` (`public/gallery/*` is otherwise ignored) — that folder holds the site's own static assets (hero fallback, etc.) referenced by hardcoded paths, while per-album upload folders are meant to live only on the upload server's disk, not in the repo. That ignore rule was added late (Nov 2025) and doesn't retroactively untrack files committed before it existed — `public/gallery/unclassified/` had ~84 such files still in the git index despite being ignored, discovered when a bulk edit made them show up as modified. If a bulk script touches `public/gallery/` and unexpected album files show up in `git status`, check `git ls-files public/gallery` for stragglers like this and `git rm --cached` them rather than assuming the ignore rule is broken.
+
 ### Admin CMS pattern
 
 Every admin resource page (`pages/admin/Articles.tsx`, `Events.tsx`, `Partners.tsx`, ...) follows the same shape: a table with search, a shadcn `Dialog` reused for both create and edit (toggled via an `isCreating` flag), and a separate delete-confirmation `Dialog`. Long-form content (article body, event description) is edited with `@uiw/react-md-editor` (`MDEditor`) and stored as raw Markdown. `src/components/ui/dialog.tsx`'s `Dialog` wrapper has a workaround effect that force-releases Radix's scroll lock shortly after `open` becomes `false` — heavy children like `MDEditor` can otherwise leave `document.body` permanently `overflow: hidden` after the dialog closes.
 
-`src/pages/admin/HomeSettings.tsx` edits a singleton `site_settings` row (`id = 1`, enforced by a `CHECK` constraint) that drives the homepage hero image/link and the navbar's external links (Boutique/Adhésion) — consumed via `useQuery(['siteSettings'], ...)` in `Navbar.tsx`, `Index.tsx`, and `SettingsRedirect.tsx` (used for the `/shop` and `/membership` redirect routes).
+`src/pages/admin/HomeSettings.tsx` edits a singleton `site_settings` row (`id = 1`, enforced by a `CHECK` constraint) that drives the homepage hero image/link and the navbar's external links (Boutique/Adhésion) — consumed via `useQuery(['siteSettings'], ...)` in `Navbar.tsx`, `Index.tsx`, and `SettingsRedirect.tsx` (used for the `/shop` and `/membership` redirect routes). `hero_image_width`/`hero_image_height` are captured automatically by `ImageUpload.tsx` (reads `naturalWidth`/`naturalHeight` off the uploaded file) whenever the hero image is set in `HomeSettings.tsx`; `Index.tsx` uses them to reserve the hero image's aspect ratio via inline `style={{ aspectRatio }}` before it loads, avoiding layout shift (CLS) — rows saved before this field existed just render without a reserved ratio until re-saved from the admin.
 
 ### Markdown rendering
 

@@ -19,7 +19,7 @@ LOOM est une application web moderne pour l'association Les Ours Occitanie Montp
 ### Backend & Services
 - **Base de données**: Supabase (PostgreSQL)
 - **Authentification**: Supabase Auth
-- **Stockage**: Supabase Storage
+- **Stockage des images**: serveur Express dédié (`server/upload.js`), pas Supabase Storage — voir la section Galerie ci-dessous
 - **API**: REST avec Supabase
 
 ## 📁 Structure du Projet
@@ -67,21 +67,40 @@ src/
 - Gestion des utilisateurs
 - Gestion des tickets de contact
 
-## �️ Galerie: stockage d'images en local
+## 🗄️ Galerie: stockage d'images en local
 
-La galerie n'utilise plus Supabase Storage. Les images sont servies en statique depuis le dossier `public/gallery` et les enregistrements en base (table `gallery_images`) référencent un chemin relatif.
+La galerie n'utilise plus Supabase Storage. Les images sont servies en statique depuis `public/gallery` par un serveur Express dédié (`server/upload.js`, `npm run server:upload`, port 8081 en dev), et les enregistrements en base (table `gallery_images`) référencent un chemin relatif (ex: `/gallery/<albumId>/photo.jpg`).
 
 ### Ajouter des images
 
-1. Copiez vos fichiers dans le dépôt dans `public/gallery/<albumId>/` ou `public/gallery/unclassified/` si l'image n'appartient à aucun album.
-2. Dans l'admin, page Galerie, utilisez le formulaire « Ajouter une image par chemin » et saisissez le chemin relatif à partir de `/public`, par exemple:
-	- `/gallery/<albumId>/mon-fichier.jpg`
-	- `/gallery/unclassified/photo.png`
-3. Validez pour créer l'enregistrement en base et, si un album est sélectionné, sa couverture est mise à jour automatiquement.
+Dans l'admin (page Galerie, ou HomeSettings/Articles/Events pour leurs images dédiées), le composant `ImageUpload` envoie le fichier au serveur d'upload. Celui-ci le redimensionne et le recompresse automatiquement avant de l'écrire sur disque (voir « Compression des images » ci-dessous) — aucune manipulation manuelle de fichiers n'est nécessaire.
 
-Remarques:
-- Les fichiers doivent être committés/déployés avec l'app pour être disponibles en production.
-- Aucun serveur d'upload n'est requis ni utilisé.
+En dev, Vite proxifie `/upload` vers `localhost:8081` (voir `vite.config.ts`) ; en prod, l'upload part vers `upload.lgbt-loom.fr`, un déploiement séparé du site principal.
+
+Remarque: seul `public/gallery/images/` (assets statiques du site, ex. l'image de secours du hero) est committé dans le repo — voir `.gitignore`. Les autres albums vivent uniquement sur le disque du serveur d'upload ; utilisez `npm run pull:gallery` pour en récupérer une copie locale (voir plus bas).
+
+### Compression des images
+
+Chaque upload est automatiquement redimensionné (2400px max sur le plus grand côté, jamais agrandi) et recompressé (JPEG/WebP qualité 82, PNG compression max) par `server/imageCompression.js`, partagé par le serveur d'upload et par le script `scripts/compress-gallery.js` :
+
+```bash
+npm run compress:gallery              # dry-run: affiche les gains projetés sans rien modifier
+npm run compress:gallery -- --write    # applique la compression aux images déjà présentes dans public/gallery
+```
+
+Le script est idempotent (n'écrase un fichier que si le résultat est plus léger) et peut être relancé sans risque.
+
+### Récupérer les images depuis le serveur
+
+`scripts/pull-gallery.js` télécharge toutes les images d'un serveur d'upload en cours d'exécution (prod par défaut) vers `public/gallery/` en local :
+
+```bash
+npm run pull:gallery                                          # depuis https://upload.lgbt-loom.fr
+PULL_UPLOAD_URL=http://localhost:8081 npm run pull:gallery    # depuis un serveur d'upload local
+npm run pull:gallery -- --force                                # re-télécharge même les fichiers déjà présents
+```
+
+Incrémental par défaut (ignore les fichiers déjà présents localement).
 
 ### Migration depuis Supabase Storage
 
@@ -176,7 +195,7 @@ Après migration, vous pouvez supprimer les fichiers du bucket Supabase si néce
 ## 📝 Notes Techniques
 
 - Utilisation de React Query pour la gestion du cache et des requêtes
-- Optimisation des images avec Supabase Storage
+- Compression automatique des images à l'upload (voir section Galerie)
 - Gestion des erreurs globalisée
 - Support multilingue (préparé pour internationalisation)
 
