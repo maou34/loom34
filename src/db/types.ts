@@ -308,6 +308,8 @@ export type Database = {
           shop_url: string | null
           membership_url: string | null
           monsieur_ours_hero_image: string | null
+          hero_image_width: number | null
+          hero_image_height: number | null
           updated_at: string
         }
         Insert: {
@@ -317,6 +319,8 @@ export type Database = {
           shop_url?: string | null
           membership_url?: string | null
           monsieur_ours_hero_image?: string | null
+          hero_image_width?: number | null
+          hero_image_height?: number | null
           updated_at?: string
         }
         Update: {
@@ -326,6 +330,8 @@ export type Database = {
           shop_url?: string | null
           membership_url?: string | null
           monsieur_ours_hero_image?: string | null
+          hero_image_width?: number | null
+          hero_image_height?: number | null
           updated_at?: string
         }
         Relationships: []

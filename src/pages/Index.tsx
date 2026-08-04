@@ -72,9 +72,21 @@ const Index = () => {
     }
   });
 
-  const heroImage = siteSettings?.hero_image || '/gallery/images/montpell_bears_2026-full.jpeg';
+  const FALLBACK_HERO_IMAGE = '/gallery/images/montpell_bears_2026-full.jpeg';
+  const FALLBACK_HERO_ASPECT_RATIO = 1131 / 1600; // dimensions natives du fichier ci-dessus
+
+  const heroImage = siteSettings?.hero_image || FALLBACK_HERO_IMAGE;
   const heroLink = siteSettings?.hero_link || '/articles/montpell-bears-2026';
   const isHeroLinkExternal = /^https?:\/\//i.test(heroLink);
+  // Ratio enregistré en base au moment de l'upload dans admin/home-settings ;
+  // permet de réserver la bonne hauteur avant même que l'image ne charge et
+  // d'éviter un Cumulative Layout Shift. Pour l'image de secours (avant tout
+  // réglage admin), on connaît ses dimensions natives à l'avance.
+  const heroAspectRatio = siteSettings?.hero_image_width && siteSettings?.hero_image_height
+    ? siteSettings.hero_image_width / siteSettings.hero_image_height
+    : heroImage === FALLBACK_HERO_IMAGE
+      ? FALLBACK_HERO_ASPECT_RATIO
+      : undefined;
   // Filter upcoming events
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -237,11 +249,23 @@ const Index = () => {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="lg:w-1/2 relative"
             >
-              <div className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm">
+              <div
+                className="relative rounded-[2rem] overflow-hidden shadow-2xl border-8 border-white/50 backdrop-blur-sm"
+                style={heroAspectRatio ? { aspectRatio: heroAspectRatio } : undefined}
+              >
                 <img
                   src={heroImage}
                   alt="Community gathering"
-                  className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
+                  width={siteSettings?.hero_image_width ?? 1131}
+                  height={siteSettings?.hero_image_height ?? 1600}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  className={
+                    heroAspectRatio
+                      ? "absolute inset-0 w-full h-full object-contain transform hover:scale-105 transition-transform duration-700"
+                      : "w-full h-auto object-contain transform hover:scale-105 transition-transform duration-700"
+                  }
                 />
                 {isHeroLinkExternal ? (
                   <a href={heroLink} target="_blank" rel="noopener noreferrer">

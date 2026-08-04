@@ -82,7 +82,7 @@ export default function AdminHomeSettings() {
                           variant="destructive"
                           size="icon"
                           className="absolute top-2 right-2 h-7 w-7 rounded-full"
-                          onClick={() => setForm(f => ({ ...f, hero_image: '' }))}
+                          onClick={() => setForm(f => ({ ...f, hero_image: '', hero_image_width: null, hero_image_height: null }))}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -93,7 +93,14 @@ export default function AdminHomeSettings() {
                         <p className="text-sm text-gray-500 mb-4">Aucune image sélectionnée</p>
                       </div>
                     )}
-                    <ImageUpload onUploadComplete={(url) => setForm(f => ({ ...f, hero_image: url }))} />
+                    <ImageUpload
+                      onUploadComplete={(url, dimensions) => setForm(f => ({
+                        ...f,
+                        hero_image: url,
+                        hero_image_width: dimensions?.width ?? null,
+                        hero_image_height: dimensions?.height ?? null,
+                      }))}
+                    />
                   </div>
                 </div>
 

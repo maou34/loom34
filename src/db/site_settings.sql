@@ -5,12 +5,20 @@ CREATE TABLE IF NOT EXISTS site_settings (
     shop_url TEXT,
     membership_url TEXT,
     monsieur_ours_hero_image TEXT,
+    hero_image_width INTEGER,
+    hero_image_height INTEGER,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Idempotent : ajoute la colonne si la table existait déjà avant son ajout
 -- au CREATE TABLE ci-dessus (cas de la prod, table créée avant ce champ).
 ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS monsieur_ours_hero_image TEXT;
+
+-- Dimensions naturelles de hero_image, capturées à l'upload dans l'admin
+-- (HomeSettings.tsx) pour réserver le bon ratio côté front et éviter un
+-- Cumulative Layout Shift quand l'image charge.
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_image_width INTEGER;
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_image_height INTEGER;
 
 -- Ligne unique contenant les réglages actuels (valeurs par défaut du site)
 INSERT INTO site_settings (id, hero_image, hero_link, shop_url, membership_url)

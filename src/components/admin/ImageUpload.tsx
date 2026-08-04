@@ -6,8 +6,24 @@ import { toast } from 'sonner';
 import { UPLOAD_URL } from '@/config';
 
 interface ImageUploadProps {
-  onUploadComplete: (url: string) => void;
+  onUploadComplete: (url: string, dimensions?: { width: number; height: number }) => void;
   folder?: string;
+}
+
+function getImageDimensions(file: File): Promise<{ width: number; height: number } | undefined> {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(undefined);
+    };
+    img.src = objectUrl;
+  });
 }
 
 type UploadResponse = {
@@ -77,7 +93,8 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       }
 
       const publicUrl = toPublicUrl(uploadedItem.relativePath);
-      onUploadComplete(publicUrl);
+      const dimensions = await getImageDimensions(file);
+      onUploadComplete(publicUrl, dimensions);
 
       toast.success('Image téléchargée avec succès');
     } catch (error) {
