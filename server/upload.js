@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { promises as fsp } from 'fs';
-import sharp from 'sharp';
+import { compressImage } from './imageCompression.js';
 
 const app = express();
 
@@ -87,37 +87,6 @@ function sanitizeAlbumId(seg) {
 
 async function ensureDir(dir) {
   await fsp.mkdir(dir, { recursive: true });
-}
-
-/**
- * Compression à l'upload : redimensionne (sans agrandir) et ré-encode pour
- * réduire le poids sans perte de qualité visible. `.rotate()` sans argument
- * applique l'orientation EXIF (photos de téléphone) avant de la stripper.
- * GIF et formats non reconnus sont laissés tels quels (pas de gestion
- * d'animation GIF ici).
- */
-const MAX_DIMENSION = 2400;
-
-async function compressImage(buffer, ext) {
-  const extLower = ext.toLowerCase();
-  try {
-    const resized = sharp(buffer)
-      .rotate()
-      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true });
-
-    if (extLower === '.jpg' || extLower === '.jpeg') {
-      return await resized.jpeg({ quality: 82, mozjpeg: true }).toBuffer();
-    }
-    if (extLower === '.png') {
-      return await resized.png({ compressionLevel: 9 }).toBuffer();
-    }
-    if (extLower === '.webp') {
-      return await resized.webp({ quality: 82 }).toBuffer();
-    }
-  } catch (err) {
-    console.error('Image compression failed, keeping original file:', err.message);
-  }
-  return buffer;
 }
 
 async function uniquePath(dir, filename) {
