@@ -149,11 +149,11 @@ const Navbar = () => {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full overflow-hidden border-2 border-brown/20 hover:border-brown transition-colors">
+                <Button variant="ghost" size="icon" className="relative rounded-full overflow-hidden">
                   <Avatar className="h-full w-full">
                     <AvatarImage src={profile?.avatar_url} alt={profile?.username || 'User'} />
                     <AvatarFallback className="bg-tan text-brown font-bold">
-                      {profile?.username?.charAt(0).toUpperCase() || <User className="h-5 w-5" />}
+                      <User className="h-5 w-5" />
                     </AvatarFallback>
                   </Avatar>
                 </Button>
