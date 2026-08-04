@@ -4,7 +4,8 @@ import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy } from "lucide-react";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { 
@@ -64,6 +65,8 @@ export default function AdminEvents() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const eventsPerPage = 10;
   const { user } = useAuth();
   
   // Form state for new/edit event
@@ -85,7 +88,7 @@ export default function AdminEvents() {
 
   useEffect(() => {
     if (searchQuery) {
-      const filtered = events.filter(event => 
+      const filtered = events.filter(event =>
         event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.location.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -93,7 +96,14 @@ export default function AdminEvents() {
     } else {
       setFilteredEvents(events);
     }
+    setCurrentPage(1);
   }, [searchQuery, events]);
+
+  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
+  const paginatedEvents = filteredEvents.slice(
+    (currentPage - 1) * eventsPerPage,
+    currentPage * eventsPerPage
+  );
 
   async function fetchEvents() {
     try {
@@ -101,7 +111,7 @@ export default function AdminEvents() {
       const { data, error } = await db
         .from('events')
         .select('id, title, location, date, time, published, slug, description, image, registration_url')
-        .order('date', { ascending: true });
+        .order('date', { ascending: false });
 
       if (error) throw error;
       setEvents(data || []);
@@ -272,6 +282,24 @@ export default function AdminEvents() {
     setDeleteDialogOpen(true);
   };
 
+  const duplicateEvent = (event: Event) => {
+    setSelectedEvent(null);
+    setEventForm({
+      title: event.title,
+      location: event.location,
+      date: "",
+      time: event.time,
+      description: event.description,
+      image: event.image,
+      published: false,
+      slug: `${event.slug}-copie-${Date.now().toString(36)}`,
+      registration_url: event.registration_url || ""
+    });
+    setIsCreating(true);
+    setDialogOpen(true);
+    toast.info("Événement dupliqué : il ne reste qu'à définir la nouvelle date");
+  };
+
   return (
     <AdminLayout title="Événements">
       <div className="space-y-6">
@@ -333,7 +361,7 @@ export default function AdminEvents() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
+                  {paginatedEvents.map((event) => (
                     <TableRow key={event.id} className="hover:bg-gray-50/50 transition-colors">
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -394,6 +422,9 @@ export default function AdminEvents() {
                             <DropdownMenuItem onClick={() => editEvent(event)}>
                               <Edit className="mr-2 h-4 w-4" /> Modifier
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => duplicateEvent(event)}>
+                              <Copy className="mr-2 h-4 w-4" /> Dupliquer
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               className="text-red-600 focus:text-red-600"
@@ -411,6 +442,39 @@ export default function AdminEvents() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <PaginationItem key={i}>
+                  <PaginationLink
+                    isActive={currentPage === i + 1}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className="cursor-pointer"
+                  >
+                    {i + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </div>
 
       {/* Event Form Dialog */}

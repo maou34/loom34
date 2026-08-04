@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Info, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { stripMarkdown } from '@/lib/markdown';
 import { Button } from '@/components/ui/button';
 
 interface EventCardProps {
@@ -79,7 +80,7 @@ const EventCard = ({
         </Link>
         
         <p className={cn("text-gray-600 mb-6 flex-1", featured ? "text-lg line-clamp-4" : "line-clamp-3")}>
-          {description}
+          {stripMarkdown(description)}
         </p>
         
         <div className="flex flex-col sm:flex-row gap-3 mt-auto">

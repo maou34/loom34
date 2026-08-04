@@ -9,6 +9,7 @@ import { Tables } from '@/db/types';
 import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { stripMarkdown } from '@/lib/markdown';
 import useSEO from '@/hooks/useSEO';
 import { generateEventStructuredData } from '@/lib/seo';
 import { motion } from 'framer-motion';
@@ -36,7 +37,7 @@ const EventDetail = () => {
   // SEO Configuration
   useSEO({
     title: event ? `${event.title} - Événement LOOM` : 'Événement - LOOM',
-    description: event?.description?.substring(0, 160) || 'Découvrez cet événement de LOOM - Les Ours Occitanie Montpellier',
+    description: event?.description ? stripMarkdown(event.description).substring(0, 160) : 'Découvrez cet événement de LOOM - Les Ours Occitanie Montpellier',
     keywords: ['LOOM', 'Bears', 'événement', 'rencontre', 'communauté'],
     image: event?.image,
     type: 'website',
@@ -49,7 +50,7 @@ const EventDetail = () => {
     if (event) {
       generateEventStructuredData({
         name: event.title,
-        description: event.description,
+        description: stripMarkdown(event.description),
         startDate: event.date,
         location: event.location,
         image: event.image,
