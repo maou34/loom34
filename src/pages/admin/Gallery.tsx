@@ -32,6 +32,7 @@ import {
   Search,
   Upload,
   CheckCircle2,
+  Copy,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -284,6 +285,19 @@ export default function Gallery() {
   const openImageDetails = (img: GalleryImage) => {
     setSelectedImage(img);
     setIsImageDetailsOpen(true);
+  };
+
+  const handleCopyImageLink = async (img: GalleryImage) => {
+    try {
+      await navigator.clipboard.writeText(getImageUrl(img.image_url));
+      toast({ title: "Lien copié dans le presse-papiers" });
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Impossible de copier le lien",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -594,6 +608,13 @@ export default function Gallery() {
             </div>
 
             <div className="pt-6 mt-auto space-y-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => selectedImage && handleCopyImageLink(selectedImage)}
+              >
+                <Copy className="w-4 h-4 mr-2" /> Copier le lien de l'image
+              </Button>
               <Button
                 variant="destructive"
                 className="w-full"

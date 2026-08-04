@@ -27,6 +27,7 @@ const MonsieurOurs = () => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const timelineItems = [
+    { year: '2026', title: 'Georges-Alexandre Lopes', description: 'Monsieur Ours élu en 2026' }, // Placeholder for future year
     { year: '2025', title: 'Sébastien Rosier', description: 'Monsieur Ours élu en 2025' },
     { year: '2024', title: 'Antonio Gabriel', description: 'Monsieur Ours élu en 2024' },
     { year: '2023', title: 'Lucas Milani', description: 'Monsieur Ours élu en 2023' },
@@ -36,6 +37,7 @@ const MonsieurOurs = () => {
   ];
 
   const galleryImages: Record<string, { url: string; alt: string } | undefined> = {
+    '2026': { url: '/gallery/unclassified/Georges-Alexandre.JPG', alt: 'Georges-Alexandre Lopes' }, // Placeholder for future year
     '2025': { url: 'gallery/images/sebastien_rosier.jpg', alt: 'Sébastien Rosier' },
     '2024': { url: 'gallery/images/antonio_gabriel.jpg', alt: 'Antonio Gabriel' },
     '2023': { url: 'gallery/images/lucas_milani.jpg', alt: 'Lucas Milani' },
