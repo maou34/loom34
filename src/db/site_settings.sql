@@ -22,3 +22,35 @@ CREATE TRIGGER update_site_settings_updated_at
     BEFORE UPDATE ON site_settings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
+-- Sécurité au niveau ligne (RLS)
+ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+
+-- Lecture publique : nécessaire pour la navbar, l'accueil et les redirections
+-- /shop et /membership, consultées par les visiteurs non connectés.
+DROP POLICY IF EXISTS "Public can read site settings" ON site_settings;
+CREATE POLICY "Public can read site settings"
+    ON site_settings
+    FOR SELECT
+    USING (true);
+
+-- Écriture réservée aux administrateurs (mêmes droits que pour les autres
+-- tables gérées depuis /admin).
+DROP POLICY IF EXISTS "Admins can manage site settings" ON site_settings;
+CREATE POLICY "Admins can manage site settings"
+    ON site_settings
+    FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.is_admin = true
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.is_admin = true
+        )
+    );
