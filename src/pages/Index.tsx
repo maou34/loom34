@@ -416,7 +416,7 @@ const Index = () => {
             transition={{ duration: 0.8 }}
             className="rounded-[2.5rem] overflow-hidden bg-brown text-white relative shadow-2xl"
           >
-            <div className="absolute top-0 right-0 w-1/2 h-full bg-[url('/gallery/images/election_2025_vainqueurs.jpg')] bg-cover bg-center hidden md:block opacity-90 mix-blend-overlay">
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-[url('/gallery/images/Mr-ours-2026_gagnants.jpg')] bg-cover bg-center hidden md:block opacity-90 mix-blend-overlay">
               <div className="absolute inset-0 bg-transparent"></div>
             </div>
 

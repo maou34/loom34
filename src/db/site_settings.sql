@@ -1,11 +1,16 @@
-CREATE TABLE site_settings (
+CREATE TABLE IF NOT EXISTS site_settings (
     id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     hero_image TEXT,
     hero_link TEXT,
     shop_url TEXT,
     membership_url TEXT,
+    monsieur_ours_hero_image TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Idempotent : ajoute la colonne si la table existait déjà avant son ajout
+-- au CREATE TABLE ci-dessus (cas de la prod, table créée avant ce champ).
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS monsieur_ours_hero_image TEXT;
 
 -- Ligne unique contenant les réglages actuels (valeurs par défaut du site)
 INSERT INTO site_settings (id, hero_image, hero_link, shop_url, membership_url)
@@ -18,6 +23,7 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+DROP TRIGGER IF EXISTS update_site_settings_updated_at ON site_settings;
 CREATE TRIGGER update_site_settings_updated_at
     BEFORE UPDATE ON site_settings
     FOR EACH ROW

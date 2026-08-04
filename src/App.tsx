@@ -32,6 +32,7 @@ const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
 const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const AdminPartners = lazy(() => import("./pages/admin/Partners"));
 const AdminHomeSettings = lazy(() => import("./pages/admin/HomeSettings"));
+const AdminMonsieurOurs = lazy(() => import("./pages/admin/MonsieurOurs"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
@@ -78,6 +79,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/admin/partners": "LOOM Admin - Partenaires",
   "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
+  "/admin/monsieur-ours": "LOOM Admin - Timeline Mr Ours",
   "/terms": "LOOM - Conditions d'utilisation",
   "/legal-notice": "LOOM - Mentions légales",
   "/unauthorized": "LOOM - Accès non autorisé",
@@ -170,6 +172,7 @@ const App = () => {
                     <Route path="/admin/seo" element={<AdminSEO />} />
                     <Route path="/admin/partners" element={<AdminPartners />} />
                     <Route path="/admin/home-settings" element={<AdminHomeSettings />} />
+                    <Route path="/admin/monsieur-ours" element={<AdminMonsieurOurs />} />
                   </Route>
                 </Route>
 

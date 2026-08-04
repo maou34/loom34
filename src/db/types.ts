@@ -307,6 +307,7 @@ export type Database = {
           hero_link: string | null
           shop_url: string | null
           membership_url: string | null
+          monsieur_ours_hero_image: string | null
           updated_at: string
         }
         Insert: {
@@ -315,6 +316,7 @@ export type Database = {
           hero_link?: string | null
           shop_url?: string | null
           membership_url?: string | null
+          monsieur_ours_hero_image?: string | null
           updated_at?: string
         }
         Update: {
@@ -323,6 +325,37 @@ export type Database = {
           hero_link?: string | null
           shop_url?: string | null
           membership_url?: string | null
+          monsieur_ours_hero_image?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      monsieur_ours_timeline: {
+        Row: {
+          id: string
+          year: number
+          title: string
+          description: string | null
+          image: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          year: number
+          title: string
+          description?: string | null
+          image?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          year?: number
+          title?: string
+          description?: string | null
+          image?: string | null
+          created_at?: string
           updated_at?: string
         }
         Relationships: []
