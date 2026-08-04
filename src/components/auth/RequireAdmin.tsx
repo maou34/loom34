@@ -6,11 +6,14 @@ interface RequireAdminProps {
 }
 
 export default function RequireAdmin({ redirectTo = "/auth/login" }: RequireAdminProps) {
-  const { isAuthenticated, isAdmin, isLoading, isProfileLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, isProfileLoading, profile } = useAuth();
   const location = useLocation();
 
-  // Tant qu'on n'a pas déterminé le profil, on n'envoie PAS vers /unauthorized
-  if (isLoading || isProfileLoading) {
+  // Tant qu'on n'a pas déterminé le profil pour la première fois, on bloque.
+  // Une fois le profil connu, ne pas re-bloquer sur un rafraîchissement en
+  // arrière-plan (ex: Supabase revalide la session au retour d'un onglet) :
+  // ça démonterait toute la page admin (donc les modales ouvertes) pour rien.
+  if (isLoading || (isProfileLoading && !profile)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
