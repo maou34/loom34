@@ -15,6 +15,14 @@ export function requireEnv(name: string): string {
 }
 
 const apiUrl = () => requireEnv("HELLOASSO_API_URL").replace(/\/+$/, "");
+
+/**
+ * Le Cloudflare de l'API HelloAsso de prod renvoie une page 403 quand le
+ * User-Agent contient « SupabaseEdgeRuntime » (celui envoyé par défaut par les
+ * Edge Functions) — constaté le 2026-11-17, la sandbox ne le fait pas. On envoie
+ * donc notre propre User-Agent à chaque appel.
+ */
+const USER_AGENT = "LOOM-site/1.0 (+https://lgbt-loom.fr)";
 export const orgSlug = () => requireEnv("HELLOASSO_ORG_SLUG");
 
 // Marge avant expiration : on renouvelle le token une minute avant la fin.
@@ -31,11 +39,15 @@ interface TokenResponse {
 async function requestToken(params: Record<string, string>): Promise<TokenResponse> {
   const res = await fetch(`${apiUrl()}/oauth2/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": USER_AGENT },
     body: new URLSearchParams(params),
   });
   if (!res.ok) {
-    throw new Error(`HelloAsso oauth2/token (${params.grant_type}) : HTTP ${res.status}`);
+    // Début de la réponse (aucune donnée personnelle ici) : distingue un refus
+    // HelloAsso d'un blocage Cloudflare (page HTML, en-tête cf-ray).
+    const body = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+    const cf = res.headers.get("cf-ray") ? " [cloudflare]" : "";
+    throw new Error(`HelloAsso oauth2/token (${params.grant_type}) : HTTP ${res.status}${cf} ${body}`);
   }
   return await res.json();
 }
@@ -106,7 +118,7 @@ export async function helloAssoGet<T>(
   const url = `${apiUrl()}/v5${path}${query ? `?${query}` : ""}`;
   for (const forceNew of [false, true]) {
     const token = await getAccessToken(supabase, { forceNew });
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, "User-Agent": USER_AGENT } });
     if (res.status === 401 && !forceNew) continue;
     if (!res.ok) throw new Error(`HelloAsso GET ${path} : HTTP ${res.status}`);
     return await res.json();
