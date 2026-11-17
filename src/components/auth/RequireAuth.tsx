@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { adminLoginPath } from '@/lib/adminRedirect';
 
 interface RequireAuthProps {
   redirectTo?: string;
@@ -8,7 +9,7 @@ interface RequireAuthProps {
 /**
  * Component to protect routes that require authentication
  */
-export default function RequireAuth({ redirectTo = '/auth/login' }: RequireAuthProps) {
+export default function RequireAuth({ redirectTo }: RequireAuthProps) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
@@ -25,7 +26,12 @@ export default function RequireAuth({ redirectTo = '/auth/login' }: RequireAuthP
   if (!isAuthenticated) {
     return (
       <Navigate 
-        to={redirectTo} 
+        to={
+          redirectTo ??
+          (location.pathname.startsWith('/admin')
+            ? adminLoginPath(location.pathname + location.search)
+            : '/auth/login')
+        }
         state={{ from: location }} 
         replace 
       />

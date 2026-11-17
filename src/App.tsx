@@ -48,13 +48,10 @@ import PageLoader from "./components/PageLoader";
 import { LOOMOrganizationSchema } from "./components/SEOStructuredData";
 import { AutoBreadcrumbs } from "./components/InternalLinks";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { DEFAULT_SHOP_URL, DEFAULT_MEMBERSHIP_URL } from "./hooks/useSiteSettings";
 
 const queryClient = new QueryClient();
 
-// HelloAsso URLs - Direct links without host prefixing
-const SHOP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu";
-const MEMBERSHIP_URL =
-  "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
 
 // Mapping des routes vers leurs titres
 const PAGE_TITLES: { [key: string]: string } = {
@@ -66,6 +63,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/gallery": "LOOM - Galerie Photos",
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
+  "/admin/login": "LOOM - Espace admin",
   "/auth/register": "LOOM - Inscription",
   "/auth/reset-password": "LOOM - Réinitialisation du mot de passe",
   "/auth/update-password": "LOOM - Nouveau mot de passe",
@@ -140,11 +138,12 @@ const App = () => {
                 <Route path="/partners" element={<Partners />} />
 
                 {/* External Redirects - URLs configurable depuis /admin/home-settings */}
-                <Route path="/shop" element={<SettingsRedirect settingKey="shop_url" fallbackUrl={SHOP_URL} />} />
-                <Route path="/membership" element={<SettingsRedirect settingKey="membership_url" fallbackUrl={MEMBERSHIP_URL} />} />
+                <Route path="/shop" element={<SettingsRedirect settingKey="shop_url" fallbackUrl={DEFAULT_SHOP_URL} />} />
+                <Route path="/membership" element={<SettingsRedirect settingKey="membership_url" fallbackUrl={DEFAULT_MEMBERSHIP_URL} />} />
 
                 {/* Auth Routes */}
                 <Route path="/auth/login" element={<Login />} />
+                <Route path="/admin/login" element={<Login />} />
                 <Route path="/auth/register" element={<Register />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordRequest />} />
                 <Route path="/auth/update-password" element={<UpdatePassword />} />

@@ -3,69 +3,75 @@
 @tailwind utilities;
 
 @layer base {
+  /* Variables shadcn/ui, alignées sur la palette LOOM de src/theme/theme.css
+     (mêmes couleurs, converties en triplets HSL pour garder les modificateurs
+     d'opacité Tailwind type bg-primary/90). Si une couleur change dans
+     theme.css, la reporter ici.
+     « --ui-border » et non « --border » : theme.css utilise déjà --border
+     (en hexadécimal) pour la bordure des cartes. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
- 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
- 
+    --background: 40 53% 97%;        /* --bg */
+    --foreground: 27 17% 10%;        /* --text */
+
+    --card: 0 0% 100%;               /* --surface */
+    --card-foreground: 27 17% 10%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
- 
+    --popover-foreground: 27 17% 10%;
+
+    --primary: 33 92% 20%;           /* --primary-bg */
+    --primary-foreground: 0 0% 100%; /* --primary-fg */
+
+    --secondary: 39 97% 86%;         /* --chip-bg */
+    --secondary-foreground: 33 92% 20%;
+
+    --muted: 36 38% 92%;
+    --muted-foreground: 28 9% 39%;   /* --text-muted */
+
+    --accent: 36 93% 94%;            /* --nav-active-bg */
+    --accent-foreground: 33 92% 20%;
+
+    --destructive: 4 76% 40%;        /* --danger */
+    --destructive-foreground: 0 0% 100%;
+
+    --ui-border: 35 21% 89%;         /* --border */
+    --input: 33 32% 78%;             /* --border-strong */
+    --ring: 33 92% 20%;
+
     --radius: 0.5rem;
   }
- 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+
+  [data-theme="dark"] {
+    --background: 30 35% 7%;
+    --foreground: 33 45% 91%;
+
+    --card: 28 32% 10%;
+    --card-foreground: 33 45% 91%;
+
+    --popover: 28 32% 10%;
+    --popover-foreground: 33 45% 91%;
+
+    --primary: 47 99% 69%;
+    --primary-foreground: 28 56% 11%;
+
+    --secondary: 30 38% 16%;
+    --secondary-foreground: 39 97% 86%;
+
+    --muted: 26 30% 14%;
+    --muted-foreground: 28 15% 60%;
+
+    --accent: 30 38% 16%;
+    --accent-foreground: 47 99% 69%;
+
+    --destructive: 4 92% 69%;
+    --destructive-foreground: 27 62% 6%;
+
+    --ui-border: 28 29% 18%;
+    --input: 28 25% 23%;
+    --ring: 47 99% 69%;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;

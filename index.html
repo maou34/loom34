@@ -4,7 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#8B4513" />
+    <meta name="theme-color" content="#FBF8F2" />
+    <!-- Thème jour / nuit posé avant le rendu (évite un flash blanc en mode nuit).
+         Même logique que src/theme/theme.ts ; l'admin reste en mode jour. -->
+    <script>
+      (function () {
+        try {
+          var p = location.pathname, t;
+          if (p.indexOf('/admin') === 0 && p.indexOf('/admin/login') !== 0) {
+            t = 'light';
+          } else {
+            t = localStorage.getItem('loom-theme');
+            if (t !== 'light' && t !== 'dark') {
+              t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- SEO Meta Tags (will be updated dynamically) -->
     <title>LOOM - Les Ours Occitanie Montpellier</title>
@@ -44,6 +62,8 @@
     <link rel="preload" href="/gallery/loom_logo_round.png" as="image">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="preload" href="/logo-loom.png" as="image">
 
     <!-- Cloudflare Web Analytics -->
     <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "bba91af7c88d4a8bbf730ecdc35ff9b3"}'></script>
