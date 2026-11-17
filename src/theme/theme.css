@@ -79,6 +79,7 @@
   /* Constantes communes aux deux thèmes */
   --yellow: #FEDD63;
   --on-yellow: #2A1A0C;
+  --join-text: #F3E3CC;          /* texte courant sur le bloc marron « Pourquoi adhérer » */
   --heart: #E5484D;              /* cœur « Fait avec ❤ » du footer */
   --gradient-bear: linear-gradient(90deg, #623804 0%, #D56300 18%, #FEDD63 34%, #FEE6B8 50%, #FFFFFF 64%, #555555 82%, #000000 100%);
   --radius-card: 22px;

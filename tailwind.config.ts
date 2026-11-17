@@ -46,7 +46,7 @@ export default {
 					'highlight-bg', 'highlight-border', 'highlight-label',
 					'header-bg', 'header-border', 'nav-fg', 'nav-active-bg', 'nav-active-fg',
 					'theme-toggle-bg', 'theme-toggle-fg',
-					'band-dark-bg', 'band-dark-text', 'footer-bg', 'join-bg',
+					'band-dark-bg', 'band-dark-text', 'footer-bg', 'join-bg', 'join-text',
 					'danger', 'success', 'warning-fg', 'yellow', 'on-yellow', 'heart',
 				].map((name) => [name, `var(--${name})`])),
 				border: 'hsl(var(--ui-border))',
