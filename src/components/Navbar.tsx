@@ -25,7 +25,8 @@ const Navbar = () => {
 
   return (
     <>
-      <div className="sticky top-0 z-50 px-3 pt-2.5 xl:px-5 xl:pt-[18px]">
+      {/* Fond opaque : le contenu qui défile passe sous la marge au-dessus de la pilule, pas à travers. */}
+      <div className="sticky top-0 z-50 bg-loom-bg px-3 pt-2.5 xl:px-5 xl:pt-[18px]">
         <header className="mx-auto max-w-[1200px] overflow-hidden rounded-[18px] bg-loom-header-bg shadow-loom-header ring-1 ring-loom-header-border xl:rounded-[22px]">
           <div className="flex h-[60px] items-center gap-1.5 pl-2 pr-1.5 xl:h-auto xl:gap-6 xl:py-2 xl:pl-2.5 xl:pr-2.5">
             <Link
