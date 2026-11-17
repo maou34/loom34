@@ -3,6 +3,8 @@ import { Calendar, Clock, MapPin, Info, Ticket } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { stripMarkdown } from '@/lib/markdown';
 import { Button } from '@/components/ui/button';
+import TicketAvailabilityBadge from '@/components/TicketAvailabilityBadge';
+import { closedLabel, formatPriceSummary, getTicketAvailability, hasTicketing, isBookable, type TicketingInfo } from '@/lib/ticketing';
 
 interface EventCardProps {
   title: string;
@@ -13,6 +15,8 @@ interface EventCardProps {
   image: string;
   slug: string;
   registrationUrl?: string;
+  /** Colonnes billetterie de l'événement ; active le parcours HelloAsso si un slug est renseigné. */
+  ticketing?: TicketingInfo;
   className?: string;
   featured?: boolean;
 }
@@ -26,6 +30,7 @@ const EventCard = ({
   image,
   slug,
   registrationUrl,
+  ticketing,
   className,
   featured = false,
 }: EventCardProps) => {
@@ -36,6 +41,12 @@ const EventCard = ({
     month: 'long', 
     day: 'numeric' 
   });
+
+  const ticketed = ticketing && hasTicketing(ticketing) ? ticketing : null;
+  const isTicketed = ticketed !== null;
+  const availability = ticketed ? getTicketAvailability(ticketed) : null;
+  const bookable = isBookable(availability);
+  const priceSummary = ticketed ? formatPriceSummary(ticketed.ticket_prices) : null;
 
   return (
     <article 
@@ -54,9 +65,12 @@ const EventCard = ({
             loading="lazy"
           />
           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300" />
-          <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
-            <Calendar size={12} className="text-orange" />
-            <span className="capitalize">{formattedDate}</span>
+          <div className="absolute top-4 left-4 right-4 flex flex-wrap items-start justify-between gap-2 lg:flex-col lg:justify-start">
+            <div className="bg-white/90 backdrop-blur-sm text-gray-900 text-xs font-bold px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+              <Calendar size={12} className="text-orange" />
+              <span className="capitalize">{formattedDate}</span>
+            </div>
+            {ticketed && <TicketAvailabilityBadge ticketing={ticketed} />}
           </div>
         </div>
       </Link>
@@ -79,41 +93,70 @@ const EventCard = ({
           </h3>
         </Link>
         
-        <p className={cn("text-gray-600 mb-6 flex-1", featured ? "text-lg line-clamp-4" : "line-clamp-3")}>
+        <p className={cn("text-gray-600 flex-1", isTicketed ? "mb-3" : "mb-6", featured ? "text-lg line-clamp-4" : "line-clamp-3")}>
           {stripMarkdown(description)}
         </p>
+
+        {isTicketed && (
+          <p className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-6">
+            <Ticket size={16} className="text-orange flex-shrink-0" />
+            <span>{priceSummary ? `${priceSummary} · billetterie en ligne` : 'Billetterie en ligne'}</span>
+          </p>
+        )}
         
-        <div className="flex flex-col sm:flex-row gap-3 mt-auto">
+        {isTicketed ? (
+          // Événement avec billetterie HelloAsso : un seul bouton, qui mène à la
+          // billetterie intégrée sur la page de l'événement.
           <Button
-            variant="outline"
+            variant={bookable ? 'default' : 'outline'}
             size="sm"
-            className="w-full hover:bg-orange/10 hover:text-orange hover:border-orange/30 transition-colors"
+            className={cn(
+              "w-full mt-auto",
+              bookable ? "bg-brown hover:bg-brown-light text-white" : "text-gray-500"
+            )}
             asChild
           >
-            <Link to={`/events/${slug}`} aria-label={`Voir les détails de l'événement : ${title}`}>
-              <Info className="w-4 h-4 mr-2" />
-              Plus d'infos
+            <Link
+              to={`/events/${slug}#billetterie`}
+              aria-label={bookable ? `S'inscrire à l'événement : ${title}` : `${closedLabel(availability)} : ${title}`}
+            >
+              <Ticket className="w-4 h-4 mr-2" />
+              {bookable ? "S'inscrire" : closedLabel(availability)}
             </Link>
           </Button>
-          {registrationUrl && (
+        ) : (
+          <div className="flex flex-col sm:flex-row gap-3 mt-auto">
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
-              className="w-full bg-brown hover:bg-brown-light text-white"
+              className="w-full hover:bg-orange/10 hover:text-orange hover:border-orange/30 transition-colors"
               asChild
             >
-              <Link
-                to={registrationUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`S'inscrire à l'événement : ${title}`}
-              >
-                <Ticket className="w-4 h-4 mr-2" />
-                S'inscrire
+              <Link to={`/events/${slug}`} aria-label={`Voir les détails de l'événement : ${title}`}>
+                <Info className="w-4 h-4 mr-2" />
+                Plus d'infos
               </Link>
             </Button>
-          )}
-        </div>
+            {registrationUrl && (
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full bg-brown hover:bg-brown-light text-white"
+                asChild
+              >
+                <Link
+                  to={registrationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`S'inscrire à l'événement : ${title}`}
+                >
+                  <Ticket className="w-4 h-4 mr-2" />
+                  S'inscrire
+                </Link>
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

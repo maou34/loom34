@@ -414,6 +414,7 @@ const Index = () => {
                     image={event.image}
                     slug={event.slug}
                     registrationUrl={event.registration_url}
+                    ticketing={event}
                   />
                 </motion.div>
               ))

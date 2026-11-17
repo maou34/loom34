@@ -132,6 +132,25 @@ export type Database = {
           updated_at: string
           slug: string
           registration_url: string | null
+          helloasso_form_slug: string | null
+          helloasso_form_type: string
+          /** Jauge saisie dans l'admin, prioritaire sur helloasso_capacity */
+          ticket_capacity: number | null
+          /** Somme des limites de tarifs HelloAsso (sync-events) */
+          helloasso_capacity: number | null
+          tickets_sold: number | null
+          tickets_sold_discounted: number | null
+          ticket_member_discount: boolean
+          /** Colonne calculée par Postgres (COALESCE(ticket_capacity, helloasso_capacity) - tickets_sold) : lecture seule. */
+          tickets_remaining: number | null
+          ticket_prices: Json | null
+          helloasso_synced_at: string | null
+          /** Ouverture des ventes HelloAsso : déclenche la publication (une fois) */
+          helloasso_sale_start_date: string | null
+          /** Fin des ventes HelloAsso : au-delà, « Inscriptions closes » */
+          helloasso_sale_end_date: string | null
+          /** Date de la publication automatique par la synchro */
+          helloasso_auto_published_at: string | null
         }
         Insert: {
           id?: string
@@ -146,6 +165,18 @@ export type Database = {
           updated_at?: string
           slug: string
           registration_url?: string | null
+          helloasso_form_slug?: string | null
+          helloasso_form_type?: string
+          ticket_capacity?: number | null
+          helloasso_capacity?: number | null
+          tickets_sold?: number | null
+          tickets_sold_discounted?: number | null
+          ticket_member_discount?: boolean
+          ticket_prices?: Json | null
+          helloasso_synced_at?: string | null
+          helloasso_sale_start_date?: string | null
+          helloasso_sale_end_date?: string | null
+          helloasso_auto_published_at?: string | null
         }
         Update: {
           id?: string
@@ -160,6 +191,18 @@ export type Database = {
           updated_at?: string
           slug?: string
           registration_url?: string | null
+          helloasso_form_slug?: string | null
+          helloasso_form_type?: string
+          ticket_capacity?: number | null
+          helloasso_capacity?: number | null
+          tickets_sold?: number | null
+          tickets_sold_discounted?: number | null
+          ticket_member_discount?: boolean
+          ticket_prices?: Json | null
+          helloasso_synced_at?: string | null
+          helloasso_sale_start_date?: string | null
+          helloasso_sale_end_date?: string | null
+          helloasso_auto_published_at?: string | null
         }
         Relationships: []
       }

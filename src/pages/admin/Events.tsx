@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import { Badge } from "@/components/ui/badge";
+import { getCapacity, isSaleEnded, normalizeHelloAssoSlug } from "@/lib/ticketing";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,22 @@ const formatDate = (dateStr: string) => {
   });
 };
 
+// 23505 = violation d'unicité (index events_helloasso_form_slug_key, entre autres).
+const describeSaveError = (error: { code?: string; message: string }) => {
+  if (error.code === '23505' && error.message.includes('helloasso_form_slug')) {
+    return "ce formulaire HelloAsso est déjà rattaché à un autre événement";
+  }
+  return error.message;
+};
+
+// "" → null (pas de jauge) ; entier > 0 → nombre ; sinon undefined (invalide).
+const parseCapacity = (value: string): number | null | undefined => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+};
+
 interface Event {
   id: string;
   title: string;
@@ -54,7 +71,29 @@ interface Event {
   description: string;
   image: string;
   registration_url: string | null;
+  helloasso_form_slug: string | null;
+  ticket_capacity: number | null;
+  helloasso_capacity: number | null;
+  ticket_member_discount: boolean;
+  tickets_sold: number | null;
+  tickets_sold_discounted: number | null;
+  helloasso_sale_start_date: string | null;
+  helloasso_sale_end_date: string | null;
 }
+
+const formatShortDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+/** Période de vente HelloAsso résumée pour la liste : publication programmée ou fin des inscriptions. */
+const describeSalePeriod = (event: Event): string | null => {
+  const now = new Date();
+  if (event.helloasso_sale_end_date && isSaleEnded(event, now)) return "Inscriptions closes";
+  if (!event.published && event.helloasso_sale_start_date && new Date(event.helloasso_sale_start_date) > now) {
+    return `Publication auto le ${formatShortDateTime(event.helloasso_sale_start_date)}`;
+  }
+  if (event.helloasso_sale_end_date) return `Inscriptions jusqu'au ${formatShortDateTime(event.helloasso_sale_end_date)}`;
+  return null;
+};
 
 export default function AdminEvents() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -79,7 +118,10 @@ export default function AdminEvents() {
     image: "https://placehold.co/600x400?text=Event+Image",
     published: false,
     slug: "",
-    registration_url: ""
+    registration_url: "",
+    helloasso_form_slug: "",
+    ticket_capacity: "",
+    ticket_member_discount: false
   });
 
   useEffect(() => {
@@ -96,8 +138,13 @@ export default function AdminEvents() {
     } else {
       setFilteredEvents(events);
     }
-    setCurrentPage(1);
   }, [searchQuery, events]);
+
+  // Revenir à la première page seulement quand la recherche change (pas quand
+  // un événement est publié/dépublié depuis la liste).
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
   const paginatedEvents = filteredEvents.slice(
@@ -110,7 +157,7 @@ export default function AdminEvents() {
       setLoading(true);
       const { data, error } = await db
         .from('events')
-        .select('id, title, location, date, time, published, slug, description, image, registration_url')
+        .select('id, title, location, date, time, published, slug, description, image, registration_url, helloasso_form_slug, ticket_capacity, helloasso_capacity, ticket_member_discount, tickets_sold, tickets_sold_discounted, helloasso_sale_start_date, helloasso_sale_end_date')
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -154,7 +201,10 @@ export default function AdminEvents() {
       image: "https://placehold.co/600x400?text=Event+Image",
       published: false,
       slug: "",
-      registration_url: ""
+      registration_url: "",
+      helloasso_form_slug: "",
+      ticket_capacity: "",
+      ticket_member_discount: false
     });
     setIsCreating(true);
     setSelectedEvent(null);
@@ -163,10 +213,16 @@ export default function AdminEvents() {
 
   const handleCreateEvent = async () => {
     try {
-      const { title, location, date, time, description, image, published, slug, registration_url } = eventForm;
+      const { title, location, date, time, description, image, published, slug, registration_url, helloasso_form_slug, ticket_capacity, ticket_member_discount } = eventForm;
       
       if (!title || !location || !date || !time || !description || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+
+      const capacity = parseCapacity(ticket_capacity);
+      if (capacity === undefined) {
+        toast.error("La jauge doit être un nombre entier de places supérieur à 0");
         return;
       }
       
@@ -180,6 +236,9 @@ export default function AdminEvents() {
         published,
         slug,
         registration_url: registration_url || null,
+        helloasso_form_slug: normalizeHelloAssoSlug(helloasso_form_slug),
+        ticket_capacity: capacity,
+        ticket_member_discount,
         author_id: user?.id
       };
       
@@ -196,7 +255,7 @@ export default function AdminEvents() {
       setDialogOpen(false);
     } catch (error: any) {
       console.error("Error creating event:", error);
-      toast.error("Erreur lors de la création de l'événement: " + error.message);
+      toast.error("Erreur lors de la création de l'événement: " + describeSaveError(error));
     }
   };
 
@@ -204,13 +263,20 @@ export default function AdminEvents() {
     if (!selectedEvent) return;
     
     try {
-      const { title, location, date, time, description, image, published, slug, registration_url } = eventForm;
+      const { title, location, date, time, description, image, published, slug, registration_url, helloasso_form_slug, ticket_capacity, ticket_member_discount } = eventForm;
       
       if (!title || !location || !date || !time || !description || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
+
+      const capacity = parseCapacity(ticket_capacity);
+      if (capacity === undefined) {
+        toast.error("La jauge doit être un nombre entier de places supérieur à 0");
+        return;
+      }
       
+      const newFormSlug = normalizeHelloAssoSlug(helloasso_form_slug);
       const updatedEvent = {
         title,
         location,
@@ -221,7 +287,23 @@ export default function AdminEvents() {
         published,
         slug,
         registration_url: registration_url || null,
-        updated_at: new Date().toISOString()
+        helloasso_form_slug: newFormSlug,
+        ticket_capacity: capacity,
+        ticket_member_discount,
+        updated_at: new Date().toISOString(),
+        // Formulaire HelloAsso changé ou retiré : les données synchronisées
+        // concernent l'ancien formulaire, on les vide jusqu'à la prochaine
+        // synchro (sync-events). La jauge, saisie ici, est conservée.
+        ...(newFormSlug !== selectedEvent.helloasso_form_slug && {
+          tickets_sold: null,
+          tickets_sold_discounted: null,
+          ticket_prices: null,
+          helloasso_synced_at: null,
+          // Nouvelle billetterie : sa date d'ouverture pourra de nouveau publier l'événement.
+          helloasso_sale_start_date: null,
+          helloasso_sale_end_date: null,
+          helloasso_auto_published_at: null,
+        }),
       };
       
       const { error } = await db
@@ -236,7 +318,33 @@ export default function AdminEvents() {
       setDialogOpen(false);
     } catch (error: any) {
       console.error("Error updating event:", error);
-      toast.error("Erreur lors de la mise à jour de l'événement: " + error.message);
+      toast.error("Erreur lors de la mise à jour de l'événement: " + describeSaveError(error));
+    }
+  };
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  /** Publier / mettre en brouillon directement depuis la liste. */
+  const togglePublished = async (event: Event) => {
+    const published = !event.published;
+    const setPublished = (value: boolean) =>
+      setEvents((prev) => prev.map((e) => (e.id === event.id ? { ...e, published: value } : e)));
+
+    setTogglingId(event.id);
+    setPublished(published); // affichage immédiat, annulé en cas d'erreur
+    try {
+      const { error } = await db
+        .from('events')
+        .update({ published, updated_at: new Date().toISOString() })
+        .eq('id', event.id);
+      if (error) throw error;
+      toast.success(published ? `« ${event.title} » est publié` : `« ${event.title} » est repassé en brouillon`);
+    } catch (error: unknown) {
+      setPublished(event.published);
+      console.error("Error toggling event publication:", error);
+      toast.error("Erreur lors du changement de statut : " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -271,7 +379,10 @@ export default function AdminEvents() {
       image: event.image,
       published: event.published,
       slug: event.slug,
-      registration_url: event.registration_url || ""
+      registration_url: event.registration_url || "",
+      helloasso_form_slug: event.helloasso_form_slug || "",
+      ticket_capacity: event.ticket_capacity?.toString() ?? "",
+      ticket_member_discount: event.ticket_member_discount
     });
     setIsCreating(false);
     setDialogOpen(true);
@@ -293,7 +404,11 @@ export default function AdminEvents() {
       image: event.image,
       published: false,
       slug: `${event.slug}-copie-${Date.now().toString(36)}`,
-      registration_url: event.registration_url || ""
+      registration_url: event.registration_url || "",
+      // Un formulaire HelloAsso ne peut être rattaché qu'à un seul événement
+      helloasso_form_slug: "",
+      ticket_capacity: event.ticket_capacity?.toString() ?? "",
+      ticket_member_discount: event.ticket_member_discount
     });
     setIsCreating(true);
     setDialogOpen(true);
@@ -371,7 +486,12 @@ export default function AdminEvents() {
                           />
                           <div>
                             <div className="font-medium text-gray-900 line-clamp-1">{event.title}</div>
-                            <div className="text-xs text-gray-500 line-clamp-1">{event.slug}</div>
+                            <div className="text-xs text-gray-500 line-clamp-1 flex items-center gap-1">
+                              {event.helloasso_form_slug && (
+                                <Ticket className="h-3 w-3 text-orange-600 flex-shrink-0" aria-label="Billetterie HelloAsso" />
+                              )}
+                              {event.slug}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -394,15 +514,29 @@ export default function AdminEvents() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {event.published ? (
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                            <CheckCircle2 className="w-3 h-3 mr-1" /> Publié
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500 border-gray-200">
-                            <XCircle className="w-3 h-3 mr-1" /> Brouillon
-                          </Badge>
+                        <label className="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                          <Switch
+                            checked={event.published}
+                            onCheckedChange={() => togglePublished(event)}
+                            disabled={togglingId === event.id}
+                            aria-label={event.published ? `Mettre « ${event.title} » en brouillon` : `Publier « ${event.title} »`}
+                            className="data-[state=checked]:bg-green-600"
+                          />
+                          <span className={event.published ? "text-sm font-medium text-green-700" : "text-sm text-gray-500"}>
+                            {event.published ? "Publié" : "Brouillon"}
+                          </span>
+                        </label>
+                        {event.helloasso_form_slug && event.tickets_sold !== null && (
+                          <div className="mt-1 text-xs text-gray-500 whitespace-nowrap">
+                            {event.tickets_sold}
+                            {getCapacity(event) ? `/${getCapacity(event)}` : ""} inscrit{event.tickets_sold > 1 ? "s" : ""}
+                            {(event.tickets_sold_discounted ?? 0) > 0 && ` · dont ${event.tickets_sold_discounted} au tarif réduit`}
+                          </div>
                         )}
+                        {event.helloasso_form_slug && (() => {
+                          const saleNote = describeSalePeriod(event);
+                          return saleNote && <div className="mt-1 text-xs text-gray-500 whitespace-nowrap">{saleNote}</div>;
+                        })()}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -424,6 +558,13 @@ export default function AdminEvents() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => duplicateEvent(event)}>
                               <Copy className="mr-2 h-4 w-4" /> Dupliquer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => togglePublished(event)} disabled={togglingId === event.id}>
+                              {event.published ? (
+                                <><XCircle className="mr-2 h-4 w-4" /> Mettre en brouillon</>
+                              ) : (
+                                <><CheckCircle2 className="mr-2 h-4 w-4" /> Publier</>
+                              )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
@@ -501,7 +642,7 @@ export default function AdminEvents() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug (URL)</Label>
+                <Label htmlFor="slug">Adresse de la page sur le site</Label>
                 <Input
                   id="slug"
                   name="slug"
@@ -509,6 +650,10 @@ export default function AdminEvents() {
                   onChange={handleInputChange}
                   placeholder="url-de-l-evenement"
                 />
+                <p className="text-xs text-gray-500">
+                  lgbt-loom.fr/events/<span className="font-medium">{eventForm.slug || "…"}</span> — rempli
+                  automatiquement depuis le titre. À ne pas confondre avec la billetterie HelloAsso plus bas.
+                </p>
               </div>
             </div>
 
@@ -575,6 +720,74 @@ export default function AdminEvents() {
                     )}
                   </Label>
                 </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="helloasso_form_slug">Billetterie HelloAsso (Optionnel)</Label>
+                <Input
+                  id="helloasso_form_slug"
+                  name="helloasso_form_slug"
+                  value={eventForm.helloasso_form_slug}
+                  onChange={handleInputChange}
+                  placeholder="Lien ou slug du formulaire, ex : loom-fete-son-anniversaire"
+                />
+                <p className="text-xs text-gray-500">
+                  Rempli automatiquement pour les billetteries créées sur HelloAsso (import toutes les
+                  15 min). Sinon, colle le lien de la billetterie ou juste son slug. Le lien
+                  d'inscription ci-dessus est alors ignoré.
+                </p>
+                {eventForm.helloasso_form_slug && (
+                  <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-2 py-1.5">
+                    HelloAsso fait foi : titre, date, heure, lieu, description et image sont recopiés
+                    depuis la billetterie à chaque synchro (et, en production, la publication suit
+                    l'état HelloAsso). Modifie-les sur HelloAsso, pas ici, sinon tes changements
+                    seront écrasés. La jauge et le tarif réduit restent à régler ici.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ticket_capacity">Jauge (facultatif)</Label>
+                <Input
+                  id="ticket_capacity"
+                  name="ticket_capacity"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  value={eventForm.ticket_capacity}
+                  onChange={handleInputChange}
+                  placeholder={
+                    !isCreating && selectedEvent?.helloasso_capacity
+                      ? `${selectedEvent.helloasso_capacity} (HelloAsso)`
+                      : "ex : 30"
+                  }
+                />
+                <p className="text-xs text-gray-500">
+                  {!isCreating && selectedEvent?.helloasso_capacity
+                    ? `HelloAsso : ${selectedEvent.helloasso_capacity} places (limite du tarif). Ne remplir que pour la remplacer.`
+                    : "Reprise automatiquement de la limite du tarif HelloAsso. À remplir seulement si la limite n'est réglée qu'au niveau global chez HelloAsso, qui ne la transmet pas."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-4 border rounded-lg p-3 bg-gray-50">
+              <Switch
+                id="ticket_member_discount"
+                checked={eventForm.ticket_member_discount}
+                onCheckedChange={(checked) => setEventForm(prev => ({ ...prev, ticket_member_discount: checked }))}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="ticket_member_discount" className="cursor-pointer font-medium">
+                  Tarif réduit adhérent avec code promo
+                </Label>
+                <p className="text-xs text-gray-500">
+                  Affiche « Tarif réduit pour les adhérents, avec le code promo LOOM » sous le prix.
+                  HelloAsso ne permet pas de savoir si un code promo existe : coche si tu en as créé un.
+                  Le nombre de billets vendus avec un code promo est compté automatiquement.
+                </p>
               </div>
             </div>
 

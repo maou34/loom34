@@ -236,6 +236,7 @@ const Events = () => {
                     image={event.image}
                     slug={event.slug}
                     registrationUrl={event.registration_url}
+                    ticketing={event}
                     featured={!isFiltered && index === 0}
                     className="h-full"
                   />
