@@ -42,12 +42,17 @@ CREATE TABLE IF NOT EXISTS public.team_members (
 CREATE INDEX IF NOT EXISTS team_members_group_id_idx ON public.team_members (group_id);
 
 -- 3. Sécurité : lecture publique, écriture réservée aux admins ------------------------------
+-- RLS activée en clair (et pas seulement dans la boucle ci-dessous) : l'éditeur SQL
+-- Supabase ne lit pas l'intérieur des blocs DO et signalerait sinon des tables sans RLS.
+ALTER TABLE public.history_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_groups     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.team_members    ENABLE ROW LEVEL SECURITY;
+
 DO $$
 DECLARE
     t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY['history_entries', 'team_groups', 'team_members'] LOOP
-        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('DROP POLICY IF EXISTS "Public can read %1$s" ON public.%1$I', t);
         EXECUTE format('CREATE POLICY "Public can read %1$s" ON public.%1$I FOR SELECT USING (true)', t);
         EXECUTE format('DROP POLICY IF EXISTS "LOOM admins manage %1$s" ON public.%1$I', t);
