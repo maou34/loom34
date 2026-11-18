@@ -1,487 +1,296 @@
-import { useEffect, useState } from "react";
-import { db } from "@/db/client";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { KeyRound, MoreHorizontal, Plus, ShieldCheck, ShieldOff, Trash2, UserX } from "lucide-react";
+import { toast } from "sonner";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Users as UsersIcon,
-  Search,
-  Shield,
-  ShieldAlert,
-  MoreHorizontal,
-  Mail,
-  User,
-} from "lucide-react";
-import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { type AdminAccount, accountInitials, accountName, callAdminUsers, useAdminAccounts } from "@/lib/adminUsers";
 
-interface Profile {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  is_admin: boolean;
-  email?: string; // peut ne pas être renvoyé si pas stocké dans profiles
-  created_at: string;
+const formatDay = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+const formatMonth = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { month: "short", year: "numeric" });
+
+/** Action sensible en attente de confirmation */
+type Pending = { kind: "revoke" | "delete"; account: AdminAccount } | null;
+
+function Avatar({ account }: { account: AdminAccount }) {
+  return (
+    <span aria-hidden="true" className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-loom-chip-bg text-sm font-bold text-loom-chip-fg">
+      {accountInitials(account)}
+    </span>
+  );
 }
 
-type FormDataState = {
-  username: string;
-  full_name: string;
-  email: string;
-  password: string;
-  is_admin: boolean;
-};
+/**
+ * Admin « Administrateurs » (maquette admin/Administrateurs) : les comptes qui
+ * peuvent se connecter à l'administration. Tout passe par l'Edge Function
+ * admin-users (service role) : invitation par e-mail, retrait de l'accès,
+ * réinitialisation du mot de passe, suppression des comptes sans accès.
+ */
+export default function AdminUsers() {
+  const queryClient = useQueryClient();
+  const { data, isLoading, error } = useAdminAccounts();
+  const admins = data?.admins ?? [];
+  const others = data?.others ?? [];
 
-export default function Users() {
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invite, setInvite] = useState({ full_name: "", email: "" });
+  const [pending, setPending] = useState<Pending>(null);
+  const [busy, setBusy] = useState(false);
 
-  // Dialog states
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
-
-  // Form state
-  const [formData, setFormData] = useState<FormDataState>({
-    username: "",
-    full_name: "",
-    email: "",
-    password: "",
-    is_admin: false,
-  });
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
-      const filtered = users.filter(
-        (user) =>
-          (user.username?.toLowerCase() || "").includes(lowerQuery) ||
-          (user.full_name?.toLowerCase() || "").includes(lowerQuery) ||
-          (user.email?.toLowerCase() || "").includes(lowerQuery)
-      );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(users);
-    }
-  }, [searchQuery, users]);
-
-  async function fetchUsers() {
+  const run = async (label: string, fn: () => Promise<unknown>) => {
+    setBusy(true);
     try {
-      setLoading(true);
-      const { data, error } = await db
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setUsers(data || []);
-      setFilteredUsers(data || []);
-    } catch (error: any) {
-      console.error("Error fetching users:", error);
-      toast.error("Erreur lors du chargement des utilisateurs");
+      await fn();
+      toast.success(label);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((s) => ({ ...s, [name]: value }));
   };
 
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData((s) => ({ ...s, is_admin: checked }));
-  };
-
-  const resetForm = () => {
-    setFormData({
-      username: "",
-      full_name: "",
-      email: "",
-      password: "",
-      is_admin: false,
-    });
-    setIsCreating(true);
-    setSelectedUser(null);
-    setDialogOpen(true);
-  };
-
-  const handleEditUser = (user: Profile) => {
-    setSelectedUser(user);
-    setFormData({
-      username: user.username || "",
-      full_name: user.full_name || "",
-      email: user.email || "",
-      password: "",
-      is_admin: user.is_admin,
-    });
-    setIsCreating(false);
-    setDialogOpen(true);
-  };
-
-  const handleCreateUser = async () => {
+  const sendInvite = async () => {
+    setBusy(true);
     try {
-      if (!formData.username || !formData.full_name || !formData.email || !formData.password) {
-        toast.error("Veuillez remplir tous les champs obligatoires");
-        return;
-      }
-
-      const { data: sessionData, error: sessionErr } = await db.auth.getSession();
-      if (sessionErr) throw sessionErr;
-
-      const token = sessionData.session?.access_token;
-      if (!token) {
-        toast.error("Session introuvable. Reconnecte-toi puis réessaie.");
-        return;
-      }
-
-      // IMPORTANT:
-      // - on n'utilise PAS db.auth.signUp ici (sinon on switch de session)
-      // - on appelle l'Edge Function admin-create-user qui utilise la Service Role Key
-      const { error } = await db.functions.invoke("admin-create-user", {
-        body: {
-          email: formData.email,
-          password: formData.password,
-          username: formData.username,
-          full_name: formData.full_name,
-          is_admin: formData.is_admin,
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      toast.success("Utilisateur créé avec succès");
-      setDialogOpen(false);
-      await fetchUsers();
-    } catch (error: any) {
-      console.error("Error creating user:", error);
-      toast.error("Erreur lors de la création: " + (error?.message || "inconnue"));
+      const { status } = await callAdminUsers<{ status: "invited" | "promoted" }>({ action: "invite", ...invite });
+      toast.success(status === "promoted" ? "Ce compte existait déjà : il est maintenant administrateur" : `Invitation envoyée à ${invite.email.trim()}`);
+      await queryClient.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      setInviteOpen(false);
+      setInvite({ full_name: "", email: "" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleUpdateUser = async () => {
-    if (!selectedUser) return;
+  const resetPassword = (a: AdminAccount) =>
+    run(`Lien de réinitialisation envoyé à ${a.email}`, () => callAdminUsers({ action: "reset", userId: a.id }));
 
-    try {
-      const { error } = await db
-        .from("profiles")
-        .update({
-          username: formData.username,
-          full_name: formData.full_name,
-          is_admin: formData.is_admin,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", selectedUser.id);
+  const restore = (a: AdminAccount) => run(`${accountName(a)} est de nouveau administrateur`, () => callAdminUsers({ action: "restore", userId: a.id }));
 
-      if (error) throw error;
-
-      toast.success("Utilisateur mis à jour avec succès");
-      setDialogOpen(false);
-      await fetchUsers();
-    } catch (error: any) {
-      console.error("Error updating user:", error);
-      toast.error("Erreur lors de la mise à jour: " + (error?.message || "inconnue"));
-    }
+  const confirmPending = async () => {
+    if (!pending) return;
+    const { kind, account } = pending;
+    const ok =
+      kind === "revoke"
+        ? await run(`${accountName(account)} n'a plus accès à l'administration`, () => callAdminUsers({ action: "revoke", userId: account.id }))
+        : await run("Compte supprimé", () => callAdminUsers({ action: "delete", userId: account.id }));
+    if (ok) setPending(null);
   };
 
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-
-    try {
-      // @ts-expect-error: Allow custom RPC function name
-      const { error } = await db.rpc("delete_user", { user_id: selectedUser.id });
-
-      if (error) throw error;
-
-      toast.success("Utilisateur supprimé avec succès");
-      setDeleteDialogOpen(false);
-      await fetchUsers();
-    } catch (error: any) {
-      console.error("Error deleting user:", error);
-      toast.error("Erreur lors de la suppression: " + (error?.message || "inconnue"));
-    }
-  };
-
-  const confirmDelete = (user: Profile) => {
-    setSelectedUser(user);
-    setDeleteDialogOpen(true);
-  };
+  const inviteValid = invite.full_name.trim() !== "" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invite.email.trim());
 
   return (
-    <AdminLayout title="Utilisateurs">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Rechercher un utilisateur..."
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <AdminLayout
+      title="Administrateurs"
+      actions={
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setInviteOpen(true)}>
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="sr-only sm:not-sr-only">Ajouter un administrateur</span>
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-6">
+        <p className="text-sm text-loom-text-muted">Les personnes qui peuvent se connecter à cette administration.</p>
+
+        {error ? (
+          <p role="alert" className="rounded-xl border border-loom-border bg-loom-surface-2 p-4 text-sm">
+            Impossible de charger les comptes : {error instanceof Error ? error.message : String(error)}
+          </p>
+        ) : isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
           </div>
-          <Button
-            className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto"
-            onClick={resetForm}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel utilisateur
-          </Button>
-        </div>
-
-        {/* Users List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
+        ) : (
+          <section aria-labelledby="h-admins" className="flex flex-col">
+            <h2 id="h-admins" className="sr-only">
+              Administrateurs
+            </h2>
+            <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1fr)_9rem_8rem_8rem_2.75rem] gap-4 border-b border-loom-border px-3 pb-2 text-xs font-bold uppercase tracking-[0.06em] text-loom-text-muted md:grid">
+              <span>Personne</span>
+              <span>Rôle</span>
+              <span>Ajouté le</span>
+              <span>Dernière connexion</span>
+              <span />
             </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <UsersIcon className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun utilisateur trouvé</h3>
-              <p className="text-gray-500 mb-6">Commencez par créer un compte utilisateur.</p>
-              <Button onClick={resetForm} variant="outline">
-                Créer un utilisateur
-              </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead>Utilisateur</TableHead>
-                    <TableHead>Nom complet</TableHead>
-                    <TableHead>Rôle</TableHead>
-                    <TableHead>Date de création</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border border-gray-200">
-                            <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback className="bg-orange-50 text-orange-700">
-                              {user.username?.substring(0, 2).toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900">{user.username}</div>
-                            {user.email && <div className="text-xs text-gray-500">{user.email}</div>}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="text-sm text-gray-600">{user.full_name || "-"}</div>
-                      </TableCell>
-
-                      <TableCell>
-                        {user.is_admin ? (
-                          <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 border-purple-200">
-                            <Shield className="w-3 h-3 mr-1" /> Admin
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-500 border-gray-200">
-                            <User className="w-3 h-3 mr-1" /> Utilisateur
-                          </Badge>
-                        )}
-                      </TableCell>
-
-                      <TableCell>
-                        <span className="text-sm text-gray-500">
-                          {new Date(user.created_at).toLocaleDateString("fr-FR")}
+            <ul className="flex flex-col">
+              {admins.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center gap-3 border-b border-loom-border px-1 py-3 md:grid md:grid-cols-[minmax(0,1fr)_9rem_8rem_8rem_2.75rem] md:gap-4 md:px-3"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <Avatar account={a} />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="flex items-center gap-2 font-semibold">
+                        <span className="truncate">{accountName(a)}</span>
+                        {a.is_me && <span className="flex-none rounded-full bg-loom-surface-2 px-2 py-0.5 text-xs font-semibold text-loom-text-2">Vous</span>}
+                      </span>
+                      <span className="truncate text-sm text-loom-text-muted">
+                        <span className="hidden md:inline">{a.email}</span>
+                        <span className="md:hidden">
+                          {a.invited_pending ? "Invitation envoyée" : "Administrateur"} · depuis {formatMonth(a.created_at)}
                         </span>
-                      </TableCell>
+                      </span>
+                    </div>
+                  </div>
+                  <span className="hidden md:block">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${a.invited_pending ? "bg-loom-surface-2 text-loom-text-2" : "bg-loom-chip-bg text-loom-chip-fg"}`}>
+                      {a.invited_pending ? "Invitation envoyée" : "Administrateur"}
+                    </span>
+                  </span>
+                  <span className="hidden text-sm text-loom-text-muted md:block">{formatDay(a.created_at)}</span>
+                  <span className="hidden text-sm text-loom-text-muted md:block">{a.last_sign_in_at ? formatDay(a.last_sign_in_at) : "Jamais"}</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour ${accountName(a)} : réinitialiser le mot de passe, retirer l'accès`}>
+                        <MoreHorizontal className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem disabled={busy || !a.email} onClick={() => resetPassword(a)}>
+                        <KeyRound className="mr-2 h-4 w-4" /> {a.invited_pending ? "Renvoyer un lien de connexion" : "Réinitialiser le mot de passe"}
+                      </DropdownMenuItem>
+                      {!a.is_me && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setPending({ kind: "revoke", account: a })}>
+                            <ShieldOff className="mr-2 h-4 w-4" /> Retirer l'accès
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                              <Edit className="mr-2 h-4 w-4" /> Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(user)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+        {others.length > 0 && (
+          <details className="group rounded-2xl border border-loom-border">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-semibold">
+              <span>
+                Comptes sans accès <span className="text-loom-text-muted">({others.length})</span>
+              </span>
+              <span className="text-sm font-normal text-loom-text-muted group-open:hidden">Afficher</span>
+              <span className="hidden text-sm font-normal text-loom-text-muted group-open:inline">Masquer</span>
+            </summary>
+            <p className="px-4 text-sm text-loom-text-muted">
+              Comptes qui existent mais ne peuvent pas entrer dans l'administration : accès retiré, ou comptes bloqués.
+            </p>
+            <ul className="flex flex-col px-3 pb-2">
+              {others.map((a) => (
+                <li key={a.id} className="flex items-center gap-3 border-b border-loom-border py-3 last:border-b-0">
+                  <Avatar account={a} />
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="flex items-center gap-2 font-semibold">
+                      <span className="truncate">{accountName(a)}</span>
+                      {a.banned && <span className="flex-none rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">Bloqué</span>}
+                    </span>
+                    <span className="truncate text-sm text-loom-text-muted">
+                      {a.email} · créé le {formatDay(a.created_at)}
+                    </span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour ${accountName(a)}`}>
+                        <MoreHorizontal className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {!a.banned && (
+                        <DropdownMenuItem disabled={busy} onClick={() => restore(a)}>
+                          <ShieldCheck className="mr-2 h-4 w-4" /> Redonner l'accès
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setPending({ kind: "delete", account: a })}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer le compte
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
 
-      {/* User Form Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+      {/* Invitation */}
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              {isCreating ? "Créer un utilisateur" : "Modifier l'utilisateur"}
-            </DialogTitle>
+            <DialogTitle>Ajouter un administrateur</DialogTitle>
+            <DialogDescription>
+              La personne reçoit un e-mail d'invitation et choisit elle-même son mot de passe. Si un compte existe déjà avec cette adresse, il devient
+              administrateur.
+            </DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-6 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Nom d'utilisateur</Label>
-              <Input
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                placeholder="jdupont"
-              />
+          <form
+            className="grid gap-4 py-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (inviteValid && !busy) sendInvite();
+            }}
+          >
+            <div className="grid gap-2">
+              <Label htmlFor="invite-name">Nom</Label>
+              <Input id="invite-name" autoComplete="off" value={invite.full_name} onChange={(e) => setInvite({ ...invite, full_name: e.target.value })} placeholder="Prénom Nom" />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Nom complet</Label>
-              <Input
-                id="full_name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                placeholder="Jean Dupont"
-              />
+            <div className="grid gap-2">
+              <Label htmlFor="invite-email">Adresse e-mail</Label>
+              <Input id="invite-email" type="email" autoComplete="off" value={invite.email} onChange={(e) => setInvite({ ...invite, email: e.target.value })} placeholder="prenom@exemple.fr" />
             </div>
-
-            {isCreating && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="pl-10"
-                      placeholder="jean@exemple.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="••••••••"
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="flex items-center justify-between border rounded-lg p-4 bg-gray-50">
-              <div className="space-y-0.5">
-                <Label className="text-base">Privilèges Administrateur</Label>
-                <p className="text-sm text-gray-500">Accès complet à toutes les fonctionnalités</p>
-              </div>
-              <Switch checked={formData.is_admin} onCheckedChange={handleSwitchChange} />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={isCreating ? handleCreateUser : handleUpdateUser}
-            >
-              {isCreating ? "Créer l'utilisateur" : "Enregistrer"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={!inviteValid || busy}>
+                Envoyer l'invitation
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+      {/* Confirmation : retirer l'accès / supprimer */}
+      <Dialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogTitle>{pending?.kind === "revoke" ? "Retirer l'accès ?" : "Supprimer le compte ?"}</DialogTitle>
+            <DialogDescription>
+              {pending?.kind === "revoke"
+                ? `${pending ? accountName(pending.account) : ""} ne pourra plus entrer dans l'administration. Le compte est conservé : vous pourrez lui redonner l'accès.`
+                : `Le compte ${pending?.account.email ?? ""} sera supprimé définitivement. Cette action est irréversible.`}
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <div className="flex items-center gap-4 p-4 bg-red-50 text-red-900 rounded-lg mb-4">
-              <ShieldAlert className="h-6 w-6 flex-shrink-0" />
-              <p className="text-sm">
-                Cette action supprimera définitivement le compte de <strong>{selectedUser?.username}</strong> et toutes
-                ses données associées.
-              </p>
-            </div>
-            <p className="text-gray-600">Êtes-vous sûr de vouloir continuer ?</p>
-          </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setPending(null)}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser}>
-              Supprimer définitivement
+            <Button variant="destructive" disabled={busy} onClick={confirmPending}>
+              {pending?.kind === "revoke" ? (
+                <>
+                  <UserX className="mr-2 h-4 w-4" /> Retirer l'accès
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

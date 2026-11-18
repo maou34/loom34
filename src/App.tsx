@@ -19,7 +19,6 @@ const MonsieurOurs = lazy(() => import("./pages/MonsieurOurs"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Login = lazy(() => import("./pages/auth/Login"));
-const Register = lazy(() => import("./pages/auth/Register"));
 const ResetPasswordRequest = lazy(() => import("./pages/auth/ResetPasswordRequest"));
 const UpdatePassword = lazy(() => import("./pages/auth/UpdatePassword"));
 const Profile = lazy(() => import("./pages/auth/Profile"));
@@ -67,7 +66,6 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
   "/admin/login": "LOOM - Espace admin",
-  "/auth/register": "LOOM - Inscription",
   "/auth/reset-password": "LOOM - Réinitialisation du mot de passe",
   "/auth/update-password": "LOOM - Nouveau mot de passe",
   "/auth/profile": "LOOM - Mon Profil",
@@ -150,11 +148,12 @@ const App = () => {
                 {/* Auth Routes */}
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/admin/login" element={<Login />} />
-                <Route path="/auth/register" element={<Register />} />
+                {/* Inscriptions publiques fermées (incident du 14/11/2026) : comptes créés par un admin */}
+                <Route path="/auth/register" element={<Navigate to="/auth/login" replace />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordRequest />} />
                 <Route path="/auth/update-password" element={<UpdatePassword />} />
                 <Route path="/login" element={<Navigate to="/auth/login" replace />} />
-                <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+                <Route path="/register" element={<Navigate to="/auth/login" replace />} />
                 <Route path="/reset-password" element={<Navigate to="/auth/reset-password" replace />} />
                 <Route path="/update-password" element={<Navigate to="/auth/update-password" replace />} />
 
