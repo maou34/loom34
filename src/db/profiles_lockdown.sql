@@ -86,7 +86,13 @@ DROP POLICY IF EXISTS "Profiles readable by owner or admin" ON public.profiles;
 CREATE POLICY "Profiles readable by owner or admin" ON public.profiles
     FOR SELECT TO authenticated
     USING (id = auth.uid() OR public.is_admin());
-REVOKE SELECT ON public.profiles FROM anon;
+-- anon GARDE le privilège SELECT : les policies des autres tables (dont la policy
+-- RESTRICTIVE des brouillons sur events/articles) font EXISTS (SELECT … FROM profiles)
+-- même pour un visiteur ; sans ce privilège, elles échouent en « permission denied
+-- for table profiles » et le site public ne charge plus ni événements ni articles
+-- (arrivé le 18/11/2026 avec la première version de ce script). La RLS ne donne
+-- aucune ligne à anon (policy réservée à authenticated) : rien n'est lisible.
+GRANT SELECT ON public.profiles TO anon;
 
 -- d. delete_user réservé aux admins
 CREATE OR REPLACE FUNCTION public.delete_user(user_id uuid)
@@ -108,7 +114,7 @@ $$;
 REVOKE ALL ON FUNCTION public.delete_user(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delete_user(uuid) TO authenticated, service_role;
 
--- Vérification (doit renvoyer : anon_select=false, anon_delete_user=false, trigger=1)
+-- Vérification (doit renvoyer : anon_select=true — privilège sans ligne visible —, anon_delete_user=false, trigger=1)
 SELECT has_table_privilege('anon', 'public.profiles', 'select') AS anon_select,
        has_function_privilege('anon', 'public.delete_user(uuid)', 'execute') AS anon_delete_user,
        (SELECT count(*) FROM pg_trigger WHERE tgname = 'protect_profile_is_admin') AS trigger;
