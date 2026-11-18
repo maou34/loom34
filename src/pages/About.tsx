@@ -69,7 +69,7 @@ const About = () => {
           email: formData.email,
           subject: formData.subject,
           message: formData.message,
-          status: 'nouveau',
+          status: 'Nouveau', // la contrainte CHECK n'accepte que « Nouveau » (avec majuscule)
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         });
