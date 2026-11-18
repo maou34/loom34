@@ -50,11 +50,18 @@ DECLARE
     changing boolean := CASE WHEN TG_OP = 'INSERT' THEN coalesce(NEW.is_admin, false)
                              ELSE NEW.is_admin IS DISTINCT FROM OLD.is_admin END;
 BEGIN
-    IF changing AND NOT (
-        session_user IN ('postgres', 'supabase_admin')                 -- éditeur SQL
-        OR coalesce(auth.jwt() ->> 'role', '') = 'service_role'         -- Edge Functions
-        OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
-    ) THEN
+    -- Seules les connexions exposées à Internet sont contrôlées : l'API (authenticator,
+    -- où passent anon, les comptes connectés et le service role) et l'inscription
+    -- (supabase_auth_admin, qui crée la ligne via handle_new_user). Les autres sessions
+    -- (éditeur SQL du dashboard, psql) exigent les identifiants de la base.
+    -- (Le nom de session de l'éditeur SQL n'est pas « postgres » : une première version
+    -- qui l'autorisait par son nom bloquait l'éditeur.)
+    IF changing
+       AND session_user IN ('authenticator', 'supabase_auth_admin')
+       AND NOT (
+           coalesce(auth.jwt() ->> 'role', '') = 'service_role'         -- Edge Functions
+           OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true)
+       ) THEN
         RAISE EXCEPTION 'Seul un administrateur peut changer le statut administrateur'
             USING ERRCODE = '42501';
     END IF;
