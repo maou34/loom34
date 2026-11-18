@@ -44,7 +44,22 @@ END $$;
 -- 2. Lectures publiques manquantes -------------------------------------------------------
 -- events / articles : « Published … are viewable by everyone » existe déjà, et la
 -- policy restrictive de drafts_rls.sql limite le public aux lignes publiées.
--- gallery_albums / gallery_images : « … are viewable by everyone » existe déjà.
+-- gallery_albums / gallery_images : les anciennes policies « … are viewable by
+-- everyone » portaient une condition restrictive (constaté après activation : 1 album
+-- visible sur ~27). Les albums n'ont pas de statut « publié » : tout est public,
+-- comme avant l'activation de la RLS.
+DROP POLICY IF EXISTS "Public can read gallery albums" ON public.gallery_albums;
+CREATE POLICY "Public can read gallery albums"
+    ON public.gallery_albums
+    FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Public can read gallery images" ON public.gallery_images;
+CREATE POLICY "Public can read gallery images"
+    ON public.gallery_images
+    FOR SELECT
+    USING (true);
+
 DROP POLICY IF EXISTS "Public can read partners" ON public.partners;
 CREATE POLICY "Public can read partners"
     ON public.partners
