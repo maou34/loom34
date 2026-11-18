@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Inbox, Mail, RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AdminLayout from "@/components/admin/AdminLayout";
+import NotifyByEmailToggle from "@/components/admin/NotifyByEmailToggle";
 import { db } from "@/db/client";
 import type { Tables } from "@/db/types";
 import { Button } from "@/components/ui/button";
@@ -127,7 +128,7 @@ export default function Tickets() {
     )}`;
 
   return (
-    <AdminLayout title="Messages">
+    <AdminLayout title="Messages" actions={<NotifyByEmailToggle />}>
       <div className="flex flex-col gap-4">
         <p className="text-sm text-loom-text-muted">Les demandes envoyées depuis le formulaire « Nous écrire » du site (page L'asso).</p>
 

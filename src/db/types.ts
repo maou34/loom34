@@ -18,6 +18,7 @@ export type Database = {
           full_name: string | null
           avatar_url: string | null
           is_admin: boolean
+          notify_on_message: boolean
           created_at: string
           updated_at: string
         }
@@ -27,6 +28,7 @@ export type Database = {
           full_name?: string | null
           avatar_url?: string | null
           is_admin?: boolean
+          notify_on_message?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -36,6 +38,7 @@ export type Database = {
           full_name?: string | null
           avatar_url?: string | null
           is_admin?: boolean
+          notify_on_message?: boolean
           created_at?: string
           updated_at?: string
         }
