@@ -1,259 +1,170 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Search, ImageIcon, Camera, ArrowRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, Camera, ImageIcon } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { btnPrimary, btnSecondary, card, container, pageFocus } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
-import { formatAlbumDate } from "@/utils/date";
+import { cn } from '@/lib/utils';
+import { useAlbums, type Album } from '@/lib/albums';
 
-import { UPLOAD_URL, getImageUrl } from '@/config';
+const PAGE_SIZE = 9;
 
-// --- NEW: albums à masquer (public) ---
-const HIDDEN_ALBUM_IDS = new Set(["images", "unclassified", "tip*"]);
-// const HIDDEN_ALBUM_PREFIXES = ["tip"];
-
-function isHiddenAlbumId(id: string) {
-  if (HIDDEN_ALBUM_IDS.has(id)) return true;
-  // return HIDDEN_ALBUM_PREFIXES.some((prefix) => id.startsWith(prefix));
+function AlbumCover({ album, className }: { album: Album; className?: string }) {
+  if (album.cover) return <img src={album.cover} alt="" loading="lazy" className={cn('bg-loom-surface-2 object-cover', className)} />;
+  return (
+    <span aria-hidden="true" className={cn('flex items-center justify-center bg-loom-chip-bg text-loom-chip-fg', className)}>
+      <ImageIcon size={36} strokeWidth={1.6} />
+    </span>
+  );
 }
 
+const photosLabel = (n: number) => `${n} photo${n > 1 ? 's' : ''}`;
+
 const Gallery = () => {
-  // SEO Configuration
   useSEO({
-    title: 'Galerie Photos - LOOM | Souvenirs et moments de notre communauté Bear',
-    description: 'Découvrez la galerie photos de LOOM - Les Ours Occitanie Montpellier. Revivez nos événements, soirées et moments de convivialité en images.',
-    keywords: ['LOOM photos', 'galerie Bears', 'événements photos', 'souvenirs LOOM', 'communauté Bear', 'Montpellier'],
-    type: 'website'
+    title: 'Photos - LOOM | Les albums de nos soirées',
+    description: 'Les albums photo des soirées de LOOM - Les Ours Occitanie Montpellier : apéros, Montpell\'Bears, Pride, dîners… Un album par événement.',
+    keywords: ['LOOM photos', 'galerie', 'soirées Bear', 'Montpellier', "Montpell'Bears"],
+    type: 'website',
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const { data: albums = [], isLoading, isError } = useAlbums();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
-  // Fetch albums
-  const { data: albums = [], isLoading, error } = useQuery({
-    queryKey: ['albums'],
-    queryFn: async () => {
-      const res = await fetch(`${UPLOAD_URL}/upload/albums`);
-      if (!res.ok) throw new Error('Failed to fetch albums');
-      return res.json();
-    }
-  });
+  const years = useMemo(() => [...new Set(albums.map((a) => a.year).filter((y): y is number => y !== null))].sort((a, b) => b - a), [albums]);
+  const yearParam = Number(searchParams.get('annee'));
+  const activeYear = years.includes(yearParam) ? yearParam : null;
+  const filtered = activeYear ? albums.filter((a) => a.year === activeYear) : albums;
+  // « Dernier album » en grand seulement sans filtre
+  const [lead, ...rest] = activeYear ? [null, ...filtered] : filtered;
+  const visible = rest.slice(0, limit);
 
-  // NEW: masquer images, unclassified et tip*
-  const visibleAlbums = (albums as any[]).filter((album: any) => !isHiddenAlbumId(String(album?.id ?? "")));
-
-  // Filter albums based on search
-  const filteredAlbums = visibleAlbums.filter((album: any) => {
-    const matchesSearch = searchQuery === '' ||
-      album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (album.description && album.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSearch;
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex-1 container mx-auto px-4 py-32">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-[400px] w-full rounded-2xl" />
-            ))}
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-          <p className="text-red-500 mb-4">Une erreur est survenue lors du chargement de la galerie</p>
-          <Button onClick={() => window.location.reload()}>Réessayer</Button>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const selectYear = (year: number | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (year) next.set('annee', String(year));
+    else next.delete('annee');
+    setSearchParams(next, { replace: true });
+    setLimit(PAGE_SIZE);
+  };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-loom-bg text-loom-text">
       <Navbar />
 
-      {/* Hero Section */}
-      <div className="relative h-[50vh] min-h-[400px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange/20 to-brown/20 mix-blend-multiply" />
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/50 via-white/20 to-gray-50" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/40 backdrop-blur-md border border-white/50 text-brown-dark mb-6 shadow-sm">
-              <Camera className="w-5 h-5 mr-2" />
-              <span className="font-medium">Souvenirs & Moments</span>
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-gray-900 tracking-tight">
-              Galerie <span className="text-orange">Communautaire</span>
-            </h1>
-
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Explorez les archives photographiques des Ours ! Retrouvez les meilleurs moments de nos événements passés.
-            </p>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Search Section */}
-      <div className="container mx-auto px-4 -mt-8 relative z-20 mb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="max-w-2xl mx-auto"
-        >
-          <div className="bg-white rounded-2xl shadow-xl p-2 flex items-center border border-gray-100">
-            <div className="pl-4 text-gray-400">
-              <Search size={20} />
-            </div>
-            <input
-              type="text"
-              placeholder="Rechercher un album, un événement..."
-              className="w-full h-12 px-4 bg-transparent border-none focus:ring-0 text-gray-800 placeholder-gray-400 text-lg"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      <main className={cn(container, 'flex flex-1 flex-col gap-6 pb-16 pt-6 sm:gap-7 sm:pb-[72px] sm:pt-10')}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <h1 className="text-[34px] font-extrabold tracking-[-0.02em] sm:text-[44px]">Photos</h1>
+            <p className="text-base text-loom-text-2 sm:text-lg">Les souvenirs de nos soirées, un album par événement.</p>
           </div>
-        </motion.div>
-      </div>
-
-      {/* Albums Grid */}
-      <section className="pb-24">
-        <div className="container mx-auto px-4">
-          {filteredAlbums.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm max-w-2xl mx-auto">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-orange/10 flex items-center justify-center">
-                <ImageIcon size={32} className="text-orange" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Aucun album trouvé</h3>
-              <p className="text-gray-500 max-w-md mx-auto">
-                {searchQuery ?
-                  `Aucun résultat pour "${searchQuery}". Essayez d'autres termes.` :
-                  "La galerie est vide pour le moment."}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredAlbums.map((album: any, index: number) => {
-                let cover = album.cover_image ? getImageUrl(album.cover_image) : null;
-
-                // Image d'un petit ours mignon par défaut
-                const CUTE_BEAR_IMAGE = 'https://www.shutterstock.com/image-vector/bears-face-symbol-logo-design-600nw-2162265087.jpg';
-
-                // Fallback image
-                if (!cover) {
-                  cover = CUTE_BEAR_IMAGE;
-                }
-
+          {years.length > 1 && (
+            <div role="group" aria-label="Filtrer par année" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+              {[null, ...years].map((y) => {
+                const pressed = activeYear === y;
                 return (
-                  <motion.div
-                    key={album.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    whileHover={{ y: -10 }}
-                    className="group"
+                  <button
+                    key={y ?? 'all'}
+                    type="button"
+                    aria-pressed={pressed}
+                    onClick={() => selectYear(y)}
+                    className={cn(
+                      'h-10 flex-none rounded-full border px-4 text-[15px] font-semibold',
+                      pressed ? 'border-loom-primary-bg bg-loom-primary-bg text-loom-primary-fg' : 'border-loom-border-strong bg-loom-surface text-loom-text hover:border-loom-text-muted',
+                      pageFocus,
+                    )}
                   >
-                    <Link to={`/gallery/${album.id}`} className="block h-full">
-                      <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full border border-gray-100 flex flex-col">
-                        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-                          <img
-                            src={cover}
-                            alt={album.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                            loading="lazy"
-                            onError={(e) => {
-                              e.currentTarget.src = CUTE_BEAR_IMAGE;
-                              e.currentTarget.onerror = null;
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-
-                          <div className="absolute bottom-4 left-4 right-4 text-white">
-                            <div className="inline-flex items-center px-2 py-1 rounded-md bg-black/30 backdrop-blur-sm text-xs font-medium mb-2 border border-white/10">
-                              <ImageIcon className="w-3 h-3 mr-1" />
-                              {album.image_count || 0} photos
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="p-6 flex-1 flex flex-col">
-                          <div className="text-sm text-orange font-medium mb-2">
-                            {album.date ? formatAlbumDate(album.date) : ''}
-                          </div>
-                          <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-orange transition-colors line-clamp-1">
-                            {album.title}
-                          </h3>
-                          <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">
-                            {album.description || "Aucune description disponible."}
-                          </p>
-
-                          <div className="flex items-center text-brown font-medium text-sm group-hover:translate-x-2 transition-transform">
-                            Voir l'album <ArrowRight className="w-4 h-4 ml-1" />
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
+                    {y ?? 'Tous'}
+                  </button>
                 );
               })}
             </div>
           )}
         </div>
-      </section>
 
-      {/* Call to Action */}
-      <section className="py-20 bg-brown relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-50" />
-        </div>
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="max-w-3xl mx-auto"
-          >
-            <Camera className="w-16 h-16 text-orange mx-auto mb-6" />
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Vous avez des photos à partager ?</h2>
-            <p className="text-white/80 text-lg mb-10 leading-relaxed">
-              Si vous avez capturé des moments spéciaux lors de nos événements, nous serions ravis de les voir !
-              Partagez vos photos avec nous pour qu'elles apparaissent dans notre galerie communautaire.
-            </p>
-            <Button
-              asChild
-              className="bg-orange hover:bg-orange-dark text-white h-14 px-8 rounded-full text-lg shadow-xl shadow-black/20"
-            >
-              <a href="mailto:contactloom34@gmail.com">
-                Envoyer vos photos
-              </a>
-            </Button>
-          </motion.div>
-        </div>
-      </section>
+        {isLoading ? (
+          <div aria-hidden="true" className="flex flex-col gap-6">
+            <div className={cn(card, 'h-[360px] animate-pulse bg-loom-surface-2')} />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className={cn(card, 'h-[280px] animate-pulse bg-loom-surface-2')} />
+              ))}
+            </div>
+          </div>
+        ) : isError ? (
+          <p className={cn(card, 'p-6 text-loom-text-muted')}>Les albums n'ont pas pu être chargés. Réessayez dans un instant.</p>
+        ) : (
+          <>
+            {lead && (
+              <Link
+                to={`/gallery/${encodeURIComponent(lead.id)}`}
+                className={cn('group relative flex h-[300px] overflow-hidden rounded-[22px] text-white no-underline sm:h-[400px]', pageFocus)}
+              >
+                <AlbumCover album={lead} className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-[1.02]" />
+                <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <span className="relative mt-auto flex w-full flex-wrap items-end justify-between gap-4 p-5 sm:p-8">
+                  <span className="flex flex-col gap-2">
+                    <span className="self-start rounded-full bg-loom-yellow px-2.5 py-0.5 text-xs font-extrabold text-loom-on-yellow">Dernier album</span>
+                    <span className="text-2xl font-extrabold leading-tight sm:text-[34px]">{lead.title}</span>
+                    <span className="text-sm text-white/85 sm:text-base">{[lead.dateLabel, photosLabel(lead.count)].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <span aria-hidden="true" className="flex h-11 items-center gap-1.5 rounded-xl bg-white px-4 font-bold text-loom-on-yellow">
+                    Voir l'album <ArrowRight size={16} />
+                  </span>
+                </span>
+              </Link>
+            )}
+
+            <section aria-labelledby="h-albums" className="flex flex-col gap-5">
+              <h2 id="h-albums" className="text-2xl font-extrabold">
+                {activeYear ? `Albums ${activeYear}` : 'Tous les albums'}
+              </h2>
+              {filtered.length === 0 ? (
+                <p className={cn(card, 'p-6 text-loom-text-muted')}>Aucun album pour le moment.</p>
+              ) : (
+                <ul className="grid gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {visible.map((album) => (
+                    <li key={album.id}>
+                      <Link to={`/gallery/${encodeURIComponent(album.id)}`} className={cn('group flex flex-col gap-2.5 rounded-[18px] text-loom-text no-underline', pageFocus)}>
+                        <span className="relative block overflow-hidden rounded-[18px]">
+                          <AlbumCover album={album} className="aspect-[4/3] w-full transition-transform duration-500 group-hover:scale-[1.03]" />
+                          <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-bold text-white">
+                            <Camera aria-hidden="true" size={13} />
+                            <span className="sr-only">{photosLabel(album.count)}</span>
+                            <span aria-hidden="true">{album.count}</span>
+                          </span>
+                        </span>
+                        <span className="flex flex-col gap-0.5 px-1">
+                          <span className="text-lg font-extrabold leading-tight group-hover:underline group-hover:underline-offset-4">{album.title}</span>
+                          {album.dateLabel && <span className="text-sm text-loom-text-muted">{album.dateLabel}</span>}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {rest.length > visible.length && (
+                <button type="button" onClick={() => setLimit((n) => n + PAGE_SIZE)} className={cn(btnSecondary, 'h-12 self-center rounded-full px-6')}>
+                  Afficher plus d'albums
+                </button>
+              )}
+            </section>
+          </>
+        )}
+
+        <aside aria-labelledby="h-share" className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-loom-highlight-border bg-loom-highlight-bg p-6 sm:px-8">
+          <div className="flex max-w-[640px] flex-col gap-1">
+            <h2 id="h-share" className="text-xl font-extrabold">
+              Vous avez pris de belles photos ?
+            </h2>
+            <p className="text-loom-text-2">Envoyez-les-nous, on les ajoute à l'album. Une photo de vous vous dérange ? Écrivez-nous, on la retire.</p>
+          </div>
+          <Link to="/about#contact" className={cn(btnPrimary, 'h-11 px-5')}>
+            Nous écrire
+          </Link>
+        </aside>
+      </main>
 
       <Footer />
     </div>

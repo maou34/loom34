@@ -37,6 +37,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { db } from "@/db/client";
+import AlbumInfoDialog from "@/components/admin/gallery/AlbumInfoDialog";
+import { Info } from "lucide-react";
 
 import { UPLOAD_URL, getImageUrl } from "@/config";
 
@@ -88,6 +91,7 @@ export default function Gallery() {
   // State for dialogs
   const [isCreateAlbumOpen, setIsCreateAlbumOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isAlbumInfoOpen, setIsAlbumInfoOpen] = useState(false);
   const [isImageDetailsOpen, setIsImageDetailsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -194,6 +198,8 @@ export default function Gallery() {
         const text = await res.text().catch(() => "");
         throw new Error(text || `Failed to delete album (${res.status})`);
       }
+      // Fiche de l'album (date, couverture, soirée liée) : supprimée avec le dossier
+      await db.from("photo_albums").delete().eq("album_id", id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
@@ -413,6 +419,11 @@ export default function Gallery() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+              {selectedAlbum && !viewUnclassified && (
+                <Button onClick={() => setIsAlbumInfoOpen(true)} variant="outline" className="h-9">
+                  <Info className="w-4 h-4 mr-2" /> Infos de l'album
+                </Button>
+              )}
               <Button onClick={() => setIsUploadOpen(true)} variant="outline" className="h-9">
                 <Upload className="w-4 h-4 mr-2" /> Importer
               </Button>
@@ -457,6 +468,10 @@ export default function Gallery() {
           </ScrollArea>
         </div>
       </div>
+
+      {selectedAlbum && (
+        <AlbumInfoDialog open={isAlbumInfoOpen} onOpenChange={setIsAlbumInfoOpen} albumId={selectedAlbum.id} images={images} />
+      )}
 
       {/* Create Album Dialog */}
       <Dialog open={isCreateAlbumOpen} onOpenChange={setIsCreateAlbumOpen}>

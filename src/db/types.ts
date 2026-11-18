@@ -166,6 +166,45 @@ export type Database = {
           },
         ]
       }
+      photo_albums: {
+        Row: {
+          /** Nom du dossier de l'album sur le serveur d'upload */
+          album_id: string
+          title: string | null
+          album_date: string | null
+          cover_image: string | null
+          event_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          album_id: string
+          title?: string | null
+          album_date?: string | null
+          cover_image?: string | null
+          event_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          album_id?: string
+          title?: string | null
+          album_date?: string | null
+          cover_image?: string | null
+          event_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_albums_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       article_categories: {
         Row: {
           id: string

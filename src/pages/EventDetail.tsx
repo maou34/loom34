@@ -11,6 +11,7 @@ import Footer from '@/components/Footer';
 import EventDateBlock from '@/components/site/EventDateBlock';
 import TicketInfo from '@/components/event/TicketInfo';
 import OsmMap from '@/components/event/OsmMap';
+import { useEventAlbums } from '@/lib/albums';
 import { Chip } from '@/components/site/EventChips';
 import type { EventChip } from '@/lib/eventChips';
 import { btnDisabled, btnPrimary, btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
@@ -99,6 +100,8 @@ const EventDetail = () => {
   });
 
   const today = todayISO();
+  const { data: eventAlbums = [] } = useEventAlbums(event?.id);
+
   const { data: otherEvents = [] } = useQuery({
     queryKey: ['event', slug, 'others', today],
     enabled: !!event,
@@ -359,6 +362,24 @@ const EventDetail = () => {
                 {isClosed && !isPast && closedMessage}
                 {memberNote}
               </div>
+
+              {/* Albums photo liés à la soirée (admin Galerie → « Soirée liée ») */}
+              {eventAlbums.length > 0 && (
+                <section aria-labelledby="h-photos" className="flex flex-col gap-2 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-5">
+                  <h2 id="h-photos" className="text-lg font-extrabold">
+                    Les photos de la soirée
+                  </h2>
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1">
+                    {eventAlbums.map((a) => (
+                      <li key={a.album_id}>
+                        <Link to={`/gallery/${encodeURIComponent(a.album_id)}`} className={strongLink}>
+                          {a.title || a.album_id} →
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               {/* Accès : adresse, itinéraire, plan (si le lieu a pu être géocodé) */}
               <section aria-labelledby="h-acces" className={cn(card, 'flex flex-col gap-4 rounded-[18px] p-5 sm:flex-row sm:p-6')}>
