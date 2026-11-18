@@ -205,6 +205,28 @@ export type Database = {
           },
         ]
       }
+      partner_categories: {
+        Row: {
+          id: string
+          name: string
+          /** Ordre des filtres sur /partners */
+          position: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          position?: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          position?: number
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       article_categories: {
         Row: {
           id: string
@@ -494,6 +516,11 @@ export type Database = {
           type: string | null
           created_at: string
           updated_at: string
+          /** Catégorie (table partner_categories, gérée dans l'admin) */
+          category_id: string | null
+          city: string | null
+          /** Adresse postale : lien « Itinéraire » */
+          address: string | null
         }
         Insert: {
           id?: string
@@ -504,6 +531,9 @@ export type Database = {
           type?: string | null
           created_at?: string
           updated_at?: string
+          category_id?: string | null
+          city?: string | null
+          address?: string | null
         }
         Update: {
           id?: string
@@ -514,8 +544,19 @@ export type Database = {
           type?: string | null
           created_at?: string
           updated_at?: string
+          category_id?: string | null
+          city?: string | null
+          address?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "partner_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_settings: {
         Row: {

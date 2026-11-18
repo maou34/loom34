@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CategoriesDialog from "@/components/admin/CategoriesDialog";
+import { usePartnerCategories } from "@/lib/partners";
+import { Tags } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Tables } from "@/db/types";
@@ -33,6 +38,14 @@ export default function AdminPartners() {
   const [isCreating, setIsCreating] = useState(true);
   const [selectedPartner, setSelectedPartner] = useState<Tables<'partners'> | null>(null);
   const [form, setForm] = useState<Partial<Tables<'partners'>>>({});
+  const queryClient = useQueryClient();
+  const { data: categories = [] } = usePartnerCategories();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoryName = (id: string | null | undefined) => categories.find((c) => c.id === id)?.name;
+  const categoryCounts = partners.reduce<Record<string, number>>((acc, p) => {
+    if (p.category_id) acc[p.category_id] = (acc[p.category_id] ?? 0) + 1;
+    return acc;
+  }, {});
 
   useEffect(() => { 
     fetchPartners(); 
@@ -43,7 +56,8 @@ export default function AdminPartners() {
       const lowerQuery = searchQuery.toLowerCase();
       const filtered = partners.filter(partner => 
         (partner.name?.toLowerCase() || '').includes(lowerQuery) ||
-        (partner.type?.toLowerCase() || '').includes(lowerQuery)
+        (partner.type?.toLowerCase() || '').includes(lowerQuery) ||
+        (partner.city?.toLowerCase() || '').includes(lowerQuery)
       );
       setFilteredPartners(filtered);
     } else {
@@ -102,6 +116,7 @@ export default function AdminPartners() {
       setForm({});
       setSelectedPartner(null);
       fetchPartners();
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
     } catch (error: any) {
       console.error("Error saving partner:", error);
       toast.error("Erreur lors de l'enregistrement: " + error.message);
@@ -142,13 +157,19 @@ export default function AdminPartners() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
-            onClick={openCreateDialog}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau partenaire
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setCategoriesOpen(true)}>
+              <Tags className="h-4 w-4 mr-2" />
+              Gérer les catégories
+            </Button>
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
+              onClick={openCreateDialog}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nouveau partenaire
+            </Button>
+          </div>
         </div>
 
         {/* Partners List */}
@@ -182,8 +203,8 @@ export default function AdminPartners() {
                 <TableHeader className="bg-gray-50/50">
                   <TableRow>
                     <TableHead>Partenaire</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Catégorie · type</TableHead>
+                    <TableHead>Avantage adhérent</TableHead>
                     <TableHead>Site Web</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -204,9 +225,12 @@ export default function AdminPartners() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {partner.type || 'Autre'}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={`self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${partner.category_id ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-500"}`}>
+                            {categoryName(partner.category_id) ?? "Sans catégorie"}
+                          </span>
+                          <span className="text-xs text-gray-500">{[partner.type, partner.city].filter(Boolean).join(" · ") || "—"}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="max-w-xs truncate text-sm text-gray-500" title={partner.description || undefined}>
@@ -292,6 +316,34 @@ export default function AdminPartners() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Catégorie (filtre de la page)</Label>
+                <Select value={form.category_id ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Choisir une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">Ville</Label>
+                <Input id="city" name="city" value={form.city || ''} onChange={handleInputChange} placeholder="Montpellier" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Adresse (facultatif)</Label>
+              <Input id="address" name="address" value={form.address || ''} onChange={handleInputChange} placeholder="3 rue Saint-Ravy, 34000 Montpellier" aria-describedby="address-help" />
+              <p id="address-help" className="text-xs text-gray-500">Affiche le lien « Itinéraire ». À laisser vide pour une boutique en ligne ou un service sans adresse.</p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="website">Site web</Label>
               <div className="relative">
@@ -333,14 +385,14 @@ export default function AdminPartners() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Avantage adhérent</Label>
               <Textarea 
                 id="description" 
                 name="description" 
                 value={form.description || ''} 
                 onChange={handleInputChange} 
                 className="min-h-[100px]"
-                placeholder="Courte description du partenaire..." 
+                placeholder="10 % de remise sur l'addition, sur présentation de la carte LOOM" 
               />
             </div>
           </div>
@@ -379,6 +431,14 @@ export default function AdminPartners() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <CategoriesDialog
+        kind="partners"
+        open={categoriesOpen}
+        onOpenChange={setCategoriesOpen}
+        categories={categories}
+        counts={categoryCounts}
+        onChanged={fetchPartners}
+      />
     </AdminLayout>
   );
 }

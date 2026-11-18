@@ -33,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ArticleCategoriesDialog from "@/components/admin/ArticleCategoriesDialog";
+import CategoriesDialog from "@/components/admin/CategoriesDialog";
 import { useArticleCategories } from "@/lib/articles";
 import { Star, Tags } from "lucide-react";
 
@@ -605,7 +605,8 @@ export default function AdminArticles() {
         </DialogContent>
       </Dialog>
 
-      <ArticleCategoriesDialog
+      <CategoriesDialog
+        kind="articles"
         open={categoriesOpen}
         onOpenChange={setCategoriesOpen}
         categories={categories}

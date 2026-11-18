@@ -11,31 +11,58 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type Category = Tables<"article_categories">;
 
+/**
+ * Catégories gérées dans l'admin (SPEC § 9, décision 4) : même fenêtre pour les
+ * articles et les partenaires. Les deux tables de catégories ont la même forme.
+ */
+const KINDS = {
+  articles: {
+    table: "article_categories",
+    items: "articles",
+    queryKey: ["articleCategories"],
+    noun: "article(s)",
+    page: "Actualités",
+    // Colonne texte historique articles.category, tenue à jour (NOT NULL en base)
+    legacyText: true,
+  },
+  partners: {
+    table: "partner_categories",
+    items: "partners",
+    queryKey: ["partnerCategories"],
+    noun: "partenaire(s)",
+    page: "Partenaires",
+    legacyText: false,
+  },
+} as const;
+
 type Props = {
+  kind: keyof typeof KINDS;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categories: Category[];
-  /** Nombre d'articles par catégorie (id → nombre) */
+  /** Nombre d'éléments (articles / partenaires) par catégorie (id → nombre) */
   counts: Record<string, number>;
-  /** Appelé après chaque modification (recharger la liste des articles) */
+  /** Appelé après chaque modification (recharger la liste des éléments) */
   onChanged: () => void;
 };
 
 /**
- * « Gérer les catégories » des articles : ajouter, renommer, ordonner (ordre des
- * filtres sur /articles), fusionner dans une autre catégorie, supprimer.
- * Les articles d'une catégorie supprimée deviennent « sans catégorie »
- * (ON DELETE SET NULL). La colonne texte historique articles.category est tenue
- * à jour lors des renommages / fusions.
+ * « Gérer les catégories » : ajouter, renommer, ordonner (ordre des filtres de
+ * la page publique), fusionner dans une autre catégorie, supprimer. Les éléments
+ * d'une catégorie supprimée deviennent « sans catégorie » (ON DELETE SET NULL).
  */
-export default function ArticleCategoriesDialog({ open, onOpenChange, categories, counts, onChanged }: Props) {
+export default function CategoriesDialog({ kind, open, onOpenChange, categories, counts, onChanged }: Props) {
+  const cfg = KINDS[kind];
+  // Les deux tables de catégories (et la colonne category_id) ont la même forme
+  const categoryTable = () => db.from(cfg.table as "article_categories");
+  const itemTable = () => db.from(cfg.items as "articles");
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [names, setNames] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
 
   const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["articleCategories"] });
+    await queryClient.invalidateQueries({ queryKey: [...cfg.queryKey] });
     onChanged();
   };
 
@@ -58,7 +85,7 @@ export default function ArticleCategoriesDialog({ open, onOpenChange, categories
     if (!name) return;
     const position = categories.length ? Math.max(...categories.map((c) => c.position)) + 1 : 0;
     run(async () => {
-      const { error } = await db.from("article_categories").insert({ name, position });
+      const { error } = await categoryTable().insert({ name, position });
       if (error) throw error;
       setNewName("");
     }, `Catégorie « ${name} » ajoutée`);
@@ -68,9 +95,9 @@ export default function ArticleCategoriesDialog({ open, onOpenChange, categories
     const name = (names[category.id] ?? category.name).trim();
     if (!name || name === category.name) return;
     run(async () => {
-      const { error } = await db.from("article_categories").update({ name }).eq("id", category.id);
+      const { error } = await categoryTable().update({ name }).eq("id", category.id);
       if (error) throw error;
-      await db.from("articles").update({ category: name }).eq("category_id", category.id);
+      if (cfg.legacyText) await itemTable().update({ category: name }).eq("category_id", category.id);
     }, `Catégorie renommée en « ${name} »`);
   };
 
@@ -83,7 +110,7 @@ export default function ArticleCategoriesDialog({ open, onOpenChange, categories
     [ordered[index], ordered[index + delta]] = [ordered[index + delta], ordered[index]];
     run(async () => {
       for (const [position, id] of ordered.entries()) {
-        const { error } = await db.from("article_categories").update({ position }).eq("id", id);
+        const { error } = await categoryTable().update({ position }).eq("id", id);
         if (error) throw error;
       }
     }, `« ${current.name} » déplacée`);
@@ -92,21 +119,23 @@ export default function ArticleCategoriesDialog({ open, onOpenChange, categories
   const merge = (source: Category, targetId: string) => {
     const target = categories.find((c) => c.id === targetId);
     if (!target) return;
-    if (!window.confirm(`Déplacer les ${counts[source.id] ?? 0} article(s) de « ${source.name} » vers « ${target.name} », puis supprimer « ${source.name} » ?`)) return;
+    if (!window.confirm(`Déplacer les ${counts[source.id] ?? 0} ${cfg.noun} de « ${source.name} » vers « ${target.name} », puis supprimer « ${source.name} » ?`)) return;
     run(async () => {
-      const { error } = await db.from("articles").update({ category_id: target.id, category: target.name }).eq("category_id", source.id);
+      const { error } = await itemTable()
+        .update(cfg.legacyText ? { category_id: target.id, category: target.name } : { category_id: target.id })
+        .eq("category_id", source.id);
       if (error) throw error;
-      const { error: deleteError } = await db.from("article_categories").delete().eq("id", source.id);
+      const { error: deleteError } = await categoryTable().delete().eq("id", source.id);
       if (deleteError) throw deleteError;
     }, `« ${source.name} » fusionnée dans « ${target.name} »`);
   };
 
   const remove = (category: Category) => {
     const n = counts[category.id] ?? 0;
-    const warning = n ? ` Ses ${n} article(s) deviendront « sans catégorie ».` : "";
+    const warning = n ? ` Ses ${n} ${cfg.noun} deviendront « sans catégorie ».` : "";
     if (!window.confirm(`Supprimer la catégorie « ${category.name} » ?${warning}`)) return;
     run(async () => {
-      const { error } = await db.from("article_categories").delete().eq("id", category.id);
+      const { error } = await categoryTable().delete().eq("id", category.id);
       if (error) throw error;
     }, `Catégorie « ${category.name} » supprimée`);
   };
@@ -115,10 +144,9 @@ export default function ArticleCategoriesDialog({ open, onOpenChange, categories
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Catégories d'articles</DialogTitle>
+          <DialogTitle>{kind === "articles" ? "Catégories d'articles" : "Catégories de partenaires"}</DialogTitle>
           <DialogDescription>
-            L'ordre ci-dessous est celui des filtres de la page Actualités (seules les catégories ayant des articles publiés y
-            apparaissent).
+            L'ordre ci-dessous est celui des filtres de la page {cfg.page} (seules les catégories utilisées y apparaissent).
           </DialogDescription>
         </DialogHeader>
 
@@ -154,7 +182,7 @@ export default function ArticleCategoriesDialog({ open, onOpenChange, categories
                 onKeyDown={(e) => e.key === "Enter" && rename(category)}
                 aria-label={`Nom de la catégorie « ${category.name} »`}
               />
-              <span className="w-20 text-sm text-muted-foreground">{counts[category.id] ?? 0} article(s)</span>
+              <span className="w-24 text-sm text-muted-foreground">{counts[category.id] ?? 0} {cfg.noun}</span>
               <Select value="" onValueChange={(target) => merge(category, target)} disabled={busy || categories.length < 2}>
                 <SelectTrigger className="w-[150px]" aria-label={`Fusionner « ${category.name} » dans…`}>
                   <SelectValue placeholder="Fusionner dans…" />
