@@ -8,6 +8,7 @@ import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCirc
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
   DialogContent, 
@@ -175,15 +176,14 @@ export default function AdminEvents() {
     const { name, value } = e.target;
     setEventForm({ ...eventForm, [name]: value });
     
-    // Auto-generate slug from title
-    if (name === "title") {
-      setEventForm(prev => ({
-        ...prev,
-        slug: value.toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-      }));
+    // Adresse calculée depuis le titre à la création ou tant que le contenu n'est pas
+    
+    // publié ; une fois publié, son adresse ne change plus toute seule (liens partagés).
+    
+    if (name === "title" && (isCreating || !selectedEvent?.published)) {
+    
+      setEventForm(prev => ({ ...prev, slug: slugify(value) }));
+    
     }
   };
 

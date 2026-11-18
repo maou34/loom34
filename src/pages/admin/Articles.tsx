@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Edit, Trash2, Eye, FileText, Search, Filter, MoreHorizontal, Calendar, CheckCircle2, XCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
   DialogContent, 
@@ -116,15 +117,14 @@ export default function AdminArticles() {
     const { name, value } = e.target;
     setArticleForm({ ...articleForm, [name]: value });
     
-    // Auto-generate slug from title
-    if (name === "title") {
-      setArticleForm(prev => ({
-        ...prev,
-        slug: value.toLowerCase()
-          .replace(/[^\w\s-]/g, '') // Remove special chars except whitespace and hyphens
-          .replace(/\s+/g, '-') // Replace spaces with hyphens
-          .replace(/-+/g, '-') // Remove duplicate hyphens
-      }));
+    // Adresse calculée depuis le titre à la création ou tant que le contenu n'est pas
+    
+    // publié ; une fois publié, son adresse ne change plus toute seule (liens partagés).
+    
+    if (name === "title" && (isCreating || !selectedArticle?.published)) {
+    
+      setArticleForm(prev => ({ ...prev, slug: slugify(value) }));
+    
     }
   };
 

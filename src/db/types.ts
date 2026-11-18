@@ -11,6 +11,12 @@ export type Tables<T extends keyof Database['public']['Tables']> = Database['pub
 export type Database = {
   public: {
     Tables: {
+      slug_redirects: {
+        Row: { kind: string; old_slug: string; new_slug: string; created_at: string }
+        Insert: { kind: string; old_slug: string; new_slug: string; created_at?: string }
+        Update: { kind?: string; old_slug?: string; new_slug?: string; created_at?: string }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string

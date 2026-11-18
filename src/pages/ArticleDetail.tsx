@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSlugRedirect } from '@/lib/slug';
 import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, ArrowLeft, Tag, Share2, Clock } from 'lucide-react';
@@ -17,10 +18,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 const ArticleDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Fetch article details
   const { data: article, isLoading, error } = useQuery({
     queryKey: ['article', slug],
+    // Adresse inconnue (PGRST116) : inutile de réessayer, on passe tout de suite à la redirection / 404
+    retry: (count, err) => (err as { code?: string })?.code !== 'PGRST116' && count < 3,
     queryFn: async () => {
       const { data, error } = await db
         .from('articles')
@@ -59,12 +63,13 @@ const ArticleDetail = () => {
     }
   }, [article]);
 
-  // Handle 404
+  // Adresse inconnue : contenu renommé ? (slug_redirects) — sinon page 404
+  const { data: movedTo, isFetched: redirectChecked } = useSlugRedirect('articles', slug, !!error);
   useEffect(() => {
-    if (error) {
-      navigate('/404');
-    }
-  }, [error, navigate]);
+    if (!error || !redirectChecked) return;
+    if (movedTo) navigate(`/articles/${movedTo}${location.search}${location.hash}`, { replace: true });
+    else navigate('/404');
+  }, [error, redirectChecked, movedTo, navigate, location.search, location.hash]);
 
   if (isLoading) {
     return (
