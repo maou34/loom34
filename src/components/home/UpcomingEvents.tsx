@@ -4,13 +4,8 @@ import { cn } from '@/lib/utils';
 import { formatShortDateTime } from '@/lib/eventDates';
 import { getEventCta } from '@/lib/eventCta';
 import SectionHeader from '@/components/site/SectionHeader';
+import { REGULAR_MEETUPS } from '@/components/site/regularMeetups';
 import { btnDisabled, btnPrimary, btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
-
-/** Rendez-vous mensuels, en entrée libre (contenu fixe de la maquette). */
-const REGULAR_MEETUPS = [
-  { when: '1ᵉʳ vendredi du mois · 19:00', short: '1ᵉʳ vendredi', title: 'Apérours au Coxx', text: 'Happy hour prolongée sur présentation de la carte.' },
-  { when: '3ᵉ vendredi du mois · 19:00', short: '3ᵉ vendredi', title: "Apér'ours à l'Hypnobar", text: 'Tarifs adhérents sur présentation de la carte.' },
-];
 
 function RegularMeetups() {
   return (
@@ -26,7 +21,7 @@ function RegularMeetups() {
       <ul className="flex flex-col gap-1.5 text-[15px] lg:hidden">
         {REGULAR_MEETUPS.map((m) => (
           <li key={m.title}>
-            <strong>{m.short}</strong> · {m.title}
+            <strong>{m.day}</strong> · {m.title}
           </li>
         ))}
         <li className="text-sm text-loom-text-2">19:00 · entrée libre</li>

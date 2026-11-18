@@ -81,6 +81,27 @@
   }
 }
 
+@layer components {
+  /* Texte Markdown (description d'événement, article) aux couleurs du thème
+     jour / nuit : à combiner avec « prose ». */
+  .prose-loom {
+    --tw-prose-body: var(--text-2);
+    --tw-prose-headings: var(--text);
+    --tw-prose-lead: var(--text-2);
+    --tw-prose-links: var(--link);
+    --tw-prose-bold: var(--text);
+    --tw-prose-counters: var(--text-muted);
+    --tw-prose-bullets: var(--accent-text);
+    --tw-prose-hr: var(--border);
+    --tw-prose-quotes: var(--text);
+    --tw-prose-quote-borders: var(--highlight-border);
+    --tw-prose-captions: var(--text-muted);
+    --tw-prose-code: var(--text);
+    --tw-prose-th-borders: var(--border-strong);
+    --tw-prose-td-borders: var(--border);
+  }
+}
+
 @layer utilities {
   /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {

@@ -1,252 +1,274 @@
-import { useState, useMemo } from 'react';
-import { db } from '@/db/client';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, Search, Filter, X, Calendar } from 'lucide-react';
+import { db } from '@/db/client';
+import type { Tables } from '@/db/types';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Tables } from '@/db/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
+import AgendaEventCard from '@/components/agenda/AgendaEventCard';
+import { REGULAR_MEETUPS } from '@/components/site/regularMeetups';
+import { btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
-import { motion } from 'framer-motion';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import EventCard from '@/components/EventCard';
+import { useExternalLinks } from '@/hooks/useSiteSettings';
+import { cn } from '@/lib/utils';
+import { eventDay, todayISO } from '@/lib/eventDates';
+import { eventCity, sortCities } from '@/lib/eventPlace';
+
+type Period = 'upcoming' | 'past';
+type EventRow = Tables<'events'>;
+
+const PAST_PAGE_SIZE = 12;
+
+/** Regroupe des événements déjà triés par mois (« Novembre 2026 »). */
+function groupByMonth(events: EventRow[]) {
+  const groups: { key: string; label: string; items: EventRow[] }[] = [];
+  for (const event of events) {
+    const key = event.date.slice(0, 7);
+    let group = groups[groups.length - 1];
+    if (!group || group.key !== key) {
+      const label = eventDay(event.date).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      group = { key, label: label.charAt(0).toUpperCase() + label.slice(1), items: [] };
+      groups.push(group);
+    }
+    group.items.push(event);
+  }
+  return groups;
+}
 
 const Events = () => {
-  // SEO Configuration
   useSEO({
-    title: 'Événements - LOOM | Calendrier des activités de la communauté Bear',
-    description: 'Découvrez tous les événements de LOOM - Les Ours Occitanie Montpellier. Soirées, activités, rencontres et moments de convivialité de notre communauté Bear.',
-    keywords: ['LOOM événements', 'activités Bears', 'soirées Bear', 'Montpellier', 'calendrier LGBTQ+', 'rencontres Bears'],
-    type: 'website'
+    title: 'Agenda - LOOM | Les soirées et sorties de la communauté Bear',
+    description:
+      'Apéros, dîners, soirées et sorties : retrouvez tous les rendez-vous de LOOM - Les Ours Occitanie Montpellier, et inscrivez-vous en ligne.',
+    keywords: ['LOOM agenda', 'événements Bears', 'soirées Bear', 'Montpellier', 'Nîmes', 'apéro ours'],
+    type: 'website',
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [locationFilter, setLocationFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [hideExpired, setHideExpired] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const period: Period = searchParams.get('periode') === 'passes' ? 'past' : 'upcoming';
+  const city = searchParams.get('ville');
+  const [pastLimit, setPastLimit] = useState(PAST_PAGE_SIZE);
+  const { membershipUrl } = useExternalLinks();
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  // Fetch events from database
+  const today = todayISO();
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ['events'],
+    queryKey: ['agenda', 'events'],
     queryFn: async () => {
-      const { data, error } = await db
-        .from('events')
-        .select('*')
-        .eq('published', true)
-        .order('date', { ascending: true });
-      if (error) {
-        console.error('Error fetching events:', error);
-        throw error;
-      }
-      return data as Tables<'events'>[];
-    }
+      const { data, error } = await db.from('events').select('*').eq('published', true).order('date', { ascending: true });
+      if (error) throw error;
+      return data as EventRow[];
+    },
   });
 
-  // Get unique locations from events
-  const locations = useMemo(() => {
-    const locs = Array.from(new Set(events.map(e => e.location).filter(Boolean)));
-    return locs.sort((a, b) => a.localeCompare(b, 'fr'));
-  }, [events]);
+  const { upcoming, past } = useMemo(
+    () => ({
+      upcoming: events.filter((e) => e.date.slice(0, 10) >= today),
+      past: events.filter((e) => e.date.slice(0, 10) < today).reverse(),
+    }),
+    [events, today],
+  );
 
-  // Filter and sort events
-  const filteredEvents = useMemo(() => {
-    let filtered = events.filter(event => {
-      const matchesSearch = searchQuery === '' || 
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesLocation = locationFilter === 'all' || event.location === locationFilter;
-      const notExpired = !hideExpired || new Date(event.date) >= new Date(new Date().setHours(0,0,0,0));
-      return matchesSearch && matchesLocation && notExpired;
-    });
-    filtered = filtered.sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-    });
-    return filtered;
-  }, [events, searchQuery, locationFilter, sortOrder, hideExpired]);
+  const periodEvents = period === 'upcoming' ? upcoming : past;
+  const cities = useMemo(
+    () => sortCities([...new Set(periodEvents.map((e) => eventCity(e.location)).filter((c): c is string => !!c))]),
+    [periodEvents],
+  );
+  const activeCity = city && cities.includes(city) ? city : null;
+  const filtered = activeCity ? periodEvents.filter((e) => eventCity(e.location) === activeCity) : periodEvents;
+  const visible = period === 'past' ? filtered.slice(0, pastLimit) : filtered;
+  const months = groupByMonth(visible);
 
-  const isFiltered = searchQuery !== '' || locationFilter !== 'all';
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
+  const selectPeriod = (p: Period) => {
+    const next = new URLSearchParams(searchParams);
+    if (p === 'past') next.set('periode', 'passes');
+    else next.delete('periode');
+    next.delete('ville');
+    setSearchParams(next, { replace: true });
+    setPastLimit(PAST_PAGE_SIZE);
+  };
+  // Onglets : flèches gauche / droite (motif ARIA « tabs »)
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const next: Period = period === 'upcoming' ? 'past' : 'upcoming';
+    selectPeriod(next);
+    tabRefs.current[next === 'upcoming' ? 0 : 1]?.focus();
+  };
+
+  const tabs: { id: Period; label: string }[] = [
+    { id: 'upcoming', label: 'À venir' },
+    { id: 'past', label: 'Passés' },
+  ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="flex min-h-screen flex-col bg-loom-bg text-loom-text">
       <Navbar />
-      
-      {/* Hero Section - Modern & Immersive */}
-      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20">
-        {/* Abstract Background Shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div 
-            animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-orange/10 rounded-full blur-3xl"
-          />
-          <motion.div 
-            animate={{ rotate: -360, scale: [1, 1.2, 1] }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-[10%] -left-[10%] w-[500px] h-[500px] bg-brown/10 rounded-full blur-3xl"
-          />
+
+      <main className={cn(container, 'flex flex-1 flex-col gap-5 pb-16 pt-6 sm:gap-7 sm:pb-[72px] sm:pt-10')}>
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[34px] font-extrabold tracking-[-0.02em] sm:text-[44px]">Agenda</h1>
+          <p className="text-base text-loom-text-2 sm:text-lg">
+            Apéros, dîners, soirées et sorties<span className="hidden sm:inline"> : retrouvez tous nos rendez-vous</span>.
+          </p>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <span className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-orange/10 text-orange font-semibold text-sm mb-6 tracking-wider uppercase">
-              <Calendar className="w-4 h-4" />
-              Agenda
-            </span>
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 tracking-tight">
-              Nos <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">Événements</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Découvrez tous nos événements à venir et passés. Rejoignez-nous pour des moments inoubliables !
-            </p>
-          </motion.div>
-        </div>
-      </section>
-      
-      {/* Search & Filters Bar - Floating Glass */}
-      <section className="sticky top-20 z-30 py-4 pointer-events-none">
-        <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg rounded-2xl p-4 max-w-5xl mx-auto pointer-events-auto"
-          >
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Rechercher un événement..."
-                  className="pl-10 bg-white/50 border-gray-200 focus:border-orange focus:ring-orange/20 transition-all duration-300"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center md:justify-end">
-                <Select value={locationFilter} onValueChange={setLocationFilter}>
-                  <SelectTrigger className="w-full md:w-[200px] bg-white/50 border-gray-200 focus:ring-orange/20 transition-all duration-300">
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-4 h-4 text-gray-500" />
-                      <SelectValue placeholder="Lieu" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/95 backdrop-blur-xl border-white/20 shadow-xl">
-                    <SelectItem value="all" className="cursor-pointer hover:bg-orange/10 focus:bg-orange/10 focus:text-orange">Tous les lieux</SelectItem>
-                    {locations.map((loc) => (
-                      <SelectItem key={loc} value={loc} className="cursor-pointer hover:bg-orange/10 focus:bg-orange/10 focus:text-orange">{loc}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant={sortOrder === 'asc' ? 'default' : 'outline'}
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className={`transition-all duration-300 ${sortOrder === 'asc' ? 'bg-brown hover:bg-brown-light text-white' : 'bg-white/50 hover:bg-white/80'}`}
+        <div className="flex flex-wrap items-center gap-3">
+          <div role="tablist" aria-label="Période" className="flex w-full gap-1 rounded-xl bg-loom-surface-2 p-1 ring-1 ring-loom-border sm:w-auto">
+            {tabs.map((tab, i) => {
+              const selected = period === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  ref={(el) => (tabRefs.current[i] = el)}
+                  type="button"
+                  role="tab"
+                  id={`tab-${tab.id}`}
+                  aria-selected={selected}
+                  aria-controls="agenda-panel"
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => selectPeriod(tab.id)}
+                  onKeyDown={onTabKeyDown}
+                  className={cn(
+                    'h-10 flex-1 rounded-[9px] px-[18px] text-base sm:flex-none',
+                    selected ? 'bg-loom-surface font-bold text-loom-text shadow-sm' : 'text-loom-text-2 hover:text-loom-text',
+                    pageFocus,
+                  )}
                 >
-                  Date {sortOrder === 'asc' ? '↑' : '↓'}
-                </Button>
-                
-                <Button
-                  variant={hideExpired ? 'default' : 'outline'}
-                  onClick={() => setHideExpired(v => !v)}
-                  className={`transition-all duration-300 ${hideExpired ? 'bg-orange hover:bg-orange-light text-white' : 'bg-white/50 hover:bg-white/80'}`}
-                >
-                  {hideExpired ? 'À venir' : 'Tous'}
-                </Button>
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-                {isFiltered && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setLocationFilter('all');
-                    }}
-                    className="text-gray-500 hover:text-red-500"
+          {cities.length > 1 && (
+            <div role="group" aria-label="Ville" className="flex flex-wrap gap-2">
+              {[null, ...cities].map((c) => {
+                const pressed = activeCity === c;
+                return (
+                  <button
+                    key={c ?? 'all'}
+                    type="button"
+                    aria-pressed={pressed}
+                    onClick={() => setParam('ville', c)}
+                    className={cn(
+                      'h-10 rounded-full border px-3.5 text-[15px]',
+                      pressed
+                        ? 'border-loom-primary-bg bg-loom-primary-bg font-semibold text-loom-primary-fg'
+                        : 'border-loom-border-strong bg-loom-surface text-loom-text-2 hover:text-loom-text',
+                      pageFocus,
+                    )}
                   >
-                    <X className="w-5 h-5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-      
-      {/* Events Grid */}
-      <section className="py-12 pb-24">
-        <div className="container mx-auto px-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {Array(6).fill(0).map((_, index) => (
-                <Skeleton key={index} className="h-[400px] rounded-xl" />
-              ))}
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CalendarDays size={32} className="text-gray-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Aucun événement trouvé</h3>
-              <p className="text-gray-600 max-w-md mx-auto">
-                {searchQuery ? 
-                  `Aucun événement ne correspond à votre recherche "${searchQuery}".` : 
-                  "Il n'y a pas encore d'événements à afficher."}
-              </p>
-              {(searchQuery || locationFilter !== 'all' || hideExpired) && (
-                <Button 
-                  variant="link" 
-                  onClick={() => {
-                    setSearchQuery('');
-                    setLocationFilter('all');
-                    setHideExpired(false);
-                  }}
-                  className="mt-4 text-orange hover:text-orange-dark"
-                >
-                  Réinitialiser tous les filtres
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredEvents.map((event, index) => (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
-                  className={!isFiltered && index === 0 ? "md:col-span-2 lg:col-span-2" : ""}
-                >
-                  <EventCard
-                    title={event.title}
-                    description={event.description}
-                    date={event.date}
-                    time={event.time}
-                    location={event.location}
-                    image={event.image}
-                    slug={event.slug}
-                    registrationUrl={event.registration_url}
-                    ticketing={event}
-                    featured={!isFiltered && index === 0}
-                    className="h-full"
-                  />
-                </motion.div>
-              ))}
+                    {c ?? 'Toutes les villes'}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
-      </section>
-      
+
+        {/* Mobile : rendez-vous réguliers en tête de liste */}
+        {period === 'upcoming' && (
+          <div className="flex flex-col gap-1.5 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-4 lg:hidden">
+            <h2 className="font-extrabold">Rendez-vous réguliers · 19:00</h2>
+            {REGULAR_MEETUPS.map((m) => (
+              <span key={m.title} className="text-[15px]">
+                <strong>{m.day}</strong> · {m.title}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-start gap-8">
+          <div
+            id="agenda-panel"
+            role="tabpanel"
+            aria-labelledby={`tab-${period}`}
+            className="flex min-w-0 flex-[999_1_560px] flex-col gap-7"
+          >
+            {isLoading ? (
+              [0, 1, 2].map((i) => <div key={i} aria-hidden="true" className={cn(card, 'h-[330px] animate-pulse bg-loom-surface-2 md:h-[150px]')} />)
+            ) : months.length === 0 ? (
+              <p className={cn(card, 'p-6 text-loom-text-muted')}>
+                {period === 'upcoming'
+                  ? activeCity
+                    ? `Aucune soirée annoncée à ${activeCity} pour le moment.`
+                    : 'Les prochaines soirées seront bientôt annoncées. En attendant, les apéros mensuels continuent !'
+                  : 'Aucun événement passé.'}
+              </p>
+            ) : (
+              months.map((month) => (
+                <section key={month.key} aria-labelledby={`mois-${month.key}`} className="flex flex-col gap-3.5">
+                  <h2 id={`mois-${month.key}`} className="text-[15px] font-extrabold uppercase tracking-[0.06em] text-loom-text-muted">
+                    {month.label}
+                  </h2>
+                  {month.items.map((event) => (
+                    <AgendaEventCard key={event.id} event={event} past={period === 'past'} />
+                  ))}
+                </section>
+              ))
+            )}
+
+            {period === 'past' && filtered.length > visible.length && (
+              <button
+                type="button"
+                onClick={() => setPastLimit((n) => n + PAST_PAGE_SIZE)}
+                className={cn(btnSecondary, 'h-12 self-center px-6')}
+              >
+                Afficher plus d'événements
+              </button>
+            )}
+          </div>
+
+          <aside aria-label="À savoir" className="hidden min-w-0 flex-[1_1_280px] flex-col gap-4 lg:flex">
+            <div className="flex flex-col gap-3.5 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-6">
+              <h2 className="text-lg font-extrabold">Rendez-vous réguliers</h2>
+              {REGULAR_MEETUPS.map((m) => (
+                <div key={m.title} className="flex flex-col gap-0.5">
+                  <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-loom-highlight-label">{m.whenShort}</span>
+                  <span className="font-bold">{m.title}</span>
+                </div>
+              ))}
+              <span className="text-sm text-loom-text-2">Entrée libre, sans réservation.</span>
+            </div>
+            <div className="flex flex-col gap-3 rounded-[18px] bg-loom-join-bg p-6 text-white">
+              <h2 className="text-lg font-extrabold">Payez moins cher vos soirées</h2>
+              <p className="text-[15px] text-loom-join-text">
+                Les adhérents profitent du tarif réduit sur les événements et de réductions chez nos{' '}
+                <Link to="/partners" className="font-semibold text-white underline underline-offset-2">
+                  partenaires
+                </Link>
+                .
+              </p>
+              <a
+                href={membershipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-11 items-center self-start rounded-xl bg-loom-yellow px-[18px] font-extrabold text-loom-on-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loom-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-loom-join-bg"
+              >
+                Adhérer<span className="sr-only"> (nouvel onglet)</span>
+              </a>
+            </div>
+          </aside>
+        </div>
+
+        {period === 'upcoming' && (
+          <p className="text-[15px] text-loom-text-muted lg:hidden">
+            Pas encore adhérent ?{' '}
+            <a href={membershipUrl} target="_blank" rel="noopener noreferrer" className={strongLink}>
+              Adhérez<span className="sr-only"> (nouvel onglet)</span>
+            </a>{' '}
+            et payez le tarif réduit.
+          </p>
+        )}
+      </main>
+
       <Footer />
     </div>
   );

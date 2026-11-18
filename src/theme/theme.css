@@ -70,6 +70,7 @@
   /* États */
   --danger: #B42318;
   --success: #2F6B2F;
+  --success-bg: #DCFCE7;          /* pastille « Entrée libre » */
   --warning-fg: #8A3B00;
 
   /* Ombres */
@@ -141,6 +142,7 @@
 
   --danger: #F97066;
   --success: #7CC47C;
+  --success-bg: #1C3320;
   --warning-fg: #FEDD63;
 
   --shadow-card: 0 18px 40px rgba(0, 0, 0, 0.45);
@@ -166,7 +168,7 @@
     --nav-active-bg: #3A2A1A; --nav-active-fg: #FEDD63;
     --theme-toggle-bg: #2E2219; --theme-toggle-fg: #FEDD63;
     --band-dark-bg: #0E0905; --band-dark-text: #CDBBA6;
-    --danger: #F97066; --success: #7CC47C; --warning-fg: #FEDD63;
+    --danger: #F97066; --success: #7CC47C; --success-bg: #1C3320; --warning-fg: #FEDD63;
     --shadow-card: 0 18px 40px rgba(0, 0, 0, 0.45);
     --shadow-header: 0 10px 28px rgba(0, 0, 0, 0.45);
   }
