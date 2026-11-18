@@ -78,7 +78,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       icon: <Users className="h-5 w-5 mr-2" />,
     },
     {
-      title: "Timeline Mr Ours",
+      title: "Monsieur Ours",
       href: "/admin/monsieur-ours",
       icon: <Crown className="h-5 w-5 mr-2" />,
     },

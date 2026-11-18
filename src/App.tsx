@@ -79,7 +79,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/admin/partners": "LOOM Admin - Partenaires",
   "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
-  "/admin/monsieur-ours": "LOOM Admin - Timeline Mr Ours",
+  "/admin/monsieur-ours": "LOOM Admin - Monsieur Ours",
   "/admin/history": "LOOM Admin - Historique",
   "/admin/team": "LOOM Admin - La Tanière",
   "/terms": "LOOM - Conditions d'utilisation",

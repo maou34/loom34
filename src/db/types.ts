@@ -489,6 +489,14 @@ export type Database = {
           hero_image_width: number | null
           hero_image_height: number | null
           updated_at: string
+          /** Page Monsieur Ours : présentation du lauréat (hero) */
+          monsieur_ours_intro: string | null
+          /** Page Monsieur Ours : lien « Les photos de l'élection » */
+          monsieur_ours_photos_url: string | null
+          /** Page Monsieur Ours : 3 étapes [{ when, title, text }] */
+          monsieur_ours_steps: Json | null
+          /** Page Monsieur Ours : texte de l'appel « Et si c'était toi ? » */
+          monsieur_ours_cta: string | null
         }
         Insert: {
           id?: number
@@ -500,6 +508,10 @@ export type Database = {
           hero_image_width?: number | null
           hero_image_height?: number | null
           updated_at?: string
+          monsieur_ours_intro?: string | null
+          monsieur_ours_photos_url?: string | null
+          monsieur_ours_steps?: Json | null
+          monsieur_ours_cta?: string | null
         }
         Update: {
           id?: number
@@ -511,6 +523,10 @@ export type Database = {
           hero_image_width?: number | null
           hero_image_height?: number | null
           updated_at?: string
+          monsieur_ours_intro?: string | null
+          monsieur_ours_photos_url?: string | null
+          monsieur_ours_steps?: Json | null
+          monsieur_ours_cta?: string | null
         }
         Relationships: []
       }
@@ -523,6 +539,11 @@ export type Database = {
           image: string | null
           created_at: string
           updated_at: string
+          /** Oursons de l'année (étape 6 de la refonte) */
+          cub1_name: string | null
+          cub1_photo: string | null
+          cub2_name: string | null
+          cub2_photo: string | null
         }
         Insert: {
           id?: string
@@ -532,6 +553,10 @@ export type Database = {
           image?: string | null
           created_at?: string
           updated_at?: string
+          cub1_name?: string | null
+          cub1_photo?: string | null
+          cub2_name?: string | null
+          cub2_photo?: string | null
         }
         Update: {
           id?: string
@@ -541,6 +566,10 @@ export type Database = {
           image?: string | null
           created_at?: string
           updated_at?: string
+          cub1_name?: string | null
+          cub1_photo?: string | null
+          cub2_name?: string | null
+          cub2_photo?: string | null
         }
         Relationships: []
       }
