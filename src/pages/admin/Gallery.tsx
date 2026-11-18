@@ -7,9 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -25,10 +22,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus,
-  Image as ImageIcon,
   Folder,
   FolderOpen,
-  MoreVertical,
+  MoreHorizontal,
   Trash2,
   Search,
   Upload,
@@ -48,6 +44,7 @@ type GalleryAlbum = {
   id: string;
   title: string;
   cover_image: string | null;
+  image_count?: number;
 };
 
 type GalleryImage = {
@@ -90,7 +87,6 @@ export default function Gallery() {
 
   // State for dialogs
   const [isCreateAlbumOpen, setIsCreateAlbumOpen] = useState(false);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAlbumInfoOpen, setIsAlbumInfoOpen] = useState(false);
   const [isImageDetailsOpen, setIsImageDetailsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -107,7 +103,8 @@ export default function Gallery() {
   const [albumForm, setAlbumForm] = useState({ title: "" });
 
   // Upload state
-  const [isDropping, setIsDropping] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
 
   // --- Queries ---
@@ -145,18 +142,21 @@ export default function Gallery() {
     if (unclassified) {
       setViewUnclassified(true);
       setSelectedAlbum(null);
-    } else if (albumId && visibleAlbums.length > 0) {
-      const album = visibleAlbums.find((a) => a.id === albumId);
-      if (album) {
-        setSelectedAlbum(album);
-        setViewUnclassified(false);
-      }
-    } else if (!albumId && !unclassified && visibleAlbums.length > 0) {
-      // Default to first album if nothing selected
-      setSelectedAlbum(visibleAlbums[0]);
+    } else if (visibleAlbums.length > 0) {
+      // Album demandé, sinon (absent ou supprimé) le premier : jamais d'écran sans album
+      // sélectionné, où l'import partirait dans « Non classées » à l'insu de l'admin.
+      setSelectedAlbum(visibleAlbums.find((a) => a.id === albumId) ?? visibleAlbums[0]);
       setViewUnclassified(false);
+    } else if (!isLoadingAlbums) {
+      setViewUnclassified(true);
+      setSelectedAlbum(null);
     }
-  }, [searchParams, visibleAlbums]);
+  }, [searchParams, visibleAlbums, isLoadingAlbums]);
+
+  // Mobile : la pastille de l'album affiché reste visible dans la liste défilante
+  useEffect(() => {
+    document.querySelector<HTMLElement>('#albums-list [aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selectedAlbum?.id, viewUnclassified]);
 
   // Filter images based on search
   const filteredImages = images.filter((img) =>
@@ -182,7 +182,7 @@ export default function Gallery() {
       setAlbumForm({ title: "" });
       toast({ title: "Album créé avec succès" });
     },
-    onError: (err: any) =>
+    onError: (err: Error) =>
       toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
@@ -216,7 +216,7 @@ export default function Gallery() {
       setAlbumToDelete(null);
       toast({ title: "Album supprimé" });
     },
-    onError: (err: any) =>
+    onError: (err: Error) =>
       toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
@@ -232,10 +232,11 @@ export default function Gallery() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
+      queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
       setIsImageDetailsOpen(false);
       toast({ title: "Image supprimée" });
     },
-    onError: (err: any) =>
+    onError: (err: Error) =>
       toast({ title: "Erreur", description: err.message, variant: "destructive" }),
   });
 
@@ -254,8 +255,8 @@ export default function Gallery() {
   };
 
   const handleDropFiles = async (files: FileList) => {
-    setIsDropping(true);
-    setUploadFeedback("Import en cours...");
+    setIsUploading(true);
+    setUploadFeedback(`Import de ${files.length} photo${files.length > 1 ? "s" : ""} en cours…`);
     try {
       const form = new FormData();
       Array.from(files).forEach((file) => {
@@ -278,16 +279,14 @@ export default function Gallery() {
 
       setUploadFeedback("Import terminé !");
       queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
-
-      setTimeout(() => {
-        setUploadFeedback(null);
-        setIsUploadOpen(false);
-      }, 1500);
-    } catch (e: any) {
+      queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
+      setTimeout(() => setUploadFeedback(null), 2500);
+    } catch (e: unknown) {
       console.error("Erreur upload", e);
-      setUploadFeedback(`Erreur: ${e.message}`);
+      setUploadFeedback(null);
+      toast({ title: "Import échoué", description: e instanceof Error ? e.message : String(e), variant: "destructive" });
     } finally {
-      setIsDropping(false);
+      setIsUploading(false);
     }
   };
 
@@ -309,164 +308,197 @@ export default function Gallery() {
     }
   };
 
+  const currentTitle = viewUnclassified ? "Non classées" : selectedAlbum?.title ?? "Galerie";
+  const photoCount = (n: number) => `${n} photo${n > 1 ? "s" : ""}`;
+  const unclassifiedCount = albums.find((a) => a.id === "unclassified")?.image_count ?? 0;
+  const albumEntries = [
+    { key: "unclassified", title: "Non classées", count: unclassifiedCount, active: viewUnclassified, select: handleUnclassifiedSelect, album: null as GalleryAlbum | null },
+    ...visibleAlbums.map((album) => ({
+      key: album.id,
+      title: album.title,
+      count: album.image_count ?? 0,
+      active: !viewUnclassified && selectedAlbum?.id === album.id,
+      select: () => handleAlbumSelect(album),
+      album,
+    })),
+  ];
+  const openCreateAlbum = () => {
+    setAlbumForm({ title: "" });
+    setIsCreateAlbumOpen(true);
+  };
+
   return (
-    <AdminLayout title="Galerie">
-      <div className="flex h-[calc(100vh-120px)] -m-6">
-        {/* Sidebar */}
-        <div className="w-100 border-r bg-gray-50/50 flex flex-col">
-          <div className="p-4">
-            <Button
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={() => {
-                setAlbumForm({ title: "" });
-                setIsCreateAlbumOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" /> Nouvel Album
-            </Button>
-          </div>
-
-          <ScrollArea className="flex-1 px-3">
-            <div className="space-y-1 pb-4">
-              <Button
-                variant={viewUnclassified ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start font-normal",
-                  viewUnclassified && "bg-white shadow-sm"
-                )}
-                onClick={handleUnclassifiedSelect}
-              >
-                <FolderOpen className="w-4 h-4 mr-2 text-orange-500" />
-                Non classées
-              </Button>
-
-              <Separator className="my-2" />
-
-              {isLoadingAlbums ? (
-                <div className="space-y-2 px-2">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              ) : (
-                visibleAlbums.map((album) => (
-                  <div key={album.id} className="group flex items-center relative">
-                    <Button
-                      variant={selectedAlbum?.id === album.id ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start font-normal pr-8",
-                        selectedAlbum?.id === album.id && "bg-white shadow-sm"
-                      )}
-                      onClick={() => handleAlbumSelect(album)}
-                    >
-                      <Folder
-                        className={cn(
-                          "w-4 h-4 mr-2",
-                          selectedAlbum?.id === album.id ? "text-orange-600" : "text-gray-400"
-                        )}
-                      />
-                      <span className="truncate">{album.title}</span>
-                    </Button>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-6 w-6 p-0 absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => {
-                            setAlbumToDelete(album);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Supprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))
-              )}
+    <AdminLayout
+      title="Galerie photos"
+      actions={
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+          <Upload className="h-4 w-4 sm:mr-2" />
+          <span className="sr-only sm:not-sr-only">Importer des photos</span>
+        </Button>
+      }
+    >
+      <input
+        type="file"
+        multiple
+        accept="image/*"
+        className="hidden"
+        ref={fileInputRef}
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) handleDropFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        {/* Albums : colonne sur grand écran, pastilles défilantes sur mobile */}
+        <aside aria-labelledby="h-albums" className="flex min-w-0 flex-col gap-2 lg:sticky lg:top-6 lg:w-64 lg:flex-none">
+          <h2 id="h-albums" className="text-xs font-bold uppercase tracking-[0.06em] text-loom-text-muted">
+            Albums
+          </h2>
+          {isLoadingAlbums ? (
+            <div className="flex gap-2 lg:flex-col">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-10 w-32 rounded-[10px] lg:w-full" />
+              ))}
             </div>
-          </ScrollArea>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col bg-white overflow-hidden">
-          {/* Toolbar */}
-          <div className="h-16 border-b flex items-center justify-between px-6 bg-white">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                {viewUnclassified ? "Photos non classées" : selectedAlbum?.title || "Galerie"}
-              </h2>
-              <Badge variant="outline" className="text-gray-500">
-                {filteredImages.length} photos
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Rechercher..."
-                  className="pl-10 h-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              {selectedAlbum && !viewUnclassified && (
-                <Button onClick={() => setIsAlbumInfoOpen(true)} variant="outline" className="h-9">
-                  <Info className="w-4 h-4 mr-2" /> Infos de l'album
-                </Button>
-              )}
-              <Button onClick={() => setIsUploadOpen(true)} variant="outline" className="h-9">
-                <Upload className="w-4 h-4 mr-2" /> Importer
-              </Button>
-            </div>
-          </div>
-
-          {/* Grid */}
-          <ScrollArea className="flex-1 p-6">
-            {filteredImages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 min-h-[400px]">
-                <div className="bg-gray-50 p-4 rounded-full mb-4">
-                  <ImageIcon className="w-12 h-12 text-gray-300" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-1">Aucune photo</h3>
-                <p className="text-sm text-gray-500 mb-6">Cet album est vide pour le moment.</p>
-                <Button onClick={() => setIsUploadOpen(true)}>
-                  <Upload className="w-4 h-4 mr-2" /> Ajouter des photos
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredImages.map((img) => (
-                  <div
-                    key={img.id}
-                    className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:shadow-md transition-all"
-                    onClick={() => openImageDetails(img)}
+          ) : (
+            <ul id="albums-list" className="flex gap-2 overflow-x-auto pb-1 lg:max-h-[calc(100vh-220px)] lg:flex-col lg:gap-1 lg:overflow-y-auto lg:overflow-x-visible">
+              {albumEntries.map((entry) => (
+                <li key={entry.key} className="max-w-[16rem] flex-none lg:max-w-none">
+                  <button
+                    type="button"
+                    aria-current={entry.active ? "page" : undefined}
+                    onClick={entry.select}
+                    className={cn(
+                      "relative flex h-10 w-full items-center gap-2 whitespace-nowrap rounded-[10px] px-3 text-left text-sm",
+                      "max-lg:border max-lg:border-loom-border-strong",
+                      entry.active ? "bg-loom-chip-bg font-bold text-loom-chip-fg max-lg:border-loom-chip-fg" : "hover:bg-loom-surface-2",
+                    )}
                   >
-                    <img
-                      src={getImageUrl(img.image_url)}
-                      alt={img.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <p className="text-white text-sm font-medium truncate">{img.title}</p>
-                    </div>
-                  </div>
-                ))}
+                    {entry.active ? <FolderOpen aria-hidden="true" className="h-4 w-4 flex-none" /> : <Folder aria-hidden="true" className="h-4 w-4 flex-none text-loom-text-muted" />}
+                    <span className="min-w-0 flex-1 truncate">{entry.title}</span>
+                    <span className="text-xs text-loom-text-muted">
+                      {entry.count}
+                      <span className="sr-only"> photos</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+              <li className="flex-none lg:mt-2">
+                <Button variant="outline" className="h-10 w-full justify-start" onClick={openCreateAlbum}>
+                  <Plus className="mr-2 h-4 w-4" /> Nouvel album
+                </Button>
+              </li>
+            </ul>
+          )}
+        </aside>
+
+        {/* Album sélectionné */}
+        <section aria-labelledby="h-album" className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-baseline gap-2">
+              <h2 id="h-album" className="truncate text-xl font-bold">
+                {currentTitle}
+              </h2>
+              <span className="flex-none text-sm text-loom-text-muted">{photoCount(images.length)}</span>
+            </div>
+            {images.length > 8 && (
+              <label className="relative w-full sm:w-56">
+                <span className="sr-only">Rechercher une photo</span>
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
+                <Input type="search" placeholder="Rechercher…" className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              </label>
+            )}
+            {selectedAlbum && !viewUnclassified && (
+              <div className="flex gap-2">
+                <Button onClick={() => setIsAlbumInfoOpen(true)} variant="outline">
+                  <Info className="mr-2 h-4 w-4" /> Infos de l'album
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-10 w-10 p-0" aria-label={`Actions pour l'album « ${selectedAlbum.title} »`}>
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={() => {
+                        setAlbumToDelete(selectedAlbum);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Supprimer l'album
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
-          </ScrollArea>
-        </div>
+          </div>
+
+          {/* Zone de dépôt (toujours visible, compacte quand l'album a des photos) */}
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed px-4 text-center transition-colors",
+              images.length === 0 ? "py-12" : "py-5",
+              isDragOver ? "border-primary bg-loom-chip-bg" : "border-loom-border-strong bg-loom-surface-2",
+            )}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragOver(true);
+            }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              if (e.dataTransfer.files?.length) handleDropFiles(e.dataTransfer.files);
+            }}
+          >
+            {uploadFeedback ? (
+              <p role="status" className="flex items-center gap-2 font-semibold">
+                {isUploading ? <Upload aria-hidden="true" className="h-5 w-5 animate-bounce" /> : <CheckCircle2 aria-hidden="true" className="h-5 w-5 text-green-700" />}
+                {uploadFeedback}
+              </p>
+            ) : (
+              <>
+                <Upload aria-hidden="true" className="h-7 w-7 text-loom-text-muted" />
+                <span className="font-bold">
+                  <span className="hidden sm:inline">Glissez vos photos ici</span>
+                  <span className="sm:hidden">Ajouter des photos</span>
+                </span>
+                <span className="text-sm text-loom-text-muted">
+                  <span className="hidden sm:inline">ou </span>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="font-semibold text-loom-accent-text underline">
+                    parcourez vos fichiers
+                  </button>{" "}
+                  · JPG, PNG, WebP · dans « {currentTitle} »
+                </span>
+              </>
+            )}
+          </div>
+
+          {filteredImages.length > 0 && (
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 xl:grid-cols-6">
+              {filteredImages.map((img) => (
+                <li key={img.id}>
+                  <button
+                    type="button"
+                    onClick={() => openImageDetails(img)}
+                    className="group relative block aspect-square w-full overflow-hidden rounded-lg border border-loom-border bg-loom-surface-2"
+                  >
+                    <img src={getImageUrl(img.image_url)} alt={img.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {images.length > 0 && filteredImages.length === 0 && <p className="text-sm text-loom-text-muted">Aucune photo ne correspond.</p>}
+
+          <p className="text-xs text-loom-text-muted">
+            Astuce : créez un album par soirée pour retrouver les photos facilement, puis reliez-le à l'événement dans « Infos de l'album ».
+          </p>
+        </section>
       </div>
 
       {selectedAlbum && (
@@ -494,7 +526,7 @@ export default function Gallery() {
               Annuler
             </Button>
             <Button
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => createAlbumMutation.mutate(albumForm.title)}
               disabled={!albumForm.title.trim()}
             >
@@ -532,70 +564,6 @@ export default function Gallery() {
               Supprimer
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Upload Dialog */}
-      <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Importer des photos</DialogTitle>
-          </DialogHeader>
-          <div className="py-6">
-            <div
-              className={cn(
-                "border-2 border-dashed rounded-xl p-8 text-center transition-colors",
-                isDropping
-                  ? "border-orange-500 bg-orange-50"
-                  : "border-gray-200 hover:border-orange-400 hover:bg-gray-50",
-                uploadFeedback && "border-green-500 bg-green-50"
-              )}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDropping(true);
-              }}
-              onDragLeave={() => setIsDropping(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer.files) handleDropFiles(e.dataTransfer.files);
-              }}
-            >
-              {uploadFeedback ? (
-                <div className="flex flex-col items-center text-green-600">
-                  <CheckCircle2 className="w-10 h-10 mb-2" />
-                  <p className="font-medium">{uploadFeedback}</p>
-                </div>
-              ) : isDropping ? (
-                <div className="flex flex-col items-center text-orange-600">
-                  <Upload className="w-10 h-10 mb-2 animate-bounce" />
-                  <p className="font-medium">Relâchez pour importer</p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center text-gray-500">
-                  <Upload className="w-10 h-10 mb-2" />
-                  <p className="font-medium text-gray-900">Glissez vos images ici</p>
-                  <p className="text-sm mt-1 mb-4">
-                    Destination : {selectedAlbum?.title || "Non classées"}
-                  </p>
-                  <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                    Parcourir les fichiers
-                  </Button>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        handleDropFiles(e.target.files);
-                      }
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -637,9 +605,7 @@ export default function Gallery() {
                 variant="destructive"
                 className="w-full"
                 onClick={() => {
-                  if (confirm("Supprimer cette image ?")) {
-                    selectedImage && deleteImageMutation.mutate(selectedImage);
-                  }
+                  if (selectedImage && confirm("Supprimer cette image ?")) deleteImageMutation.mutate(selectedImage);
                 }}
               >
                 <Trash2 className="w-4 h-4 mr-2" /> Supprimer l'image
