@@ -151,6 +151,9 @@ export type Database = {
           helloasso_sale_end_date: string | null
           /** Date de la publication automatique par la synchro */
           helloasso_auto_published_at: string | null
+          /** Coordonnées du lieu (géocodage OpenStreetMap), NULL si adresse introuvable */
+          latitude: number | null
+          longitude: number | null
         }
         Insert: {
           id?: string
@@ -177,6 +180,8 @@ export type Database = {
           helloasso_sale_start_date?: string | null
           helloasso_sale_end_date?: string | null
           helloasso_auto_published_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Update: {
           id?: string
@@ -203,6 +208,8 @@ export type Database = {
           helloasso_sale_start_date?: string | null
           helloasso_sale_end_date?: string | null
           helloasso_auto_published_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Relationships: []
       }

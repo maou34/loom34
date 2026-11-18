@@ -10,6 +10,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import EventDateBlock from '@/components/site/EventDateBlock';
 import TicketInfo from '@/components/event/TicketInfo';
+import OsmMap from '@/components/event/OsmMap';
 import { Chip } from '@/components/site/EventChips';
 import type { EventChip } from '@/lib/eventChips';
 import { btnDisabled, btnPrimary, btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
@@ -359,15 +360,22 @@ const EventDetail = () => {
                 {memberNote}
               </div>
 
-              {/* Accès */}
-              <section aria-labelledby="h-acces" className={cn(card, 'hidden flex-col gap-2 rounded-[18px] p-5 sm:p-6 lg:flex')}>
-                <h2 id="h-acces" className="text-lg font-extrabold">
-                  Accès
-                </h2>
-                <p className="text-loom-text-2">{event.location}</p>
-                <a href={directionsUrl(event.location)} target="_blank" rel="noopener noreferrer" className={cn(strongLink, 'self-start')}>
-                  Ouvrir l'itinéraire →<span className="sr-only"> (nouvel onglet)</span>
-                </a>
+              {/* Accès : adresse, itinéraire, plan (si le lieu a pu être géocodé) */}
+              <section aria-labelledby="h-acces" className={cn(card, 'flex flex-col gap-4 rounded-[18px] p-5 sm:flex-row sm:p-6')}>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-[1_1_0]">
+                  <h2 id="h-acces" className="text-lg font-extrabold">
+                    Accès
+                  </h2>
+                  <p className="text-loom-text-2">{event.location}</p>
+                  <a href={directionsUrl(event.location)} target="_blank" rel="noopener noreferrer" className={cn(strongLink, 'self-start')}>
+                    Ouvrir l'itinéraire →<span className="sr-only"> (nouvel onglet)</span>
+                  </a>
+                </div>
+                {typeof event.latitude === 'number' && typeof event.longitude === 'number' && (
+                  <div className="min-w-0 sm:flex-[1.3_1_0]">
+                    <OsmMap latitude={event.latitude} longitude={event.longitude} label={event.location} />
+                  </div>
+                )}
               </section>
 
               {/* Réservation (desktop) : widget HelloAsso intégré */}

@@ -28,6 +28,7 @@ import '@uiw/react-markdown-preview/markdown.css';
 import { Badge } from "@/components/ui/badge";
 import { getCapacity, isSaleEnded, normalizeHelloAssoSlug } from "@/lib/ticketing";
 import { eventCity } from "@/lib/eventPlace";
+import { geocodeAddress } from "@/lib/geocode";
 import { todayISO } from "@/lib/eventDates";
 
 import {
@@ -84,7 +85,23 @@ interface Event {
   tickets_sold_discounted: number | null;
   helloasso_sale_start_date: string | null;
   helloasso_sale_end_date: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
+
+/**
+ * Coordonnées du lieu pour le plan OpenStreetMap de la fiche, recalculées
+ * seulement si le lieu a changé (ou n'a pas encore de coordonnées).
+ * Adresse introuvable : on enregistre quand même, sans plan.
+ */
+const coordinatesFor = async (location: string, previous?: Event | null) => {
+  if (previous && previous.location === location && previous.latitude !== null && previous.longitude !== null) return {};
+  const found = await geocodeAddress(location);
+  if (!found) {
+    toast.warning("Adresse introuvable sur OpenStreetMap : la fiche affichera le lien d'itinéraire, sans plan.");
+  }
+  return found ?? { latitude: null, longitude: null };
+};
 
 const formatShortDateTime = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -157,12 +174,38 @@ export default function AdminEvents() {
     currentPage * eventsPerPage
   );
 
+  // Événements à venir sans coordonnées (créés avant le plan OpenStreetMap, ou
+  // adresse introuvable) : un clic les géocode un par un (1 requête / s, Nominatim).
+  const [geocodingProgress, setGeocodingProgress] = useState<number | null>(null);
+  const missingMaps = events.filter((e) => e.date >= todayISO() && e.latitude === null && e.location.trim());
+  const fillMissingMaps = async () => {
+    let found = 0;
+    setGeocodingProgress(0);
+    for (const [i, event] of missingMaps.entries()) {
+      const coords = await geocodeAddress(event.location);
+      if (coords) {
+        const { error } = await db.from('events').update(coords).eq('id', event.id);
+        if (!error) found++;
+      }
+      setGeocodingProgress(i + 1);
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+    setGeocodingProgress(null);
+    const missed = missingMaps.length - found;
+    if (missed > 0) {
+      toast.warning(`${found} plan(s) ajouté(s), ${missed} adresse(s) introuvable(s) : complétez le lieu (n° et rue) puis réessayez.`);
+    } else {
+      toast.success(`${found} plan(s) ajouté(s)`);
+    }
+    fetchEvents();
+  };
+
   async function fetchEvents() {
     try {
       setLoading(true);
       const { data, error } = await db
         .from('events')
-        .select('id, title, location, date, time, published, slug, description, image, registration_url, helloasso_form_slug, ticket_capacity, helloasso_capacity, ticket_member_discount, tickets_sold, tickets_sold_discounted, helloasso_sale_start_date, helloasso_sale_end_date')
+        .select('id, title, location, date, time, published, slug, description, image, registration_url, helloasso_form_slug, ticket_capacity, helloasso_capacity, ticket_member_discount, tickets_sold, tickets_sold_discounted, helloasso_sale_start_date, helloasso_sale_end_date, latitude, longitude')
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -251,7 +294,8 @@ export default function AdminEvents() {
         helloasso_form_slug: normalizeHelloAssoSlug(helloasso_form_slug),
         ticket_capacity: capacity,
         ticket_member_discount,
-        author_id: user?.id
+        author_id: user?.id,
+        ...(await coordinatesFor(location)),
       };
       
       const { data, error } = await db
@@ -310,6 +354,7 @@ export default function AdminEvents() {
         ticket_capacity: capacity,
         ticket_member_discount,
         updated_at: new Date().toISOString(),
+        ...(await coordinatesFor(location, selectedEvent)),
         // Formulaire HelloAsso changé ou retiré : les données synchronisées
         // concernent l'ancien formulaire, on les vide jusqu'à la prochaine
         // synchro (sync-events). La jauge, saisie ici, est conservée.
@@ -448,13 +493,23 @@ export default function AdminEvents() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
-            onClick={resetForm}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel événement
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            {missingMaps.length > 0 && (
+              <Button variant="outline" className="w-full sm:w-auto" onClick={fillMissingMaps} disabled={geocodingProgress !== null}>
+                <MapPin className="h-4 w-4 mr-2" />
+                {geocodingProgress !== null
+                  ? `Plans : ${geocodingProgress}/${missingMaps.length}…`
+                  : `Calculer les plans manquants (${missingMaps.length})`}
+              </Button>
+            )}
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
+              onClick={resetForm}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvel événement
+            </Button>
+          </div>
         </div>
 
         {/* Events List */}
