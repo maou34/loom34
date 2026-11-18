@@ -14,6 +14,7 @@ export type VisitsStats =
       visits: number;
       pageViews: number;
       previousVisits: number;
+      previousDaysWithData: number;
       series: { date: string; visits: number; pageViews: number }[];
       topPages: { path: string; pageViews: number }[];
     };

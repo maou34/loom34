@@ -44,8 +44,9 @@ async function cloudflareVisits(days: number) {
     viewer { accounts(filter: { accountTag: $account }) {
       total: rumPageloadEventsAdaptiveGroups(filter: $cur, limit: 1) { count sum { visits } }
       previous: rumPageloadEventsAdaptiveGroups(filter: $prev, limit: 1) { count sum { visits } }
+      previousDays: rumPageloadEventsAdaptiveGroups(filter: $prev, limit: 100) { count dimensions { date } }
       series: rumPageloadEventsAdaptiveGroups(filter: $cur, limit: 100, orderBy: [date_ASC]) { count sum { visits } dimensions { date } }
-      pages: rumPageloadEventsAdaptiveGroups(filter: $cur, limit: 6, orderBy: [count_DESC]) { count dimensions { requestPath } }
+      pages: rumPageloadEventsAdaptiveGroups(filter: $cur, limit: 12, orderBy: [count_DESC]) { count dimensions { requestPath } }
     } }
   }`;
   const res = await fetch("https://api.cloudflare.com/client/v4/graphql", {
@@ -74,6 +75,9 @@ async function cloudflareVisits(days: number) {
     visits: first(acc.total).sum?.visits ?? 0,
     pageViews: first(acc.total).count ?? 0,
     previousVisits: first(acc.previous).sum?.visits ?? 0,
+    // Jours de la période précédente avec des données : la comparaison n'a de sens que si
+    // l'outil mesurait déjà le site (sinon « +1140 % » le premier mois)
+    previousDaysWithData: (acc.previousDays as RumGroup[]).filter((g) => g.count > 0).length,
     series,
     topPages: (acc.pages as RumGroup[]).map((g) => ({ path: g.dimensions?.requestPath ?? "/", pageViews: g.count })),
   };

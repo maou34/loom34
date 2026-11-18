@@ -6,27 +6,52 @@ import { STATIC_PAGE_LABELS, useSiteVisits } from "@/lib/siteStats";
 const nf = new Intl.NumberFormat("fr-FR");
 const shortDay = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
-/** Titres des fiches événement / article les plus vues (le reste : libellés fixes). */
-function usePageLabels(paths: string[]) {
-  const slugs = (prefix: string) => paths.filter((p) => p.startsWith(prefix)).map((p) => decodeURIComponent(p.slice(prefix.length)).replace(/\/+$/, ""));
-  const eventSlugs = slugs("/events/");
-  const articleSlugs = slugs("/articles/");
+/**
+ * Pages les plus vues, regroupées par page : une ancienne adresse (slug renommé,
+ * table slug_redirects) compte pour la nouvelle ; libellé = titre de la fiche.
+ */
+function useTopPages(pages: { path: string; pageViews: number }[]) {
+  const clean = (p: string) => (p.length > 1 ? p.replace(/\/+$/, "") : p);
+  const slugsOf = (prefix: string) => pages.map((p) => clean(p.path)).filter((p) => p.startsWith(prefix)).map((p) => decodeURIComponent(p.slice(prefix.length)));
+  const eventSlugs = slugsOf("/events/");
+  const articleSlugs = slugsOf("/articles/");
   const { data } = useQuery({
     queryKey: ["admin", "pageLabels", eventSlugs, articleSlugs],
     enabled: eventSlugs.length + articleSlugs.length > 0,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
+      const redirects: Record<string, string> = {};
+      const { data: rows } = await db.from("slug_redirects").select("kind, old_slug, new_slug").in("old_slug", [...eventSlugs, ...articleSlugs]);
+      for (const r of rows ?? []) redirects[`/${r.kind}/${r.old_slug}`] = `/${r.kind}/${r.new_slug}`;
+      const resolved = (kind: string, slugs: string[]) => slugs.map((s) => (redirects[`/${kind}/${s}`] ?? `/${kind}/${s}`).slice(kind.length + 2));
       const [ev, ar] = await Promise.all([
-        eventSlugs.length ? db.from("events").select("slug, title").in("slug", eventSlugs) : Promise.resolve({ data: [] }),
-        articleSlugs.length ? db.from("articles").select("slug, title").in("slug", articleSlugs) : Promise.resolve({ data: [] }),
+        eventSlugs.length ? db.from("events").select("slug, title").in("slug", resolved("events", eventSlugs)) : Promise.resolve({ data: [] }),
+        articleSlugs.length ? db.from("articles").select("slug, title").in("slug", resolved("articles", articleSlugs)) : Promise.resolve({ data: [] }),
       ]);
-      const map: Record<string, string> = {};
-      for (const e of ev.data ?? []) map[`/events/${e.slug}`] = e.title;
-      for (const a of ar.data ?? []) map[`/articles/${a.slug}`] = a.title;
-      return map;
+      const titles: Record<string, string> = {};
+      for (const e of ev.data ?? []) titles[`/events/${e.slug}`] = e.title;
+      for (const a of ar.data ?? []) titles[`/articles/${a.slug}`] = a.title;
+      return { redirects, titles };
     },
   });
-  return (path: string) => STATIC_PAGE_LABELS[path] ?? data?.[path.replace(/\/+$/, "")] ?? path;
+
+  return useMemo(() => {
+    const merged = new Map<string, number>();
+    for (const p of pages) {
+      let path = clean(p.path);
+      try {
+        path = decodeURIComponent(path);
+      } catch {
+        // adresse mal encodée : gardée telle quelle
+      }
+      const target = data?.redirects[path] ?? path;
+      merged.set(target, (merged.get(target) ?? 0) + p.pageViews);
+    }
+    return [...merged.entries()]
+      .map(([path, pageViews]) => ({ path, pageViews, label: STATIC_PAGE_LABELS[path] ?? data?.titles[path] ?? path }))
+      .sort((a, b) => b.pageViews - a.pageViews)
+      .slice(0, 5);
+  }, [pages, data]);
 }
 
 function VisitsChart({ series }: { series: { date: string; visits: number; pageViews: number }[] }) {
@@ -103,13 +128,14 @@ export default function VisitsCard({ className }: { className: string }) {
   const [days, setDays] = useState<7 | 30>(30);
   const { data, isLoading, error } = useSiteVisits(days);
   const stats = data?.configured ? data : null;
-  const label = usePageLabels(stats?.topPages.map((p) => p.path) ?? []);
+  const topPages = useTopPages(stats?.topPages ?? []);
 
   const delta = useMemo(() => {
-    if (!stats || stats.previousVisits === 0) return null;
+    // Comparaison seulement si l'outil mesurait déjà le site sur la période précédente
+    if (!stats || stats.previousVisits === 0 || (stats.previousDaysWithData ?? 0) < stats.days * 0.8) return null;
     return Math.round(((stats.visits - stats.previousVisits) / stats.previousVisits) * 100);
   }, [stats]);
-  const topMax = Math.max(1, ...(stats?.topPages.map((p) => p.pageViews) ?? [1]));
+  const topMax = Math.max(1, ...topPages.map((p) => p.pageViews));
 
   return (
     <section aria-labelledby="h-visits" className={className}>
@@ -169,14 +195,14 @@ export default function VisitsCard({ className }: { className: string }) {
 
           <VisitsChart series={stats.series} />
 
-          {stats.topPages.length > 0 && (
+          {topPages.length > 0 && (
             <div className="flex flex-col gap-2">
               <h3 className="text-sm font-bold">Pages les plus vues</h3>
               <ul className="flex flex-col gap-1.5">
-                {stats.topPages.slice(0, 5).map((p) => (
+                {topPages.map((p) => (
                   <li key={p.path} className="grid grid-cols-[minmax(0,1fr)_6rem_3rem] items-center gap-3 text-sm">
                     <span className="truncate" title={p.path}>
-                      {label(p.path)}
+                      {p.label}
                     </span>
                     <span aria-hidden="true" className="h-2 rounded-full bg-loom-surface-2">
                       <span className="block h-2 rounded-full bg-loom-accent-text" style={{ width: `${(p.pageViews / topMax) * 100}%` }} />
@@ -187,7 +213,7 @@ export default function VisitsCard({ className }: { className: string }) {
               </ul>
             </div>
           )}
-          <p className="text-xs text-loom-text-muted">Source : Cloudflare Web Analytics (sans cookies)</p>
+          <p className="text-xs text-loom-text-muted">Source : Cloudflare Web Analytics, sans cookies. Chiffres estimés par Cloudflare à partir d'un échantillon des visites.</p>
         </>
       )}
     </section>
