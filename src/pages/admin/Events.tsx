@@ -27,6 +27,9 @@ import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import { Badge } from "@/components/ui/badge";
 import { getCapacity, isSaleEnded, normalizeHelloAssoSlug } from "@/lib/ticketing";
+import { eventCity } from "@/lib/eventPlace";
+import { todayISO } from "@/lib/eventDates";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +38,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const LOCATION_EXAMPLE = "« Le Marvelous, 3 rue Saint-Ravy, 34000 Montpellier »";
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -220,6 +225,13 @@ export default function AdminEvents() {
         return;
       }
 
+      // Filtre par ville de l'agenda : la ville doit être lisible dans le lieu.
+      // Pas exigé pour les événements passés (anciens lieux saisis sans ville).
+      if (date >= todayISO() && !eventCity(location)) {
+        toast.error(`Indiquez l'adresse complète du lieu, avec le code postal et la ville (ex. ${LOCATION_EXAMPLE})`);
+        return;
+      }
+
       const capacity = parseCapacity(ticket_capacity);
       if (capacity === undefined) {
         toast.error("La jauge doit être un nombre entier de places supérieur à 0");
@@ -267,6 +279,13 @@ export default function AdminEvents() {
       
       if (!title || !location || !date || !time || !description || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+
+      // Filtre par ville de l'agenda : la ville doit être lisible dans le lieu.
+      // Pas exigé pour les événements passés (anciens lieux saisis sans ville).
+      if (date >= todayISO() && !eventCity(location)) {
+        toast.error(`Indiquez l'adresse complète du lieu, avec le code postal et la ville (ex. ${LOCATION_EXAMPLE})`);
         return;
       }
 
@@ -681,14 +700,18 @@ export default function AdminEvents() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Lieu</Label>
+                <Label htmlFor="location">Lieu (adresse complète)</Label>
                 <Input
                   id="location"
                   name="location"
                   value={eventForm.location}
                   onChange={handleInputChange}
-                  placeholder="Ex: Montpellier, Le Coxx..."
+                  placeholder="Le Marvelous, 3 rue Saint-Ravy, 34000 Montpellier"
+                  aria-describedby="location-help"
                 />
+                <p id="location-help" className="text-xs text-muted-foreground">
+                  Nom du lieu, adresse, code postal et ville : la ville sert au filtre de l'agenda, l'adresse à l'itinéraire.
+                </p>
               </div>
             </div>
 
