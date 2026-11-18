@@ -6,6 +6,7 @@ import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { compressImage } from './imageCompression.js';
 import { authConfigured, requireAdmin } from './auth.js';
+import { serverStatus } from './status.js';
 
 const app = express();
 
@@ -285,6 +286,17 @@ app.delete('/upload/images', requireAdmin, express.json(), async (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// État du serveur pour le tableau de bord de l'admin (disque, mémoire, certificat,
+// dernier déploiement) : réservé aux admins, ces informations n'ont pas à être publiques.
+app.get('/upload/status', requireAdmin, async (req, res) => {
+  try {
+    res.json(await serverStatus());
+  } catch (err) {
+    console.error('Status error', err);
+    res.status(500).json({ error: 'Status error' });
+  }
+});
 
 // Erreurs (fichier refusé, taille dépassée, CORS…) -> réponse JSON propre
 // eslint-disable-next-line no-unused-vars

@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { CalendarDays, ChevronRight, FileText, Plus, Ticket } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import HealthCard from "@/components/admin/dashboard/HealthCard";
+import VisitsCard from "@/components/admin/dashboard/VisitsCard";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,8 +61,9 @@ function useDashboard() {
 
 /**
  * Tableau de bord de l'admin (maquette admin/Main) : prochains événements, points
- * à traiter, messages, derniers articles, chiffres clés. Les blocs « Visites » et
- * « Santé du site » de la maquette viendront avec Cloudflare / Uptime Kuma.
+ * à traiter, messages, derniers articles, chiffres clés, et en tête les blocs
+ * « Visites du site » (Cloudflare Web Analytics) et « Santé du site » (UptimeRobot +
+ * route /upload/status du serveur d'images), via src/lib/siteStats.ts.
  */
 export default function AdminDashboard() {
   const { profile } = useAuth();
@@ -157,6 +160,12 @@ export default function AdminDashboard() {
             {firstName && ` ${firstName}`}
           </p>
           <p className="text-sm text-loom-text-muted">{subtitle}</p>
+        </div>
+
+        {/* Visites (Cloudflare Web Analytics) et santé du site (UptimeRobot + serveur) */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <VisitsCard className={card} />
+          <HealthCard className={card} />
         </div>
 
         {error ? (
