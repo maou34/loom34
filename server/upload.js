@@ -53,6 +53,8 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 const PORT = Number(process.env.UPLOAD_PORT || 8081);
+// Écoute uniquement en local : nginx fait le proxy depuis l'extérieur (UPLOAD_HOST pour changer)
+const HOST = process.env.UPLOAD_HOST || '127.0.0.1';
 const ROOT_DIR = path.resolve(process.cwd(), 'public', 'gallery');
 
 console.log('Serving gallery from:', ROOT_DIR);
@@ -67,7 +69,17 @@ fs.mkdirSync(ROOT_DIR, { recursive: true });
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024, files: 100 }
+  limits: { fileSize: 50 * 1024 * 1024, files: 100 },
+  // Images uniquement : un .html / .js / .svg déposé serait ensuite servi tel quel
+  // depuis upload.lgbt-loom.fr (contenu piégé sur notre domaine)
+  fileFilter(req, file, cb) {
+    const okExt = /\.(jpe?g|png|gif|webp)$/i.test(file.originalname || '');
+    const okMime = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype || '');
+    if (okExt && okMime) return cb(null, true);
+    const err = new Error(`Type de fichier refusé : ${file.originalname}`);
+    err.status = 400;
+    return cb(err);
+  }
 });
 
 /**
@@ -130,7 +142,7 @@ async function uploadHandler(req, res) {
     for (const file of files) {
       const original = path.basename(file.originalname || 'image.jpg');
       const safeBase = sanitizeSegment(original.replace(/\.[^.]+$/, ''));
-      const ext = path.extname(original) || '.jpg';
+      const ext = path.extname(original).toLowerCase() || '.jpg';
 
       const out = await uniquePath(targetDir, `${safeBase}${ext}`);
       const compressedBuffer = await compressImage(file.buffer, ext);
@@ -274,6 +286,14 @@ app.delete('/upload/images', requireAdmin, express.json(), async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.listen(PORT, () => {
-  console.log(`Upload server listening on http://localhost:${PORT}`);
+// Erreurs (fichier refusé, taille dépassée, CORS…) -> réponse JSON propre
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  const status = err.status || (err instanceof multer.MulterError ? 400 : 500);
+  if (status >= 500) console.error('Unhandled error', err);
+  res.status(status).json({ error: err.message || 'Server error' });
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`Upload server listening on http://${HOST}:${PORT}`);
 });
