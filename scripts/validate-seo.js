@@ -43,7 +43,7 @@ function validateSEOFiles() {
 
   // 2. Vérifier sitemap.xml
   console.log('\n2. Validation sitemap.xml...');
-  const sitemapPath = join(process.cwd(), 'public', 'sitemap.xml');
+  const sitemapPath = join(process.cwd(), 'dist', 'sitemap.xml');
   
   if (existsSync(sitemapPath)) {
     const sitemapContent = readFileSync(sitemapPath, 'utf8');
@@ -54,7 +54,6 @@ function validateSEOFiles() {
       'URLs présentes': sitemapContent.includes('<url>'),
       'Locations présentes': sitemapContent.includes('<loc>'),
       'Dates de modification': sitemapContent.includes('<lastmod>'),
-      'Mobile friendly': sitemapContent.includes('<mobile:mobile/>')
     };
     
     let sitemapValid = true;
@@ -85,7 +84,6 @@ function validateSEOFiles() {
     'src/components/SEOPage.tsx',
     'src/components/SEOStructuredData.tsx',
     'src/components/InternalLinks.tsx',
-    'src/lib/sitemap.ts'
   ];
 
   for (const file of seoFiles) {

@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "node scripts/generate-seo.js",
     "build:dev": "vite build --mode development",
-    "build:seo": "node scripts/generate-seo.js && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "migrate:gallery": "node scripts/migrate-gallery.js",

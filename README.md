@@ -134,10 +134,11 @@ Ce script:
 
 ## 🚀 Déploiement
 
-Le site est déployé sur Vercel avec les configurations suivantes :
-- Build automatique à chaque push
-- Variables d'environnement pour les clés Supabase
-- Optimisation des performances
+Le site est hébergé sur un VPS OVH :
+- mise à jour par `git pull` puis `npm run build` dans le dépôt du serveur ; le dossier `dist/` est servi tel quel ;
+- `npm run build` régénère aussi `dist/sitemap.xml` (étape `postbuild`) à partir des articles, événements et albums publiés ;
+- le serveur d'images (`server/upload.js`, `upload.lgbt-loom.fr`) se déploie et se redémarre à part ; quand une modification touche les deux, déployer d'abord le site, puis le serveur d'images ;
+- les fonctions Supabase (`supabase/functions/*`) se déploient avec `supabase functions deploy <nom>`.
 
 ## 🔧 Configuration Requise
 
@@ -164,7 +165,6 @@ npm run build
 
 - Mise à jour régulière des dépendances
 - Sauvegarde automatique de la base de données Supabase
-- Monitoring des performances via Vercel Analytics
 
 ### Migration galerie vers stockage local
 
