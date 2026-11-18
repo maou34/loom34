@@ -185,7 +185,7 @@ export default function AdminMonsieurOurs() {
               <CardTitle>Palmarès</CardTitle>
               <CardDescription>Une année = le lauréat et ses deux oursons. L'année la plus récente est « En titre ».</CardDescription>
             </div>
-            <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={addYear}>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={addYear}>
               <Plus className="mr-2 h-4 w-4" /> Ajouter une année
             </Button>
           </CardHeader>
@@ -257,7 +257,7 @@ export default function AdminMonsieurOurs() {
                       <Button variant="outline" className="text-red-600" onClick={() => setToDelete(selected)}>
                         <Trash2 className="mr-2 h-4 w-4" /> Supprimer l'année
                       </Button>
-                      <Button className="bg-orange-600 text-white hover:bg-orange-700" disabled={savingYear} onClick={saveYear}>
+                      <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={savingYear} onClick={saveYear}>
                         Enregistrer l'année
                       </Button>
                     </div>
@@ -299,7 +299,7 @@ export default function AdminMonsieurOurs() {
               <Input id="mo-cta" value={cta} onChange={(e) => setCta(e.target.value)} />
             </div>
             <div className="flex justify-end">
-              <Button className="bg-orange-600 text-white hover:bg-orange-700" disabled={savingPage} onClick={savePage}>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={savingPage} onClick={savePage}>
                 Enregistrer la page
               </Button>
             </div>

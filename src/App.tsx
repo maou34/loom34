@@ -79,6 +79,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/admin/partners": "LOOM Admin - Partenaires",
   "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
+  "/admin/navigation": "LOOM Admin - Navigation",
   "/admin/monsieur-ours": "LOOM Admin - Monsieur Ours",
   "/admin/history": "LOOM Admin - Historique",
   "/admin/team": "LOOM Admin - La Tanière",
@@ -175,6 +176,8 @@ const App = () => {
                     <Route path="/admin/seo" element={<AdminSEO />} />
                     <Route path="/admin/partners" element={<AdminPartners />} />
                     <Route path="/admin/home-settings" element={<AdminHomeSettings />} />
+                    {/* Navigation (URLs Boutique / Adhésion) : même écran que la page d'accueil en attendant sa séparation */}
+                    <Route path="/admin/navigation" element={<AdminHomeSettings />} />
                     <Route path="/admin/monsieur-ours" element={<AdminMonsieurOurs />} />
                     <Route path="/admin/history" element={<AdminHistory />} />
                     <Route path="/admin/team" element={<AdminTeam />} />

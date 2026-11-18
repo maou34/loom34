@@ -316,7 +316,7 @@ export default function Gallery() {
         <div className="w-100 border-r bg-gray-50/50 flex flex-col">
           <div className="p-4">
             <Button
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => {
                 setAlbumForm({ title: "" });
                 setIsCreateAlbumOpen(true);

@@ -147,7 +147,7 @@ export default function AdminTeam() {
                   aria-label={`Titre de la section « ${group.title} »`}
                 />
                 <div className="ml-auto flex gap-2">
-                  <Button size="sm" className="bg-orange-600 text-white hover:bg-orange-700" onClick={() => openMember(group.id)}>
+                  <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => openMember(group.id)}>
                     <UserPlus className="mr-1 h-4 w-4" /> Ajouter un membre
                   </Button>
                   <Button size="sm" variant="ghost" className="text-red-600" onClick={() => deleteGroup(group.id, group.title, group.team_members.length)} aria-label={`Supprimer la section « ${group.title} »`}>
@@ -237,7 +237,7 @@ export default function AdminTeam() {
             <Button variant="outline" onClick={() => setMemberDialog({ open: false, editing: null })}>
               Annuler
             </Button>
-            <Button className="bg-orange-600 text-white hover:bg-orange-700" disabled={busy} onClick={saveMember}>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={busy} onClick={saveMember}>
               {memberDialog.editing ? "Enregistrer" : "Ajouter"}
             </Button>
           </DialogFooter>

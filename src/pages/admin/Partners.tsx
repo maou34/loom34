@@ -163,7 +163,7 @@ export default function AdminPartners() {
               Gérer les catégories
             </Button>
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
+              className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" 
               onClick={openCreateDialog}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -402,7 +402,7 @@ export default function AdminPartners() {
               Annuler
             </Button>
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleSubmit}
             >
               {isCreating ? "Ajouter" : "Enregistrer"}

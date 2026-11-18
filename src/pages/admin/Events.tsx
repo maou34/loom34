@@ -503,7 +503,7 @@ export default function AdminEvents() {
               </Button>
             )}
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
+              className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" 
               onClick={resetForm}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -900,7 +900,7 @@ export default function AdminEvents() {
               Annuler
             </Button>
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={isCreating ? handleCreateEvent : handleUpdateEvent}
             >
               {isCreating ? "Créer l'événement" : "Enregistrer les modifications"}

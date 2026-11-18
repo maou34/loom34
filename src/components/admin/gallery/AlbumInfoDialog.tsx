@@ -148,7 +148,7 @@ export default function AlbumInfoDialog({ open, onOpenChange, albumId, images }:
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button className="bg-orange-600 text-white hover:bg-orange-700" disabled={saving || isLoading} onClick={save}>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saving || isLoading} onClick={save}>
             Enregistrer
           </Button>
         </DialogFooter>

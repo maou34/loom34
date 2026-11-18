@@ -89,7 +89,7 @@ export default function AdminHistory() {
           <p className="text-sm text-gray-600">
             Les dates de la frise « Notre histoire » (page L'asso), triées automatiquement par année puis par mois.
           </p>
-          <Button className="bg-orange-600 text-white hover:bg-orange-700" onClick={openCreate}>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={openCreate}>
             <Plus className="mr-2 h-4 w-4" /> Ajouter une date
           </Button>
         </div>
@@ -183,7 +183,7 @@ export default function AdminHistory() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Annuler
             </Button>
-            <Button className="bg-orange-600 text-white hover:bg-orange-700" disabled={saving} onClick={save}>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saving} onClick={save}>
               {editing ? "Enregistrer" : "Ajouter"}
             </Button>
           </DialogFooter>

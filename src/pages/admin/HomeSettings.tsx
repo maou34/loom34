@@ -166,7 +166,7 @@ export default function AdminHomeSettings() {
 
             <div className="flex justify-end">
               <Button
-                className="bg-orange-600 hover:bg-orange-700 text-white"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
                 onClick={handleSave}
                 disabled={saving}
               >
