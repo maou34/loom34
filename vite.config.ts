@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       "/upload": {
-        target: "http://localhost:8081",
+        target: "http://127.0.0.1:8081",
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/upload/, "/upload"),
         // Configuration CORS
@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => ({
     host: "localhost",
     port: 4173,
     proxy: {
-      "/upload": "http://localhost:8081",
+      "/upload": "http://127.0.0.1:8081",
     },
   },
 
