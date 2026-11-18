@@ -33,6 +33,8 @@ const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const AdminPartners = lazy(() => import("./pages/admin/Partners"));
 const AdminHomeSettings = lazy(() => import("./pages/admin/HomeSettings"));
 const AdminMonsieurOurs = lazy(() => import("./pages/admin/MonsieurOurs"));
+const AdminHistory = lazy(() => import("./pages/admin/History"));
+const AdminTeam = lazy(() => import("./pages/admin/Team"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
@@ -78,6 +80,8 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/partners": "LOOM Admin - Partenaires",
   "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
   "/admin/monsieur-ours": "LOOM Admin - Timeline Mr Ours",
+  "/admin/history": "LOOM Admin - Historique",
+  "/admin/team": "LOOM Admin - La Tanière",
   "/terms": "LOOM - Conditions d'utilisation",
   "/legal-notice": "LOOM - Mentions légales",
   "/unauthorized": "LOOM - Accès non autorisé",
@@ -172,6 +176,8 @@ const App = () => {
                     <Route path="/admin/partners" element={<AdminPartners />} />
                     <Route path="/admin/home-settings" element={<AdminHomeSettings />} />
                     <Route path="/admin/monsieur-ours" element={<AdminMonsieurOurs />} />
+                    <Route path="/admin/history" element={<AdminHistory />} />
+                    <Route path="/admin/team" element={<AdminTeam />} />
                   </Route>
                 </Route>
 

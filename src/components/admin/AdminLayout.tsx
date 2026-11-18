@@ -14,7 +14,9 @@ import {
   Users,
   MessageSquare,
   Home,
-  Crown
+  Crown,
+  History,
+  UsersRound
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -79,6 +81,16 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       title: "Timeline Mr Ours",
       href: "/admin/monsieur-ours",
       icon: <Crown className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "Historique",
+      href: "/admin/history",
+      icon: <History className="h-5 w-5 mr-2" />,
+    },
+    {
+      title: "La Tanière",
+      href: "/admin/team",
+      icon: <UsersRound className="h-5 w-5 mr-2" />,
     },
   ];
 

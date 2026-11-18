@@ -76,6 +76,96 @@ export type Database = {
           }
         ]
       }
+      history_entries: {
+        Row: {
+          id: string
+          year: number
+          /** Libellé libre affiché au-dessus du titre : « Juin », « 9 novembre », « Aujourd'hui » */
+          month_label: string | null
+          /** 1–12, départage les dates d'une même année (tri) */
+          sort_month: number | null
+          title: string
+          /** 160 caractères max (contrainte CHECK) */
+          body: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          year: number
+          month_label?: string | null
+          sort_month?: number | null
+          title: string
+          body: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          year?: number
+          month_label?: string | null
+          sort_month?: number | null
+          title?: string
+          body?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_groups: {
+        Row: {
+          id: string
+          title: string
+          position: number
+        }
+        Insert: {
+          id?: string
+          title: string
+          position?: number
+        }
+        Update: {
+          id?: string
+          title?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          id: string
+          group_id: string
+          name: string
+          role: string
+          /** URL de la photo ; NULL = initiales sur fond beige */
+          photo: string | null
+          position: number
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          name: string
+          role: string
+          photo?: string | null
+          position?: number
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          name?: string
+          role?: string
+          photo?: string | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "team_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       article_categories: {
         Row: {
           id: string
