@@ -75,7 +75,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/events": "LOOM Admin - Événements",
   "/admin/gallery": "LOOM Admin - Galerie",
   "/admin/users": "LOOM Admin - Utilisateurs",
-  "/admin/tickets": "LOOM Admin - Tickets",
+  "/admin/tickets": "LOOM Admin - Messages",
   "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/admin/partners": "LOOM Admin - Partenaires",
   "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",

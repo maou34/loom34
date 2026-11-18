@@ -1,381 +1,271 @@
-import { useState, useEffect } from 'react';
-import { db } from '@/db/client';
-import { Tables } from '@/db/types';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import AdminLayout from '@/components/admin/AdminLayout';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
-  Search, 
-  Eye, 
-  Trash2, 
-  Mail, 
-  MessageSquare, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle,
-  MoreHorizontal
-} from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, CheckCircle2, Inbox, Mail, RotateCcw, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import AdminLayout from "@/components/admin/AdminLayout";
+import { db } from "@/db/client";
+import type { Tables } from "@/db/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
-type ContactTicket = Tables<'contact_tickets'> & {
-  id: number;
-  status: string; // 'new' | 'read' | 'replied'
+type Ticket = Tables<"contact_tickets">;
+
+/**
+ * Statuts acceptés par la contrainte CHECK de contact_tickets :
+ *   Nouveau     → non lu (compté dans la pastille du menu)
+ *   En attente  → lu, reste à traiter
+ *   Répondu / Fermé → traité
+ */
+const TO_HANDLE = ["Nouveau", "En attente"];
+const HANDLED = ["Répondu", "Fermé"];
+
+type Tab = "todo" | "done" | "all";
+const TABS: { id: Tab; label: string }[] = [
+  { id: "todo", label: "À traiter" },
+  { id: "done", label: "Traités" },
+  { id: "all", label: "Tous" },
+];
+
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const formatWhen = (iso: string) => {
+  const d = new Date(iso);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay
+    ? d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
 };
 
+/** Admin « Messages » (maquette admin/Messages) : messages du formulaire « Nous écrire ». */
 export default function Tickets() {
-  const [tickets, setTickets] = useState<ContactTicket[]>([]);
-  const [filteredTickets, setFilteredTickets] = useState<ContactTicket[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  // Dialog states
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<ContactTicket | null>(null);
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get("onglet") as Tab) || "todo";
+  const selectedId = Number(searchParams.get("message")) || null;
+  const [query, setQuery] = useState("");
+  const [toDelete, setToDelete] = useState<Ticket | null>(null);
 
+  const { data: tickets = [], isLoading } = useQuery({
+    queryKey: ["admin", "tickets"],
+    queryFn: async () => {
+      const { data, error } = await db.from("contact_tickets").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const counts = useMemo(
+    () => ({
+      todo: tickets.filter((t) => TO_HANDLE.includes(t.status)).length,
+      done: tickets.filter((t) => HANDLED.includes(t.status)).length,
+      all: tickets.length,
+    }),
+    [tickets],
+  );
+
+  const visible = useMemo(() => {
+    const q = fold(query.trim());
+    return tickets.filter((t) => {
+      if (tab === "todo" && !TO_HANDLE.includes(t.status)) return false;
+      if (tab === "done" && !HANDLED.includes(t.status)) return false;
+      return !q || fold(`${t.name} ${t.email} ${t.subject} ${t.message}`).includes(q);
+    });
+  }, [tickets, tab, query]);
+
+  const selected = tickets.find((t) => t.id === selectedId) ?? null;
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin", "tickets"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "unreadMessages"] });
+  };
+
+  const setStatus = async (ticket: Ticket, status: string, success?: string) => {
+    const { error } = await db.from("contact_tickets").update({ status }).eq("id", ticket.id);
+    if (error) {
+      toast.error(`Erreur : ${error.message}`);
+      return false;
+    }
+    if (success) toast.success(success);
+    refresh();
+    return true;
+  };
+
+  // Ouvrir un message non lu le passe en « lu, à traiter »
   useEffect(() => {
-    fetchTickets();
-  }, []);
+    if (selected?.status === "Nouveau") setStatus(selected, "En attente");
+  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
-      const filtered = tickets.filter(ticket => 
-        (ticket.name?.toLowerCase() || '').includes(lowerQuery) ||
-        (ticket.email?.toLowerCase() || '').includes(lowerQuery) ||
-        (ticket.subject?.toLowerCase() || '').includes(lowerQuery)
-      );
-      setFilteredTickets(filtered);
-    } else {
-      setFilteredTickets(tickets);
-    }
-  }, [searchQuery, tickets]);
-
-  const fetchTickets = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await db
-        .from('contact_tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTickets(data || []);
-      setFilteredTickets(data || []);
-    } catch (error) {
-      console.error('Error fetching tickets:', error);
-      toast.error('Erreur lors du chargement des tickets');
-    } finally {
-      setLoading(false);
-    }
+  const select = (id: number | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set("message", String(id));
+    else next.delete("message");
+    setSearchParams(next, { replace: true });
+  };
+  const selectTab = (t: Tab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("onglet", t);
+    next.delete("message");
+    setSearchParams(next, { replace: true });
   };
 
-  const updateTicketStatus = async (ticketId: number, newStatus: string) => {
-    try {
-      const { error } = await db
-        .from('contact_tickets')
-        .update({ status: newStatus })
-        .eq('id', ticketId);
-
-      if (error) throw error;
-
-      const updatedTickets = tickets.map(ticket =>
-        ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
-      );
-      
-      setTickets(updatedTickets);
-      
-      // Update selected ticket if open
-      if (selectedTicket && selectedTicket.id === ticketId) {
-        setSelectedTicket({ ...selectedTicket, status: newStatus });
-      }
-
-      toast.success('Statut mis à jour');
-    } catch (error) {
-      console.error('Error updating ticket status:', error);
-      toast.error('Erreur lors de la mise à jour du statut');
-    }
+  const remove = async () => {
+    if (!toDelete) return;
+    const { error } = await db.from("contact_tickets").delete().eq("id", toDelete.id);
+    if (error) return toast.error(`Erreur : ${error.message}`);
+    toast.success("Message supprimé");
+    setToDelete(null);
+    select(null);
+    refresh();
   };
 
-  const handleDeleteTicket = async () => {
-    if (!selectedTicket) return;
-    try {
-      const { error } = await db
-        .from('contact_tickets')
-        .delete()
-        .eq('id', selectedTicket.id);
-        
-      if (error) throw error;
-      
-      setTickets(tickets.filter(t => t.id !== selectedTicket.id));
-      toast.success('Ticket supprimé avec succès');
-      setDeleteDialogOpen(false);
-      setDetailsDialogOpen(false); // Close details if open
-    } catch (error) {
-      console.error('Erreur lors de la suppression du ticket:', error);
-      toast.error('Erreur lors de la suppression du ticket');
-    }
-  };
-
-  const openDetails = (ticket: ContactTicket) => {
-    setSelectedTicket(ticket);
-    setDetailsDialogOpen(true);
-    // Optionally mark as read if it's new
-    if (ticket.status === 'new') {
-      updateTicketStatus(ticket.id, 'read');
-    }
-  };
-
-  const confirmDelete = (ticket: ContactTicket) => {
-    setSelectedTicket(ticket);
-    setDeleteDialogOpen(true);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'new':
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200"><AlertCircle className="w-3 h-3 mr-1" /> Nouveau</Badge>;
-      case 'read':
-        return <Badge variant="outline" className="text-gray-600 border-gray-200"><Clock className="w-3 h-3 mr-1" /> Lu</Badge>;
-      case 'replied':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200"><CheckCircle2 className="w-3 h-3 mr-1" /> Répondu</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const replyHref = (t: Ticket) =>
+    `mailto:${encodeURIComponent(t.email)}?subject=${encodeURIComponent(`Re : ${t.subject}`)}&body=${encodeURIComponent(
+      `Bonjour ${t.name},\n\n\n\n— L'équipe LOOM\n\n> ${t.message.split("\n").join("\n> ")}`,
+    )}`;
 
   return (
-    <AdminLayout title="Tickets de contact">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="Rechercher un ticket..." 
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <AdminLayout title="Messages">
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-loom-text-muted">Les demandes envoyées depuis le formulaire « Nous écrire » du site (page L'asso).</p>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div role="tablist" aria-label="Filtrer les messages" className="flex gap-1 rounded-xl bg-loom-surface-2 p-1 ring-1 ring-loom-border">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => selectTab(t.id)}
+                className={cn("h-9 rounded-[9px] px-3.5 text-sm", tab === t.id ? "bg-loom-surface font-bold shadow-sm" : "text-loom-text-2 hover:text-loom-text")}
+              >
+                {t.label} <span className="text-loom-text-muted">({counts[t.id]})</span>
+              </button>
+            ))}
           </div>
+          <label className="relative w-full sm:w-72">
+            <span className="sr-only">Rechercher un message</span>
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
+            <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un message…" className="pl-9" />
+          </label>
         </div>
 
-        {/* Tickets List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredTickets.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun ticket trouvé</h3>
-              <p className="text-gray-500">Votre boîte de réception est vide.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Expéditeur</TableHead>
-                    <TableHead>Sujet</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTickets.map((ticket) => (
-                    <TableRow key={ticket.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => openDetails(ticket)}>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(ticket.status)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900">{ticket.name}</span>
-                          <span className="text-xs text-gray-500 flex items-center mt-0.5">
-                            <Mail className="w-3 h-3 mr-1" /> {ticket.email}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium text-gray-700 max-w-xs truncate">
-                          {ticket.subject}
-                        </div>
-                        <div className="text-xs text-gray-500 max-w-xs truncate mt-0.5">
-                          {ticket.message}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-gray-500">
-                          {format(new Date(ticket.created_at), 'dd MMM yyyy HH:mm', { locale: fr })}
+        <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+          {/* Liste (masquée en mobile quand un message est ouvert) */}
+          <ul className={cn("flex flex-col gap-2", selected && "hidden lg:flex")} aria-label="Messages">
+            {isLoading ? (
+              <li className="text-loom-text-muted">Chargement…</li>
+            ) : visible.length === 0 ? (
+              <li className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong p-8 text-center">
+                <Inbox aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
+                <span className="font-bold">{tab === "todo" ? "Rien à traiter" : "Aucun message"}</span>
+                {tab === "todo" && <span className="text-sm text-loom-text-muted">Les nouveaux messages apparaîtront ici.</span>}
+              </li>
+            ) : (
+              visible.map((t) => {
+                const unread = t.status === "Nouveau";
+                const handled = HANDLED.includes(t.status);
+                return (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() => select(t.id)}
+                      aria-current={selectedId === t.id ? "true" : undefined}
+                      className={cn(
+                        "flex w-full flex-col gap-0.5 rounded-xl border p-3 text-left transition-colors",
+                        selectedId === t.id ? "border-loom-border-strong bg-loom-chip-bg" : "border-loom-border bg-loom-surface hover:bg-loom-surface-2",
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        {unread && <span aria-label="Non lu" className="h-2 w-2 flex-none rounded-full bg-loom-chip-hot-bg" />}
+                        <span className={cn("min-w-0 flex-1 truncate", unread ? "font-bold" : "font-semibold")}>{t.name}</span>
+                        <span className="flex-none text-xs text-loom-text-muted">{formatWhen(t.created_at)}</span>
+                      </span>
+                      <span className={cn("truncate text-sm", unread ? "font-semibold" : "text-loom-text-2")}>{t.subject}</span>
+                      <span className="truncate text-sm text-loom-text-muted">{t.message}</span>
+                      {handled && (
+                        <span className="mt-1 inline-flex items-center gap-1 self-start text-xs font-semibold text-loom-success">
+                          <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" /> Traité
                         </span>
-                      </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => openDetails(ticket)}>
-                              <Eye className="mr-2 h-4 w-4" /> Voir détails
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(ticket)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                      )}
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+
+          {/* Message ouvert */}
+          <section aria-label="Message" className={cn("min-w-0 rounded-2xl border border-loom-border p-5", !selected && "hidden lg:block")}>
+            {!selected ? (
+              <div className="flex flex-col gap-3 text-sm text-loom-text-2">
+                <h2 className="text-base font-bold text-loom-text">Quand un message arrive</h2>
+                <ol className="flex list-decimal flex-col gap-1.5 pl-5">
+                  <li>Il s'affiche dans la liste, avec une pastille dans le menu tant qu'il n'est pas lu.</li>
+                  <li>Cliquez dessus pour le lire en entier et y répondre par e-mail.</li>
+                  <li>« Marquer comme traité » le range dans l'onglet Traités : les autres admins savent qu'il a été pris en charge.</li>
+                </ol>
+              </div>
+            ) : (
+              <article className="flex flex-col gap-4">
+                <button type="button" onClick={() => select(null)} className="flex items-center gap-1 self-start text-sm font-semibold text-loom-link lg:hidden">
+                  <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Messages
+                </button>
+                <header className="flex flex-col gap-1">
+                  <h2 className="text-xl font-bold">{selected.subject}</h2>
+                  <p className="text-sm text-loom-text-2">
+                    <span className="font-semibold">{selected.name}</span> ·{" "}
+                    <a href={`mailto:${selected.email}`} className="text-loom-link underline underline-offset-2">
+                      {selected.email}
+                    </a>
+                  </p>
+                  <p className="text-xs text-loom-text-muted">
+                    Reçu le {new Date(selected.created_at).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })} · {selected.status}
+                  </p>
+                </header>
+                <div className="whitespace-pre-wrap rounded-xl bg-loom-surface-2 p-4 leading-relaxed">{selected.message}</div>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    <a href={replyHref(selected)}>
+                      <Mail className="mr-2 h-4 w-4" /> Répondre par e-mail
+                    </a>
+                  </Button>
+                  {HANDLED.includes(selected.status) ? (
+                    <Button variant="outline" onClick={() => setStatus(selected, "En attente", "Remis dans « À traiter »")}>
+                      <RotateCcw className="mr-2 h-4 w-4" /> Remettre à traiter
+                    </Button>
+                  ) : (
+                    <Button variant="outline" onClick={() => setStatus(selected, "Répondu", "Message marqué comme traité")}>
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Marquer comme traité
+                    </Button>
+                  )}
+                  <Button variant="ghost" className="text-loom-danger" onClick={() => setToDelete(selected)}>
+                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                  </Button>
+                </div>
+              </article>
+            )}
+          </section>
         </div>
       </div>
 
-      {/* Ticket Details Dialog */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Détails du ticket</span>
-              {selectedTicket && getStatusBadge(selectedTicket.status)}
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedTicket && (
-            <div className="space-y-6 py-4">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <div>
-                  <Label className="text-xs text-gray-500 uppercase tracking-wider">Expéditeur</Label>
-                  <div className="font-medium mt-1">{selectedTicket.name}</div>
-                  <div className="text-sm text-gray-600 flex items-center mt-1">
-                    <Mail className="w-3 h-3 mr-1" /> 
-                    <a href={`mailto:${selectedTicket.email}`} className="hover:underline text-blue-600">
-                      {selectedTicket.email}
-                    </a>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500 uppercase tracking-wider">Date</Label>
-                  <div className="font-medium mt-1">
-                    {format(new Date(selectedTicket.created_at), 'PPP à HH:mm', { locale: fr })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-gray-500 uppercase tracking-wider">Sujet</Label>
-                <div className="text-lg font-semibold text-gray-900">{selectedTicket.subject}</div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-gray-500 uppercase tracking-wider">Message</Label>
-                <div className="p-4 bg-white border rounded-lg text-gray-700 whitespace-pre-wrap min-h-[150px]">
-                  {selectedTicket.message}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t">
-                <div className="flex items-center gap-2">
-                  <Label>Changer le statut :</Label>
-                  <Select 
-                    value={selectedTicket.status} 
-                    onValueChange={(val) => updateTicketStatus(selectedTicket.id, val)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Statut" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="new">Nouveau</SelectItem>
-                      <SelectItem value="read">Lu</SelectItem>
-                      <SelectItem value="replied">Répondu</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
-                    Fermer
-                  </Button>
-                  <Button variant="default" asChild>
-                    <a href={`mailto:${selectedTicket.email}?subject=RE: ${selectedTicket.subject}`}>
-                      <Mail className="w-4 h-4 mr-2" /> Répondre
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogTitle>Supprimer ce message ?</DialogTitle>
+            <DialogDescription>
+              Le message de {toDelete?.name} sera définitivement effacé (à faire par exemple si la personne demande la suppression de ses données).
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-gray-600">
-            Êtes-vous sûr de vouloir supprimer ce ticket de <span className="font-semibold">{selectedTicket?.name}</span> ? 
-            Cette action est irréversible.
-          </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setToDelete(null)}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTicket}>
-              Supprimer définitivement
+            <Button variant="destructive" onClick={remove}>
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>
