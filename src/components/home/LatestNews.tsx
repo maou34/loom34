@@ -1,17 +1,16 @@
 import { Link } from 'react-router-dom';
-import type { Tables } from '@/db/types';
 import { cn } from '@/lib/utils';
 import { formatLongDate } from '@/lib/eventDates';
 import SectionHeader from '@/components/site/SectionHeader';
 import { card, chip, container, pageFocus } from '@/components/site/styles';
 
-type Article = Pick<Tables<'articles'>, 'id' | 'title' | 'slug' | 'excerpt' | 'image' | 'category' | 'date'>;
+import { categoryName, pickFeatured, type ArticleListItem } from '@/lib/articles';
 
 const FALLBACK_IMAGE = '/loom_logo_square.jpg';
 
 /** « Les dernières nouvelles » : un article à la une + 2 vignettes (1 sur mobile). */
-export default function LatestNews({ articles, isLoading }: { articles: Article[]; isLoading: boolean }) {
-  const [lead, ...others] = articles;
+export default function LatestNews({ articles, isLoading }: { articles: ArticleListItem[]; isLoading: boolean }) {
+  const { lead, rest: others } = pickFeatured(articles);
 
   return (
     <section aria-labelledby="news-title" className={cn(container, 'flex flex-col gap-6 py-10 sm:pb-16 sm:pt-14')}>
@@ -55,7 +54,7 @@ export default function LatestNews({ articles, isLoading }: { articles: Article[
                 <span className="inline-flex items-center rounded-full bg-loom-chip-hot-bg px-2.5 py-0.5 text-xs font-extrabold text-loom-chip-hot-fg">
                   À la une
                 </span>
-                {lead.category && <span className={chip}>{lead.category}</span>}
+                {categoryName(lead) && <span className={chip}>{categoryName(lead)}</span>}
               </span>
               <span className="text-xl font-extrabold leading-tight group-hover:underline group-hover:underline-offset-4 sm:text-[28px] sm:leading-[1.15]">
                 {lead.title}
@@ -95,12 +94,12 @@ export default function LatestNews({ articles, isLoading }: { articles: Article[
                     className="h-[72px] w-[72px] flex-none rounded-xl bg-loom-surface-2 object-cover sm:h-[120px] sm:w-[120px]"
                   />
                   <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    {article.category && <span className={cn(chip, 'hidden self-start sm:inline-flex')}>{article.category}</span>}
+                    {categoryName(article) && <span className={cn(chip, 'hidden self-start sm:inline-flex')}>{categoryName(article)}</span>}
                     <span className="text-base font-extrabold leading-tight group-hover:underline group-hover:underline-offset-4 sm:text-lg">
                       {article.title}
                     </span>
                     <span className="text-sm text-loom-text-muted">
-                      <span className="sm:hidden">{article.category ? `${article.category} · ` : ''}</span>
+                      <span className="sm:hidden">{categoryName(article) ? `${categoryName(article)} · ` : ''}</span>
                       {formatLongDate(article.date)}
                     </span>
                   </span>

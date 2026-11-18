@@ -1,245 +1,260 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Newspaper, Search } from 'lucide-react';
 import { db } from '@/db/client';
-import { Search, Filter, Newspaper, X } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import ArticleCard from '@/components/ArticleCard';
-import { Tables } from '@/db/types';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { SOCIAL_LINKS } from '@/components/site/navigation';
+import { btnPrimary, btnSecondary, card, chip, container, pageFocus } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
-import { motion } from 'framer-motion';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { formatLongDate } from '@/lib/eventDates';
+import { stripMarkdown } from '@/lib/markdown';
+import {
+  ARTICLE_LIST_SELECT,
+  categoryName,
+  pickFeatured,
+  readingTime,
+  useArticleCategories,
+  type ArticleListItem,
+} from '@/lib/articles';
+
+const PAGE_SIZE = 9;
+
+/** Recherche insensible à la casse et aux accents. */
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+function ArticleImage({ src, className }: { src?: string | null; className?: string }) {
+  if (src) return <img src={src} alt="" loading="lazy" className={cn('bg-loom-surface-2 object-cover', className)} />;
+  return (
+    <div role="img" aria-label="Pas encore d'image" className={cn('flex items-center justify-center bg-loom-chip-bg text-loom-chip-fg', className)}>
+      <Newspaper aria-hidden="true" size={34} strokeWidth={1.6} />
+    </div>
+  );
+}
 
 const Articles = () => {
-  // SEO Configuration
   useSEO({
-    title: 'Articles - LOOM | Actualités et nouvelles de la communauté Bear',
-    description: 'Découvrez les derniers articles de LOOM - Les Ours Occitanie Montpellier. Actualités, événements passés, témoignages et nouvelles de notre communauté Bear.',
-    keywords: ['LOOM articles', 'actualités Bears', 'communauté Bear', 'Montpellier', 'nouvelles LGBTQ+', 'événements Bears'],
-    type: 'website'
+    title: 'Actualités - LOOM | Les nouvelles de la communauté Bear de Montpellier',
+    description: "Les actualités de LOOM - Les Ours Occitanie Montpellier : vie de l'association, partenariats, communauté Bear, retours en images.",
+    keywords: ['LOOM actualités', 'Bears', 'communauté Bear', 'Montpellier', 'association LGBTQ+'],
+    type: 'website',
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const articlesPerPage = 9;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('categorie');
+  const [query, setQuery] = useState('');
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
   const { data: articles = [], isLoading } = useQuery({
-    queryKey: ['articles', searchQuery, categoryFilter],
+    queryKey: ['articles', 'list'],
     queryFn: async () => {
-      let query = db
+      const { data, error } = await db
         .from('articles')
-        .select('*')
+        .select(ARTICLE_LIST_SELECT)
         .eq('published', true)
         .order('date', { ascending: false });
-      
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`);
-      }
-
-      if (categoryFilter && categoryFilter !== 'all') {
-        query = query.eq('category', categoryFilter);
-      }
-
-      const { data, error } = await query;
-      
       if (error) throw error;
-      return data as Tables<'articles'>[];
-    }
+      return data as unknown as ArticleListItem[];
+    },
   });
+  const { data: allCategories = [] } = useArticleCategories();
 
-  // Get unique categories for filter
-  const categories = [...new Set(articles.map(article => article.category))];
+  // Filtres : seulement les catégories qui ont des articles publiés, dans l'ordre de l'admin
+  const categories = useMemo(() => {
+    const used = new Set(articles.map((a) => a.article_categories?.id).filter(Boolean));
+    return allCategories.filter((c) => used.has(c.id));
+  }, [articles, allCategories]);
+  const activeCategory = categories.find((c) => c.name === categoryParam) ?? null;
 
-  // Calculate pagination
-  const totalPages = Math.ceil(articles.length / articlesPerPage);
-  const paginatedArticles = articles.slice(
-    (currentPage - 1) * articlesPerPage, 
-    currentPage * articlesPerPage
-  );
+  const filtered = useMemo(() => {
+    const q = fold(query.trim());
+    return articles.filter((a) => {
+      if (activeCategory && a.article_categories?.id !== activeCategory.id) return false;
+      if (!q) return true;
+      return fold(`${a.title} ${a.excerpt} ${stripMarkdown(a.content)}`).includes(q);
+    });
+  }, [articles, activeCategory, query]);
 
-  const isFiltered = searchQuery !== '' || (categoryFilter !== '' && categoryFilter !== 'all');
+  const browsing = !activeCategory && !query.trim();
+  // « À la une » en grand seulement sans filtre ni recherche
+  const { lead, rest } = browsing ? pickFeatured(filtered) : { lead: null, rest: filtered };
+  const visible = rest.slice(0, limit);
+
+  const selectCategory = (name: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (name) next.set('categorie', name);
+    else next.delete('categorie');
+    setSearchParams(next, { replace: true });
+    setLimit(PAGE_SIZE);
+  };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="flex min-h-screen flex-col bg-loom-bg text-loom-text">
       <Navbar />
-      
-      {/* Hero Section - Modern & Immersive */}
-      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-20">
-        {/* Abstract Background Shapes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <motion.div 
-            animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] bg-orange/10 rounded-full blur-3xl"
-          />
-          <motion.div 
-            animate={{ rotate: -360, scale: [1, 1.2, 1] }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-[10%] -left-[10%] w-[500px] h-[500px] bg-brown/10 rounded-full blur-3xl"
-          />
+
+      <main className={cn(container, 'flex flex-1 flex-col gap-6 pb-16 pt-6 sm:gap-7 sm:pb-[72px] sm:pt-10')}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-1.5">
+            <h1 className="text-[34px] font-extrabold tracking-[-0.02em] sm:text-[44px]">Actualités</h1>
+            <p className="text-base text-loom-text-2 sm:text-lg">Ce qui se passe chez LOOM et dans la communauté.</p>
+          </div>
+          <label className="relative w-full sm:w-[320px]">
+            <span className="sr-only">Rechercher un article</span>
+            <Search aria-hidden="true" size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-loom-text-muted" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setLimit(PAGE_SIZE);
+              }}
+              placeholder="Rechercher un article"
+              className={cn(
+                'h-12 w-full rounded-full border border-loom-border-strong bg-loom-surface pl-11 pr-4 text-base text-loom-text placeholder:text-loom-text-muted',
+                pageFocus,
+              )}
+            />
+          </label>
         </div>
 
-        <div className="container mx-auto px-4 relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <span className="inline-flex items-center gap-2 py-1 px-3 rounded-full bg-orange/10 text-orange font-semibold text-sm mb-6 tracking-wider uppercase">
-              <Newspaper className="w-4 h-4" />
-              Le Journal
-            </span>
-            <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 tracking-tight">
-              L'Actualité <span className="text-transparent bg-clip-text bg-gradient-to-r from-brown to-orange">LOOM</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              Plongez dans la vie de l'association : retours sur événements, portraits et nouvelles fraîches.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-      
-      {/* Search and Filter Bar - Floating Glass */}
-      <section className="sticky top-20 z-30 py-4 pointer-events-none">
-        <div className="container mx-auto px-4">
-          <motion.div 
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-white/80 backdrop-blur-lg border border-white/20 shadow-lg rounded-2xl p-4 max-w-4xl mx-auto pointer-events-auto"
-          >
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Rechercher un article..."
-                  className="pl-10 bg-white/50 border-gray-200 focus:border-orange focus:ring-orange/20 transition-all duration-300"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-              
-              <div className="flex gap-2 w-full md:w-auto">
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-full md:w-[200px] bg-white/50 border-gray-200 focus:ring-orange/20 transition-all duration-300">
-                    <div className="flex items-center gap-2">
-                      <Filter className="w-4 h-4 text-gray-500" />
-                      <SelectValue placeholder="Catégorie" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-white/95 backdrop-blur-xl border-white/20 shadow-xl">
-                    <SelectItem value="all" className="cursor-pointer hover:bg-orange/10 focus:bg-orange/10 focus:text-orange">Toutes les catégories</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat} className="cursor-pointer hover:bg-orange/10 focus:bg-orange/10 focus:text-orange">{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {isFiltered && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setCategoryFilter('all');
-                    }}
-                    className="text-gray-500 hover:text-red-500"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Articles Grid */}
-      <section className="py-12 pb-24">
-        <div className="container mx-auto px-4">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <div key={n} className="h-[400px] bg-gray-100 rounded-xl animate-pulse"></div>
-              ))}
-            </div>
-          ) : articles.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {paginatedArticles.map((article, index) => (
-                <motion.div
-                  key={article.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: index * 0.1 }}
+        {categories.length > 1 && (
+          <div role="group" aria-label="Filtrer par catégorie" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+            {[null, ...categories].map((c) => {
+              const pressed = (activeCategory?.id ?? null) === (c?.id ?? null);
+              return (
+                <button
+                  key={c?.id ?? 'all'}
+                  type="button"
+                  aria-pressed={pressed}
+                  onClick={() => selectCategory(c?.name ?? null)}
+                  className={cn(
+                    'h-10 flex-none rounded-full border px-4 text-[15px] font-semibold',
+                    pressed
+                      ? 'border-loom-primary-bg bg-loom-primary-bg text-loom-primary-fg'
+                      : 'border-loom-border-strong bg-loom-surface text-loom-text hover:border-loom-text-muted',
+                    pageFocus,
+                  )}
                 >
-                  <ArticleCard
-                    title={article.title}
-                    excerpt={article.excerpt}
-                    date={article.date}
-                    image={article.image}
-                    category={article.category}
-                    slug={article.slug}
-                    featured={!isFiltered && currentPage === 1 && index === 0}
-                    className={!isFiltered && currentPage === 1 && index === 0 ? "md:col-span-2 lg:col-span-2 h-full" : "h-full"}
-                  />
-                </motion.div>
+                  {c?.name ?? 'Toutes'}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {isLoading ? (
+          <div aria-hidden="true" className="flex flex-col gap-6">
+            <div className={cn(card, 'h-[340px] animate-pulse bg-loom-surface-2')} />
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className={cn(card, 'h-[300px] animate-pulse bg-loom-surface-2')} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-20">
-              <div className="bg-gray-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Search className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Aucun article trouvé</h3>
-              <p className="text-gray-500">Essayez de modifier vos critères de recherche.</p>
-            </div>
-          )}
+          </div>
+        ) : (
+          <>
+            {/* À la une */}
+            {lead && (
+              <Link
+                to={`/articles/${lead.slug}`}
+                className={cn(card, 'group flex flex-col overflow-hidden text-loom-text no-underline shadow-loom-card md:flex-row', pageFocus)}
+              >
+                {/* Desktop : l'image remplit la hauteur sans l'imposer (visuels carrés) */}
+                <span className="relative block h-52 w-full flex-none sm:h-[300px] md:h-auto md:min-h-[340px] md:w-[53%]">
+                  <ArticleImage src={lead.image} className="absolute inset-0 h-full w-full" />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-3 p-5 sm:p-8">
+                  <span className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center rounded-full bg-loom-chip-hot-bg px-2.5 py-0.5 text-xs font-extrabold text-loom-chip-hot-fg">
+                      À la une
+                    </span>
+                    {categoryName(lead) && <span className={chip}>{categoryName(lead)}</span>}
+                  </span>
+                  <span className="text-2xl font-extrabold leading-tight group-hover:underline group-hover:underline-offset-4 sm:text-[32px] sm:leading-[1.15]">
+                    {lead.title}
+                  </span>
+                  {lead.excerpt && <span className="text-base text-loom-text-2 sm:text-[17px]">{lead.excerpt}</span>}
+                  <span className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2 text-sm text-loom-text-muted">
+                    <span>
+                      {formatLongDate(lead.date)} · {readingTime(lead.content)}
+                    </span>
+                    <span aria-hidden="true" className="font-bold text-loom-link">
+                      Lire l'article →
+                    </span>
+                  </span>
+                </span>
+              </Link>
+            )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-16">
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                  
-                  {Array.from({ length: totalPages }).map((_, i) => (
-                    <PaginationItem key={i}>
-                      <PaginationLink
-                        isActive={currentPage === i + 1}
-                        onClick={() => setCurrentPage(i + 1)}
-                        className="cursor-pointer"
+            <section aria-labelledby="h-all" className="flex flex-col gap-5">
+              <h2 id="h-all" className="text-2xl font-extrabold">
+                {activeCategory ? activeCategory.name : query.trim() ? 'Résultats' : 'Tous les articles'}
+                {!browsing && <span className="ml-2 text-base font-semibold text-loom-text-muted">({filtered.length})</span>}
+              </h2>
+
+              {filtered.length === 0 ? (
+                <p className={cn(card, 'p-6 text-loom-text-muted')}>
+                  Aucun article ne correspond{query.trim() ? ` à « ${query.trim()} »` : ''}.
+                </p>
+              ) : (
+                <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {visible.map((article) => (
+                    <li key={article.id} className="flex">
+                      <Link
+                        to={`/articles/${article.slug}`}
+                        className={cn(card, 'group flex w-full flex-col overflow-hidden rounded-[18px] text-loom-text no-underline', pageFocus)}
                       >
-                        {i + 1}
-                      </PaginationLink>
-                    </PaginationItem>
+                        <ArticleImage src={article.image} className="h-[180px] w-full" />
+                        <span className="flex flex-1 flex-col gap-2 p-5">
+                          {categoryName(article) && <span className={cn(chip, 'self-start')}>{categoryName(article)}</span>}
+                          <span className="text-lg font-extrabold leading-tight group-hover:underline group-hover:underline-offset-4">
+                            {article.title}
+                          </span>
+                          {article.excerpt && (
+                            <span className="block">
+                              <span className="text-[15px] text-loom-text-2 line-clamp-2">{article.excerpt}</span>
+                            </span>
+                          )}
+                          <span className="mt-auto pt-2 text-sm text-loom-text-muted">{formatLongDate(article.date)}</span>
+                        </span>
+                      </Link>
+                    </li>
                   ))}
-                  
-                  <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
-        </div>
-      </section>
-      
+                </ul>
+              )}
+
+              {rest.length > visible.length && (
+                <button type="button" onClick={() => setLimit((n) => n + PAGE_SIZE)} className={cn(btnSecondary, 'h-12 self-center rounded-full px-6')}>
+                  Afficher plus d'articles
+                </button>
+              )}
+            </section>
+          </>
+        )}
+
+        <aside
+          aria-labelledby="h-follow"
+          className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-loom-highlight-border bg-loom-highlight-bg p-6 sm:px-8"
+        >
+          <div className="flex flex-col gap-1">
+            <h2 id="h-follow" className="text-xl font-extrabold">
+              Ne ratez rien
+            </h2>
+            <p className="text-loom-text-2">Les photos des soirées et les annonces de dernière minute passent d'abord par nos réseaux.</p>
+          </div>
+          <div className="flex gap-2.5">
+            <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className={cn(btnPrimary, 'h-11 px-5')}>
+              Instagram<span className="sr-only"> (nouvel onglet)</span>
+            </a>
+            <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className={cn(btnSecondary, 'h-11 px-5')}>
+              Facebook<span className="sr-only"> (nouvel onglet)</span>
+            </a>
+          </div>
+        </aside>
+      </main>
+
       <Footer />
     </div>
   );

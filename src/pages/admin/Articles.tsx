@@ -32,7 +32,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { motion } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ArticleCategoriesDialog from "@/components/admin/ArticleCategoriesDialog";
+import { useArticleCategories } from "@/lib/articles";
+import { Star, Tags } from "lucide-react";
 
 interface Article {
   id: string;
@@ -44,7 +47,13 @@ interface Article {
   content: string;
   excerpt: string;
   image: string;
+  category_id: string | null;
+  is_featured: boolean;
+  article_categories: { name: string } | null;
 }
+
+/** Longueur conseillée du chapô (≈ deux lignes dans les cartes) */
+const EXCERPT_MAX = 160;
 
 export default function AdminArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -56,11 +65,18 @@ export default function AdminArticles() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
+  const { data: categories = [] } = useArticleCategories();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoryCounts = articles.reduce<Record<string, number>>((acc, a) => {
+    if (a.category_id) acc[a.category_id] = (acc[a.category_id] ?? 0) + 1;
+    return acc;
+  }, {});
   
   // Form state for new/edit article
   const [articleForm, setArticleForm] = useState({
     title: "",
-    category: "",
+    category_id: "",
+    is_featured: false,
     excerpt: "",
     content: "",
     image: "https://placehold.co/600x400?text=Article+Image",
@@ -77,7 +93,7 @@ export default function AdminArticles() {
     if (searchQuery) {
       const filtered = articles.filter(article => 
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.category.toLowerCase().includes(searchQuery.toLowerCase())
+        (article.article_categories?.name ?? "").toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredArticles(filtered);
     } else {
@@ -90,7 +106,7 @@ export default function AdminArticles() {
       setLoading(true);
       const { data, error } = await db
         .from('articles')
-        .select('id, title, category, date, published, slug, content, excerpt, image')
+        .select('id, title, category, date, published, slug, content, excerpt, image, category_id, is_featured, article_categories(name)')
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -135,7 +151,8 @@ export default function AdminArticles() {
   const resetForm = () => {
     setArticleForm({
       title: "",
-      category: "",
+      category_id: "",
+      is_featured: false,
       excerpt: "",
       content: "",
       image: "https://placehold.co/600x400?text=Article+Image",
@@ -150,16 +167,20 @@ export default function AdminArticles() {
 
   const handleCreateArticle = async () => {
     try {
-      const { title, category, excerpt, content, image, published, slug, date } = articleForm;
+      const { title, category_id, is_featured, excerpt, content, image, published, slug, date } = articleForm;
+      const category = categories.find((c) => c.id === category_id);
       
       if (!title || !category || !excerpt || !content || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
+      if (is_featured) await clearFeatured();
       
       const newArticle = {
         title,
-        category,
+        category: category.name,
+        category_id: category.id,
+        is_featured,
         excerpt,
         content,
         image,
@@ -190,16 +211,20 @@ export default function AdminArticles() {
     if (!selectedArticle) return;
     
     try {
-      const { title, category, excerpt, content, image, published, slug } = articleForm;
+      const { title, category_id, is_featured, excerpt, content, image, published, slug } = articleForm;
+      const category = categories.find((c) => c.id === category_id);
       
       if (!title || !category || !excerpt || !content || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
+      if (is_featured && !selectedArticle.is_featured) await clearFeatured(selectedArticle.id);
       
       const updatedArticle = {
         title,
-        category,
+        category: category.name,
+        category_id: category.id,
+        is_featured,
         excerpt,
         content,
         image,
@@ -222,6 +247,14 @@ export default function AdminArticles() {
       console.error("Error updating article:", error);
       toast.error("Erreur lors de la mise à jour de l'article: " + error.message);
     }
+  };
+
+  /** Un seul article « À la une » (index unique en base) : on retire l'ancien avant d'en marquer un nouveau. */
+  const clearFeatured = async (exceptId?: string) => {
+    let query = db.from('articles').update({ is_featured: false }).eq('is_featured', true);
+    if (exceptId) query = query.neq('id', exceptId);
+    const { error } = await query;
+    if (error) throw error;
   };
 
   const handleDeleteArticle = async () => {
@@ -248,7 +281,8 @@ export default function AdminArticles() {
     setSelectedArticle(article);
     setArticleForm({
       title: article.title,
-      category: article.category,
+      category_id: article.category_id ?? "",
+      is_featured: article.is_featured,
       excerpt: article.excerpt,
       content: article.content,
       image: article.image,
@@ -279,13 +313,19 @@ export default function AdminArticles() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
-            onClick={resetForm}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel article
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setCategoriesOpen(true)}>
+              <Tags className="h-4 w-4 mr-2" />
+              Gérer les catégories
+            </Button>
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
+              onClick={resetForm}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nouvel article
+            </Button>
+          </div>
         </div>
 
         {/* Articles List */}
@@ -341,9 +381,20 @@ export default function AdminArticles() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="font-normal">
-                          {article.category}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {article.article_categories ? (
+                            <Badge variant="secondary" className="font-normal">
+                              {article.article_categories.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-gray-400">Sans catégorie</span>
+                          )}
+                          {article.is_featured && (
+                            <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200">
+                              <Star className="w-3 h-3 mr-1" /> À la une
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center text-sm text-gray-500">
@@ -436,14 +487,27 @@ export default function AdminArticles() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
-                <Input
-                  id="category"
-                  name="category"
-                  value={articleForm.category}
-                  onChange={handleInputChange}
-                  placeholder="Ex: Événement, Actualité..."
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="category">Catégorie</Label>
+                  <button type="button" className="text-xs font-medium text-orange-700 hover:underline" onClick={() => setCategoriesOpen(true)}>
+                    Gérer les catégories →
+                  </button>
+                </div>
+                <Select
+                  value={articleForm.category_id}
+                  onValueChange={(value) => setArticleForm((prev) => ({ ...prev, category_id: value }))}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Choisir une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
@@ -465,16 +529,40 @@ export default function AdminArticles() {
               </div>
             </div>
 
+            <div className="flex items-start gap-4 rounded-lg border p-3 bg-orange-50/50">
+              <Switch
+                id="is_featured"
+                checked={articleForm.is_featured}
+                onCheckedChange={(checked) => setArticleForm((prev) => ({ ...prev, is_featured: checked }))}
+              />
+              <div>
+                <Label htmlFor="is_featured" className="cursor-pointer font-medium">À la une</Label>
+                <p className="text-xs text-gray-500">
+                  Mis en avant en grand sur l'accueil et la page Actualités. Un seul article à la fois : cocher celui-ci retire l'ancien.
+                  Sans article à la une, c'est le plus récent qui s'affiche.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="excerpt">Extrait (Résumé)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="excerpt">Chapô</Label>
+                <span className={`text-xs ${articleForm.excerpt.length > EXCERPT_MAX ? "text-orange-700 font-medium" : "text-gray-500"}`} aria-live="polite">
+                  {articleForm.excerpt.length}/{EXCERPT_MAX}
+                </span>
+              </div>
               <Textarea
                 id="excerpt"
                 name="excerpt"
                 value={articleForm.excerpt}
                 onChange={handleInputChange}
-                placeholder="Un court résumé qui apparaîtra dans les listes..."
+                placeholder="Une ou deux phrases qui donnent envie de lire, affichées sous le titre dans les listes."
                 rows={3}
+                aria-describedby="excerpt-help"
               />
+              <p id="excerpt-help" className="text-xs text-gray-500">
+                Deux lignes maximum dans les cartes ; au-delà de {EXCERPT_MAX} caractères, le texte est coupé.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -516,6 +604,14 @@ export default function AdminArticles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ArticleCategoriesDialog
+        open={categoriesOpen}
+        onOpenChange={setCategoriesOpen}
+        categories={categories}
+        counts={categoryCounts}
+        onChanged={fetchArticles}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

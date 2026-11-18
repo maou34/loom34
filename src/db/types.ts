@@ -76,6 +76,28 @@ export type Database = {
           }
         ]
       }
+      article_categories: {
+        Row: {
+          id: string
+          name: string
+          /** Ordre des filtres sur /articles */
+          position: number
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          position?: number
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          position?: number
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           id: string
@@ -89,6 +111,10 @@ export type Database = {
           published: boolean
           created_at: string
           updated_at: string
+          /** Catégorie (table article_categories, gérée dans l'admin) */
+          category_id: string | null
+          /** « À la une » : un seul article à la fois (index unique) */
+          is_featured: boolean
         }
         Insert: {
           id?: string
@@ -102,6 +128,8 @@ export type Database = {
           published?: boolean
           created_at?: string
           updated_at?: string
+          category_id?: string | null
+          is_featured?: boolean
         }
         Update: {
           id?: string
@@ -115,8 +143,18 @@ export type Database = {
           published?: boolean
           created_at?: string
           updated_at?: string
+          category_id?: string | null
+          is_featured?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "articles_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "article_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {

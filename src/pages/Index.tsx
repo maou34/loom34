@@ -14,6 +14,7 @@ import useSEO from '@/hooks/useSEO';
 import { useExternalLinks, useSiteSettings } from '@/hooks/useSiteSettings';
 import { SEOHomePage } from '@/components/SEOPage';
 import { isRecurringApero, todayISO } from '@/lib/eventDates';
+import { ARTICLE_LIST_SELECT, type ArticleListItem } from '@/lib/articles';
 
 const FALLBACK_MONSIEUR_OURS_PHOTO = '/gallery/images/Mr-ours-2026_gagnants.jpg';
 
@@ -75,14 +76,16 @@ const Index = () => {
   const { data: latestArticles = [], isLoading: isLoadingArticles } = useQuery({
     queryKey: ['home', 'latestArticles'],
     queryFn: async () => {
+      // L'article « À la une » (admin) en premier, puis les plus récents
       const { data, error } = await db
         .from('articles')
-        .select('id, title, slug, excerpt, image, category, date')
+        .select(ARTICLE_LIST_SELECT)
         .eq('published', true)
+        .order('is_featured', { ascending: false })
         .order('date', { ascending: false })
         .limit(3);
       if (error) throw error;
-      return data;
+      return data as unknown as ArticleListItem[];
     },
   });
 
