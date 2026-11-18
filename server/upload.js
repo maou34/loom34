@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { compressImage } from './imageCompression.js';
+import { authConfigured, requireAdmin } from './auth.js';
 
 const app = express();
 
@@ -55,6 +56,9 @@ const PORT = Number(process.env.UPLOAD_PORT || 8081);
 const ROOT_DIR = path.resolve(process.cwd(), 'public', 'gallery');
 
 console.log('Serving gallery from:', ROOT_DIR);
+if (!authConfigured) {
+  console.warn('⚠ SUPABASE_URL / SUPABASE_ANON_KEY absents : les routes d\'écriture (upload, création / suppression) sont refusées.');
+}
 
 // Servir les fichiers statiques de la galerie
 app.use('/gallery', express.static(ROOT_DIR));
@@ -144,8 +148,10 @@ async function uploadHandler(req, res) {
   }
 }
 
-app.post('/upload', upload.array('files'), uploadHandler);
-app.post('/upload/', upload.array('files'), uploadHandler);
+// Écritures : admin connecté uniquement (vérifié AVANT de lire les fichiers envoyés).
+// Lectures (GET) : publiques, pour la page Photos du site.
+app.post('/upload', requireAdmin, upload.array('files'), uploadHandler);
+app.post('/upload/', requireAdmin, upload.array('files'), uploadHandler);
 
 /**
  * List albums (directories)
@@ -190,7 +196,7 @@ app.get('/upload/albums', async (req, res) => {
 /**
  * Create album (directory)
  */
-app.post('/upload/albums', express.json(), async (req, res) => {
+app.post('/upload/albums', requireAdmin, express.json(), async (req, res) => {
   try {
     const { title } = req.body || {};
     if (!title) return res.status(400).json({ error: 'Title required' });
@@ -206,7 +212,7 @@ app.post('/upload/albums', express.json(), async (req, res) => {
 /**
  * Delete album
  */
-app.delete('/upload/albums/:id', async (req, res) => {
+app.delete('/upload/albums/:id', requireAdmin, async (req, res) => {
   try {
     const safeName = sanitizeAlbumId(req.params.id);
     const target = path.join(ROOT_DIR, safeName);
@@ -250,7 +256,7 @@ app.get('/upload/albums/:id/images', async (req, res) => {
 /**
  * Delete image
  */
-app.delete('/upload/images', express.json(), async (req, res) => {
+app.delete('/upload/images', requireAdmin, express.json(), async (req, res) => {
   try {
     const { albumId, filename } = req.body || {};
     if (!albumId || !filename) return res.status(400).json({ error: 'Missing params' });

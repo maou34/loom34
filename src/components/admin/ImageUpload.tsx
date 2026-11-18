@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { uploadAuthHeaders } from '@/lib/uploadAuth';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -70,12 +71,9 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       formData.append('files', file);
       formData.append('albumId', folder);
 
-      // Debug (à retirer après validation)
-      console.log('UPLOAD_URL=', UPLOAD_URL);
-      console.log('UPLOAD endpoint=', uploadPostUrl());
-
       const response = await fetch(uploadPostUrl(), {
         method: 'POST',
+        headers: await uploadAuthHeaders(),
         body: formData,
         credentials: 'include',
       });

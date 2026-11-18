@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { uploadAuthHeaders } from "@/lib/uploadAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/admin/AdminLayout";
@@ -164,7 +165,7 @@ export default function Gallery() {
     mutationFn: async (title: string) => {
       const res = await fetch(uploadEndpoint("/upload/albums"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await uploadAuthHeaders()) },
         body: JSON.stringify({ title }),
         credentials: "include",
       });
@@ -185,6 +186,7 @@ export default function Gallery() {
     mutationFn: async (id: string) => {
       const res = await fetch(uploadEndpoint(`/upload/albums/${id}`), {
         method: "DELETE",
+        headers: await uploadAuthHeaders(),
         credentials: "include",
       });
 
@@ -216,7 +218,7 @@ export default function Gallery() {
     mutationFn: async (image: GalleryImage) => {
       const res = await fetch(uploadEndpoint("/upload/images"), {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await uploadAuthHeaders()) },
         body: JSON.stringify({ albumId: image.album_id, filename: image.id }),
         credentials: "include",
       });
@@ -261,6 +263,7 @@ export default function Gallery() {
 
       const res = await fetch(url, {
         method: "POST",
+        headers: await uploadAuthHeaders(),
         body: form,
         credentials: "include",
       });
