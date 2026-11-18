@@ -15,7 +15,7 @@ import { SITE_NAV_LINKS, focusRing, isNavActive } from '@/components/site/naviga
  */
 const Navbar = () => {
   const { pathname } = useLocation();
-  const { shopUrl, membershipUrl } = useExternalLinks();
+  const { shopUrl, membershipUrl, showShop, showMembership } = useExternalLinks();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Ferme le menu mobile à chaque changement de page
@@ -68,34 +68,38 @@ const Navbar = () => {
               })}
             </nav>
 
-            <a
-              href={shopUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                'hidden h-11 items-center gap-1.5 rounded-full px-2 text-base font-semibold text-loom-nav-fg transition-colors hover:text-loom-nav-active-fg xl:flex',
-                focusRing,
-              )}
-            >
-              Boutique
-              <ExternalLink aria-hidden="true" size={14} />
-              <span className="sr-only">(nouvel onglet)</span>
-            </a>
+            {showShop && (
+              <a
+                href={shopUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'hidden h-11 items-center gap-1.5 rounded-full px-2 text-base font-semibold text-loom-nav-fg transition-colors hover:text-loom-nav-active-fg xl:flex',
+                  focusRing,
+                )}
+              >
+                Boutique
+                <ExternalLink aria-hidden="true" size={14} />
+                <span className="sr-only">(nouvel onglet)</span>
+              </a>
+            )}
 
             <ThemeToggle />
 
-            <a
-              href={membershipUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                'flex h-[42px] items-center rounded-full bg-loom-primary-bg px-3.5 text-[15px] font-extrabold text-loom-primary-fg transition-colors hover:bg-loom-primary-hover xl:h-[46px] xl:px-[22px] xl:text-base',
-                focusRing,
-              )}
-            >
-              Adhérer
-              <span className="sr-only"> (nouvel onglet)</span>
-            </a>
+            {showMembership && (
+              <a
+                href={membershipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex h-[42px] items-center rounded-full bg-loom-primary-bg px-3.5 text-[15px] font-extrabold text-loom-primary-fg transition-colors hover:bg-loom-primary-hover xl:h-[46px] xl:px-[22px] xl:text-base',
+                  focusRing,
+                )}
+              >
+                Adhérer
+                <span className="sr-only"> (nouvel onglet)</span>
+              </a>
+            )}
 
             <button
               type="button"

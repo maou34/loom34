@@ -54,22 +54,31 @@ const Index = () => {
     },
   });
 
-  // Élément mis en avant : l'événement visé par le lien « Page d'accueil » de l'admin
-  // (s'il est publié et à venir), sinon la prochaine soirée hors apéros réguliers.
-  const featuredSlug = eventSlugFromLink(siteSettings?.hero_link);
+  // Élément mis en avant (admin « Page d'accueil ») : un événement ou un article
+  // choisi par id (featured_kind), ou un visuel + lien externe. Avant ce réglage
+  // (featured_kind absent), on lisait le lien hero_link (…/events/<slug>).
+  const featuredKind = siteSettings?.featured_kind ?? null;
+  const legacySlug = featuredKind ? null : eventSlugFromLink(siteSettings?.hero_link);
+  const featuredEventId = featuredKind === 'event' ? siteSettings?.featured_event_id ?? null : null;
   const { data: linkedEvent, isLoading: isLoadingLinked } = useQuery({
-    queryKey: ['home', 'featuredEvent', featuredSlug, today],
-    enabled: !!featuredSlug,
+    queryKey: ['home', 'featuredEvent', featuredEventId ?? legacySlug, today],
+    enabled: !!(featuredEventId || legacySlug),
     queryFn: async () => {
-      const { data, error } = await db
-        .from('events')
-        .select('*')
-        .eq('slug', featuredSlug!)
-        .eq('published', true)
-        .gte('date', today)
-        .maybeSingle();
+      let query = db.from('events').select('*').eq('published', true).gte('date', today);
+      query = featuredEventId ? query.eq('id', featuredEventId) : query.eq('slug', legacySlug!);
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data as Tables<'events'> | null;
+    },
+  });
+  const featuredArticleId = featuredKind === 'article' ? siteSettings?.featured_article_id ?? null : null;
+  const { data: linkedArticle, isLoading: isLoadingArticle } = useQuery({
+    queryKey: ['home', 'featuredArticle', featuredArticleId],
+    enabled: !!featuredArticleId,
+    queryFn: async () => {
+      const { data, error } = await db.from('articles').select(ARTICLE_LIST_SELECT).eq('id', featuredArticleId!).eq('published', true).maybeSingle();
+      if (error) throw error;
+      return data as unknown as ArticleListItem | null;
     },
   });
 
@@ -108,15 +117,18 @@ const Index = () => {
   });
 
   const fallbackEvent = upcomingEvents.find((e) => !isRecurringApero(e.title)) ?? upcomingEvents[0] ?? null;
-  const featuredEvent = linkedEvent ?? fallbackEvent;
 
   let featured: FeaturedItem | null = null;
-  if (siteSettings?.hero_link && !featuredSlug && siteSettings.hero_image) {
+  const isVisual = featuredKind === 'url' || (!featuredKind && !!siteSettings?.hero_link && !legacySlug);
+  if (isVisual && siteSettings?.hero_image && siteSettings.hero_link) {
     featured = { kind: 'visual', image: siteSettings.hero_image, link: siteSettings.hero_link };
-  } else if (featuredEvent) {
-    featured = { kind: 'event', event: featuredEvent };
+  } else if (linkedArticle) {
+    featured = { kind: 'article', article: linkedArticle };
+  } else if (linkedEvent ?? fallbackEvent) {
+    featured = { kind: 'event', event: (linkedEvent ?? fallbackEvent)! };
   }
-  const featuredLoading = isLoadingSettings || isLoadingEvents || (!!featuredSlug && isLoadingLinked);
+  const featuredLoading =
+    isLoadingSettings || isLoadingEvents || (!!(featuredEventId || legacySlug) && isLoadingLinked) || (!!featuredArticleId && isLoadingArticle);
 
   const eventCards = upcomingEvents
     .filter((e) => !isRecurringApero(e.title) && e.id !== (featured?.kind === 'event' ? featured.event.id : null))

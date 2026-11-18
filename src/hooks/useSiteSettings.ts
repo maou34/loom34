@@ -25,5 +25,8 @@ export function useExternalLinks() {
   return {
     shopUrl: data?.shop_url || DEFAULT_SHOP_URL,
     membershipUrl: data?.membership_url || DEFAULT_MEMBERSHIP_URL,
+    // Admin « Navigation » : boutons du menu masquables (affichés par défaut)
+    showShop: data?.show_shop_link !== false,
+    showMembership: data?.show_membership_link !== false,
   };
 }

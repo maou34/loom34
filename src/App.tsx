@@ -32,6 +32,7 @@ const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
 const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const AdminPartners = lazy(() => import("./pages/admin/Partners"));
 const AdminHomeSettings = lazy(() => import("./pages/admin/HomeSettings"));
+const AdminNavigation = lazy(() => import("./pages/admin/Navigation"));
 const AdminMonsieurOurs = lazy(() => import("./pages/admin/MonsieurOurs"));
 const AdminHistory = lazy(() => import("./pages/admin/History"));
 const AdminTeam = lazy(() => import("./pages/admin/Team"));
@@ -78,7 +79,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/tickets": "LOOM Admin - Messages",
   "/admin/seo": "LOOM Admin - SEO & Référencement",
   "/admin/partners": "LOOM Admin - Partenaires",
-  "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
+  "/admin/home-settings": "LOOM Admin - Page d'accueil",
   "/admin/navigation": "LOOM Admin - Navigation",
   "/admin/monsieur-ours": "LOOM Admin - Monsieur Ours",
   "/admin/history": "LOOM Admin - Historique",
@@ -176,8 +177,7 @@ const App = () => {
                     <Route path="/admin/seo" element={<AdminSEO />} />
                     <Route path="/admin/partners" element={<AdminPartners />} />
                     <Route path="/admin/home-settings" element={<AdminHomeSettings />} />
-                    {/* Navigation (URLs Boutique / Adhésion) : même écran que la page d'accueil en attendant sa séparation */}
-                    <Route path="/admin/navigation" element={<AdminHomeSettings />} />
+                    <Route path="/admin/navigation" element={<AdminNavigation />} />
                     <Route path="/admin/monsieur-ours" element={<AdminMonsieurOurs />} />
                     <Route path="/admin/history" element={<AdminHistory />} />
                     <Route path="/admin/team" element={<AdminTeam />} />

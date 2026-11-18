@@ -577,6 +577,13 @@ export type Database = {
           monsieur_ours_steps: Json | null
           /** Page Monsieur Ours : texte de l'appel « Et si c'était toi ? » */
           monsieur_ours_cta: string | null
+          /** Élément mis en avant sur l'accueil : event | article | url (hero_link + hero_image) */
+          featured_kind: string | null
+          featured_event_id: string | null
+          featured_article_id: string | null
+          /** Navigation : afficher les boutons Boutique / Adhérer du menu */
+          show_shop_link: boolean
+          show_membership_link: boolean
         }
         Insert: {
           id?: number
@@ -592,6 +599,11 @@ export type Database = {
           monsieur_ours_photos_url?: string | null
           monsieur_ours_steps?: Json | null
           monsieur_ours_cta?: string | null
+          featured_kind?: string | null
+          featured_event_id?: string | null
+          featured_article_id?: string | null
+          show_shop_link?: boolean
+          show_membership_link?: boolean
         }
         Update: {
           id?: number
@@ -607,6 +619,11 @@ export type Database = {
           monsieur_ours_photos_url?: string | null
           monsieur_ours_steps?: Json | null
           monsieur_ours_cta?: string | null
+          featured_kind?: string | null
+          featured_event_id?: string | null
+          featured_article_id?: string | null
+          show_shop_link?: boolean
+          show_membership_link?: boolean
         }
         Relationships: []
       }

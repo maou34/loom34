@@ -3,14 +3,16 @@ import { CalendarPlus } from 'lucide-react';
 import type { Tables } from '@/db/types';
 import { cn } from '@/lib/utils';
 import { stripMarkdown } from '@/lib/markdown';
-import { formatCountdown, formatShortDateTime } from '@/lib/eventDates';
+import { formatCountdown, formatLongDate, formatShortDateTime } from '@/lib/eventDates';
 import { getEventCta } from '@/lib/eventCta';
 import { downloadEventIcs } from '@/lib/ics';
+import { categoryName, readingTime, type ArticleListItem } from '@/lib/articles';
 import EventDateBlock from '@/components/site/EventDateBlock';
 import { btnDisabled, btnPrimary, btnSecondary, card, pageFocus } from '@/components/site/styles';
 
 export type FeaturedItem =
   | { kind: 'event'; event: Tables<'events'> }
+  | { kind: 'article'; article: ArticleListItem }
   | { kind: 'visual'; image: string; link: string };
 
 const cardShell = cn(card, 'min-w-0 overflow-hidden shadow-loom-card');
@@ -48,6 +50,40 @@ export default function FeaturedCard({ item, isLoading }: { item: FeaturedItem |
           </Link>
         )}
       </div>
+    );
+  }
+
+  if (item.kind === 'article') {
+    const { article } = item;
+    return (
+      <article aria-labelledby="featured-title" className={cardShell}>
+        <div className="relative">
+          {article.image ? (
+            <img src={article.image} alt="" className="block h-[190px] w-full object-cover sm:h-[230px]" fetchPriority="high" />
+          ) : (
+            <div aria-hidden="true" className="h-[120px] bg-loom-chip-bg" />
+          )}
+          <span className="absolute left-4 top-4 rounded-full bg-loom-surface px-3 py-1.5 text-[13px] font-bold text-loom-nav-active-fg">
+            À lire{categoryName(article) ? ` · ${categoryName(article)}` : ''}
+          </span>
+        </div>
+        <div className="flex flex-col gap-3 p-5 sm:px-6 sm:pb-6 sm:pt-[22px]">
+          <h2 id="featured-title" className="text-xl font-extrabold leading-tight sm:text-[22px]">
+            {article.title}
+          </h2>
+          {article.excerpt && (
+            <div className="hidden sm:block">
+              <p className="text-[15px] text-loom-text-2 line-clamp-3">{article.excerpt}</p>
+            </div>
+          )}
+          <span className="text-sm text-loom-text-muted">
+            {formatLongDate(article.date)} · {readingTime(article.content)}
+          </span>
+          <Link to={`/articles/${article.slug}`} className={cn(btnPrimary, 'h-[46px]')}>
+            Lire l'article
+          </Link>
+        </div>
+      </article>
     );
   }
 

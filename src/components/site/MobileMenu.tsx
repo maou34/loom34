@@ -19,7 +19,7 @@ const MENU_LINKS: SiteNavLink[] = [{ to: '/', label: 'Accueil' }, ...SITE_NAV_LI
  */
 export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
   const { pathname } = useLocation();
-  const { shopUrl, membershipUrl } = useExternalLinks();
+  const { shopUrl, membershipUrl, showShop, showMembership } = useExternalLinks();
   const close = () => onOpenChange(false);
 
   return (
@@ -70,31 +70,35 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 </Link>
               );
             })}
-            <a
-              href={shopUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn('flex min-h-[52px] items-center gap-2 rounded-full px-[18px] text-[17px] font-semibold text-loom-text-2', focusRing)}
-            >
-              Boutique
-              <ExternalLink aria-hidden="true" size={16} />
-              <span className="sr-only">(nouvel onglet)</span>
-            </a>
+            {showShop && (
+              <a
+                href={shopUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn('flex min-h-[52px] items-center gap-2 rounded-full px-[18px] text-[17px] font-semibold text-loom-text-2', focusRing)}
+              >
+                Boutique
+                <ExternalLink aria-hidden="true" size={16} />
+                <span className="sr-only">(nouvel onglet)</span>
+              </a>
+            )}
           </nav>
 
           <div className="flex flex-none flex-col gap-3 px-5 pb-7 pt-4">
-            <a
-              href={membershipUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                'flex h-[52px] items-center justify-center rounded-full bg-loom-primary-bg text-[17px] font-extrabold text-loom-primary-fg transition-colors hover:bg-loom-primary-hover',
-                focusRing,
-              )}
-            >
-              Adhérer à LOOM
-              <span className="sr-only"> (nouvel onglet)</span>
-            </a>
+            {showMembership && (
+              <a
+                href={membershipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex h-[52px] items-center justify-center rounded-full bg-loom-primary-bg text-[17px] font-extrabold text-loom-primary-fg transition-colors hover:bg-loom-primary-hover',
+                  focusRing,
+                )}
+              >
+                Adhérer à LOOM
+                <span className="sr-only"> (nouvel onglet)</span>
+              </a>
+            )}
             <div className="flex justify-center gap-3">
               <a
                 href={SOCIAL_LINKS.facebook}
