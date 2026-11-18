@@ -11,7 +11,7 @@
 //          de réponse moyen. Secret : UPTIMEROBOT_API_KEY (clé « Read-Only »).
 // Une source non configurée répond { configured: false } (le tableau de bord
 // affiche alors une invite), jamais une erreur.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
