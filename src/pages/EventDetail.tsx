@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useSlugRedirect } from '@/lib/slug';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -92,6 +93,8 @@ const EventDetail = () => {
 
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', slug],
+    // Adresse inconnue (PGRST116) : inutile de réessayer, on passe tout de suite à la redirection / 404
+    retry: (count, err) => (err as { code?: string })?.code !== 'PGRST116' && count < 3,
     queryFn: async () => {
       const { data, error } = await db.from('events').select('*').eq('slug', slug).single();
       if (error) throw error;
@@ -144,9 +147,13 @@ const EventDetail = () => {
     }
   }, [event]);
 
+  // Adresse inconnue : contenu renommé ? (slug_redirects) — sinon page 404
+  const { data: movedTo, isFetched: redirectChecked } = useSlugRedirect('events', slug, !!error);
   useEffect(() => {
-    if (error) navigate('/404');
-  }, [error, navigate]);
+    if (!error || !redirectChecked) return;
+    if (movedTo) navigate(`/events/${movedTo}${location.search}${location.hash}`, { replace: true });
+    else navigate('/404');
+  }, [error, redirectChecked, movedTo, navigate, location.search, location.hash]);
 
   // Arrivée depuis un bouton « S'inscrire » (/events/<slug>#billetterie) : React Router
   // ne fait pas défiler jusqu'à l'ancre. Sur mobile la section n'existe pas (pas

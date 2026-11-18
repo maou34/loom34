@@ -85,6 +85,10 @@ Content authored via `MDEditor` is rendered on public detail pages (`ArticleDeta
 
 `useSEO` (`src/hooks/useSEO.ts`) plus `SEOPage.tsx`/`InternalLinks.tsx`/`SEOStructuredData.tsx` components handle per-page meta tags, Open Graph/Twitter cards, and JSON-LD. `scripts/generate-seo.js` runs as `postbuild` and writes `dist/sitemap.xml` — never `public/`: the server builds inside the git checkout, and a tracked file rewritten on every build would block the next `git pull`. It lists the static pages, published articles/events (read with the anon key from `VITE_SUPABASE_*`, loaded from the env or `.env*` files) and non-empty public albums from the upload server; any source that fails is skipped with a warning, so it never fails the build. `public/robots.txt` is static and points to `/sitemap.xml`; the base URL is `https://lgbt-loom.fr`.
 
+### Slugs and redirects (UX redesign step 10)
+
+`slugify()` in `src/lib/slug.ts` transliterates accents (« Nîmes » → `nimes`; the old admin rule dropped accented letters, giving `nmes`, `f-te`, trailing `-`) and must stay identical to the SQL `public.slugify()` in `src/db/slug_redirects.sql`. The admin forms only derive the slug from the title while creating or while the item is unpublished; a manually typed slug is normalised on blur. Every slug change on `events`/`articles` is recorded by the `record_slug_redirect` trigger into `slug_redirects (kind, old_slug, new_slug)` (chains collapsed, a revived slug drops its redirect), whoever makes the change; `EventDetail`/`ArticleDetail` look it up via `useSlugRedirect()` when the slug isn't found and `navigate(..., { replace: true })` to the new address, else 404. These are client-side redirects (the SPA has no server-side 301s); a generated NGINX map could add real 301s later.
+
 ### Path alias
 
 `@/*` maps to `src/*` (configured in `vite.config.ts` and `tsconfig.json`).

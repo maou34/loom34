@@ -7,6 +7,7 @@ import { Plus, Edit, Trash2, Eye, FileText, Search, MoreHorizontal, CheckCircle2
 import { Link, useSearchParams } from "react-router-dom";
 import { getImageUrl } from "@/config";
 import { toast } from "sonner";
+import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
   DialogContent, 
@@ -161,15 +162,14 @@ export default function AdminArticles() {
     const { name, value } = e.target;
     setArticleForm({ ...articleForm, [name]: value });
     
-    // Auto-generate slug from title
-    if (name === "title") {
-      setArticleForm(prev => ({
-        ...prev,
-        slug: value.toLowerCase()
-          .replace(/[^\w\s-]/g, '') // Remove special chars except whitespace and hyphens
-          .replace(/\s+/g, '-') // Replace spaces with hyphens
-          .replace(/-+/g, '-') // Remove duplicate hyphens
-      }));
+    // Adresse calculée depuis le titre à la création ou tant que le contenu n'est pas
+    
+    // publié ; une fois publié, son adresse ne change plus toute seule (liens partagés).
+    
+    if (name === "title" && (isCreating || !selectedArticle?.published)) {
+    
+      setArticleForm(prev => ({ ...prev, slug: slugify(value) }));
+    
     }
   };
 
@@ -563,14 +563,19 @@ export default function AdminArticles() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug (URL)</Label>
+                <Label htmlFor="slug">Adresse de la page sur le site</Label>
                 <Input
                   id="slug"
                   name="slug"
                   value={articleForm.slug}
                   onChange={handleInputChange}
+                  onBlur={() => setArticleForm(prev => ({ ...prev, slug: slugify(prev.slug) }))}
                   placeholder="url-de-l-article"
                 />
+                <p className="text-xs text-loom-text-muted">
+                  lgbt-loom.fr/articles/<span className="font-medium">{articleForm.slug || "…"}</span>
+                  {!isCreating && selectedArticle?.published && " — la changer garde l'ancienne adresse en redirection"}
+                </p>
               </div>
             </div>
 

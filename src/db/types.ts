@@ -169,6 +169,27 @@ export type Database = {
           },
         ]
       }
+      slug_redirects: {
+        Row: {
+          kind: string
+          old_slug: string
+          new_slug: string
+          created_at: string
+        }
+        Insert: {
+          kind: string
+          old_slug: string
+          new_slug: string
+          created_at?: string
+        }
+        Update: {
+          kind?: string
+          old_slug?: string
+          new_slug?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       photo_albums: {
         Row: {
           /** Nom du dossier de l'album sur le serveur d'upload */

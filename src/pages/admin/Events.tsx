@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
   DialogContent, 
@@ -246,15 +247,14 @@ export default function AdminEvents() {
     const { name, value } = e.target;
     setEventForm({ ...eventForm, [name]: value });
     
-    // Auto-generate slug from title
-    if (name === "title") {
-      setEventForm(prev => ({
-        ...prev,
-        slug: value.toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-      }));
+    // Adresse calculée depuis le titre à la création ou tant que le contenu n'est pas
+    
+    // publié ; une fois publié, son adresse ne change plus toute seule (liens partagés).
+    
+    if (name === "title" && (isCreating || !selectedEvent?.published)) {
+    
+      setEventForm(prev => ({ ...prev, slug: slugify(value) }));
+    
     }
   };
 
@@ -691,11 +691,13 @@ export default function AdminEvents() {
                   name="slug"
                   value={eventForm.slug}
                   onChange={handleInputChange}
+                  onBlur={() => setEventForm(prev => ({ ...prev, slug: slugify(prev.slug) }))}
                   placeholder="url-de-l-evenement"
                 />
                 <p className="text-xs text-gray-500">
-                  lgbt-loom.fr/events/<span className="font-medium">{eventForm.slug || "…"}</span> — rempli
-                  automatiquement depuis le titre. À ne pas confondre avec la billetterie HelloAsso plus bas.
+                  lgbt-loom.fr/events/<span className="font-medium">{eventForm.slug || "…"}</span> — remplie
+                  depuis le titre tant que l'événement n'est pas publié ; la changer ensuite garde l'ancienne adresse en redirection.
+                  À ne pas confondre avec la billetterie HelloAsso plus bas.
                 </p>
               </div>
             </div>
