@@ -194,6 +194,20 @@ export default function AdminArticles() {
     setDialogOpen(true);
   };
 
+  // « Créer » depuis le tableau de bord : /admin/…?nouveau=1 ouvre directement le formulaire
+  useEffect(() => {
+    if (!searchParams.has("nouveau")) return;
+    resetForm();
+    setSearchParams(
+      (params) => {
+        params.delete("nouveau");
+        return params;
+      },
+      { replace: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleCreateArticle = async () => {
     try {
       const { title, category_id, is_featured, excerpt, content, image, published, slug, date } = articleForm;

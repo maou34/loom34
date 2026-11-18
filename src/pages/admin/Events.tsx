@@ -282,6 +282,20 @@ export default function AdminEvents() {
     setDialogOpen(true);
   };
 
+  // « Créer » depuis le tableau de bord : /admin/…?nouveau=1 ouvre directement le formulaire
+  useEffect(() => {
+    if (!searchParams.has("nouveau")) return;
+    resetForm();
+    setSearchParams(
+      (params) => {
+        params.delete("nouveau");
+        return params;
+      },
+      { replace: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleCreateEvent = async () => {
     try {
       const { title, location, date, time, description, image, published, slug, registration_url, helloasso_form_slug, ticket_capacity, ticket_member_discount } = eventForm;
