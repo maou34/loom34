@@ -3,10 +3,8 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket } from "lucide-react";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { 
   Dialog, 
@@ -29,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { getCapacity, isSaleEnded, normalizeHelloAssoSlug } from "@/lib/ticketing";
 import { eventCity } from "@/lib/eventPlace";
 import { geocodeAddress } from "@/lib/geocode";
-import { todayISO } from "@/lib/eventDates";
+import { dateBlockParts, eventDay, formatCountdown, todayISO } from "@/lib/eventDates";
 
 import {
   DropdownMenu,
@@ -41,6 +39,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const LOCATION_EXAMPLE = "« Le Marvelous, 3 rue Saint-Ravy, 34000 Montpellier »";
+
+type ListTab = "upcoming" | "past" | "drafts";
+const LIST_TABS: { id: ListTab; label: string }[] = [
+  { id: "upcoming", label: "À venir" },
+  { id: "past", label: "Passés" },
+  { id: "drafts", label: "Brouillons" },
+];
+
+/** Regroupe des événements déjà triés par mois (« Novembre 2026 »). */
+function groupEventsByMonth<T extends { date: string }>(events: T[]) {
+  const groups: { key: string; label: string; items: T[] }[] = [];
+  for (const event of events) {
+    const key = event.date.slice(0, 7);
+    let group = groups[groups.length - 1];
+    if (!group || group.key !== key) {
+      const label = eventDay(event.date).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      group = { key, label: label.charAt(0).toUpperCase() + label.slice(1), items: [] };
+      groups.push(group);
+    }
+    group.items.push(event);
+  }
+  return groups;
+}
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -126,8 +147,6 @@ export default function AdminEvents() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const eventsPerPage = 10;
   const { user } = useAuth();
   
   // Form state for new/edit event
@@ -162,16 +181,20 @@ export default function AdminEvents() {
     }
   }, [searchQuery, events]);
 
-  // Revenir à la première page seulement quand la recherche change (pas quand
-  // un événement est publié/dépublié depuis la liste).
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
-
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
-  const paginatedEvents = filteredEvents.slice(
-    (currentPage - 1) * eventsPerPage,
-    currentPage * eventsPerPage
+  // Onglets de la liste : À venir (publiés), Passés, Brouillons (à venir non publiés)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listTab = (searchParams.get("onglet") as ListTab) || "upcoming";
+  const setListTab = (tab: ListTab) => setSearchParams(tab === "upcoming" ? {} : { onglet: tab }, { replace: true });
+  const today = todayISO();
+  const inTab = (e: Event, tab: ListTab) =>
+    tab === "past" ? e.date.slice(0, 10) < today : e.date.slice(0, 10) >= today && (tab === "upcoming" ? e.published : !e.published);
+  const tabCounts = {
+    upcoming: events.filter((e) => inTab(e, "upcoming")).length,
+    past: events.filter((e) => inTab(e, "past")).length,
+    drafts: events.filter((e) => inTab(e, "drafts")).length,
+  };
+  const monthGroups = groupEventsByMonth(
+    filteredEvents.filter((e) => inTab(e, listTab)).sort((x, y) => (listTab === "past" ? y.date.localeCompare(x.date) : x.date.localeCompare(y.date))),
   );
 
   // Événements à venir sans coordonnées (créés avant le plan OpenStreetMap, ou
@@ -480,158 +503,123 @@ export default function AdminEvents() {
   };
 
   return (
-    <AdminLayout title="Événements">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="Rechercher un événement..." 
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <AdminLayout
+      title="Événements"
+      actions={
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={resetForm}>
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="sr-only sm:not-sr-only">Nouvel événement</span>
+        </Button>
+      }
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div role="tablist" aria-label="Filtrer les événements" className="flex gap-1 rounded-xl bg-loom-surface-2 p-1 ring-1 ring-loom-border">
+            {LIST_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={listTab === t.id}
+                onClick={() => setListTab(t.id)}
+                className={`h-9 rounded-[9px] px-3.5 text-sm ${listTab === t.id ? "bg-loom-surface font-bold shadow-sm" : "text-loom-text-2 hover:text-loom-text"}`}
+              >
+                {t.label} <span className="text-loom-text-muted">({tabCounts[t.id]})</span>
+              </button>
+            ))}
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <label className="relative w-full sm:w-72">
+              <span className="sr-only">Rechercher un événement</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
+              <Input type="search" placeholder="Rechercher un événement…" className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </label>
             {missingMaps.length > 0 && (
-              <Button variant="outline" className="w-full sm:w-auto" onClick={fillMissingMaps} disabled={geocodingProgress !== null}>
+              <Button variant="outline" onClick={fillMissingMaps} disabled={geocodingProgress !== null}>
                 <MapPin className="h-4 w-4 mr-2" />
                 {geocodingProgress !== null
                   ? `Plans : ${geocodingProgress}/${missingMaps.length}…`
                   : `Calculer les plans manquants (${missingMaps.length})`}
               </Button>
             )}
-            <Button 
-              className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto" 
-              onClick={resetForm}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvel événement
-            </Button>
           </div>
         </div>
 
-        {/* Events List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CalendarDays className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun événement trouvé</h3>
-              <p className="text-gray-500 mb-6">Commencez par créer votre premier événement.</p>
-              <Button onClick={resetForm} variant="outline">
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : monthGroups.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong px-4 py-12 text-center">
+            <CalendarDays aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
+            <p className="font-bold">{searchQuery ? "Aucun événement ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun événement"}</p>
+            {listTab === "upcoming" && !searchQuery && (
+              <Button onClick={resetForm} variant="outline" className="mt-2">
                 Créer un événement
               </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead className="w-[400px]">Événement</TableHead>
-                    <TableHead>Lieu</TableHead>
-                    <TableHead>Date & Heure</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedEvents.map((event) => (
-                    <TableRow key={event.id} className="hover:bg-gray-50/50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="h-10 w-10 rounded-lg bg-cover bg-center flex-shrink-0 border border-gray-200"
-                            style={{ backgroundImage: `url(${event.image})` }}
-                          />
-                          <div>
-                            <div className="font-medium text-gray-900 line-clamp-1">{event.title}</div>
-                            <div className="text-xs text-gray-500 line-clamp-1 flex items-center gap-1">
-                              {event.helloasso_form_slug && (
-                                <Ticket className="h-3 w-3 text-orange-600 flex-shrink-0" aria-label="Billetterie HelloAsso" />
-                              )}
-                              {event.slug}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <MapPin className="mr-2 h-3 w-3 text-gray-400" />
-                          {event.location}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col text-sm">
-                          <span className="flex items-center text-gray-900">
-                            <CalendarDays className="mr-2 h-3 w-3 text-gray-400" />
-                            {formatDate(event.date)}
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {monthGroups.map((group) => (
+              <section key={group.key} aria-label={group.label} className="flex flex-col gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-[0.06em] text-loom-text-muted">{group.label}</h2>
+                <ul className="flex flex-col gap-2">
+                  {group.items.map((event) => {
+                    const day = dateBlockParts(event.date);
+                    const countdown = formatCountdown(event.date);
+                    const saleNote = event.helloasso_form_slug ? describeSalePeriod(event) : null;
+                    return (
+                      <li key={event.id} className="flex items-center gap-3 rounded-xl border border-loom-border bg-loom-surface p-2.5 pr-1.5 sm:gap-4 sm:p-3">
+                        <span aria-hidden="true" className="flex w-12 flex-none flex-col items-center rounded-lg bg-loom-surface-2 py-1.5">
+                          <span className="text-lg font-extrabold leading-tight">{day.day}</span>
+                          <span className="text-[11px] font-bold text-loom-accent-text">{day.weekday}</span>
+                        </span>
+                        <button type="button" onClick={() => editEvent(event)} className="flex min-w-0 flex-1 flex-col text-left">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <span className="sr-only">{day.full} : </span>
+                            <span className="truncate">{event.title}</span>
+                            {event.helloasso_form_slug && <Ticket className="h-3.5 w-3.5 flex-none text-loom-accent-text" aria-label="Billetterie HelloAsso" />}
                           </span>
-                          <span className="flex items-center text-gray-500 mt-1">
-                            <Clock className="mr-2 h-3 w-3 text-gray-400" />
-                            {event.time}
+                          <span className="truncate text-sm text-loom-text-muted">
+                            {[event.time, event.location].filter(Boolean).join(" · ")}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <label className="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                          <Switch
-                            checked={event.published}
-                            onCheckedChange={() => togglePublished(event)}
-                            disabled={togglingId === event.id}
-                            aria-label={event.published ? `Mettre « ${event.title} » en brouillon` : `Publier « ${event.title} »`}
-                            className="data-[state=checked]:bg-green-600"
-                          />
-                          <span className={event.published ? "text-sm font-medium text-green-700" : "text-sm text-gray-500"}>
+                          {event.helloasso_form_slug && (event.tickets_sold !== null || saleNote) && (
+                            <span className="truncate text-xs text-loom-text-muted">
+                              {event.tickets_sold !== null &&
+                                `${event.tickets_sold}${getCapacity(event) ? `/${getCapacity(event)}` : ""} inscrit${event.tickets_sold > 1 ? "s" : ""}${
+                                  (event.tickets_sold_discounted ?? 0) > 0 ? ` · dont ${event.tickets_sold_discounted} au tarif réduit` : ""
+                                }`}
+                              {event.tickets_sold !== null && saleNote && " · "}
+                              {saleNote}
+                            </span>
+                          )}
+                        </button>
+                        <span className="hidden flex-none flex-col items-end gap-1 sm:flex">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${event.published ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
                             {event.published ? "Publié" : "Brouillon"}
                           </span>
-                        </label>
-                        {event.helloasso_form_slug && event.tickets_sold !== null && (
-                          <div className="mt-1 text-xs text-gray-500 whitespace-nowrap">
-                            {event.tickets_sold}
-                            {getCapacity(event) ? `/${getCapacity(event)}` : ""} inscrit{event.tickets_sold > 1 ? "s" : ""}
-                            {(event.tickets_sold_discounted ?? 0) > 0 && ` · dont ${event.tickets_sold_discounted} au tarif réduit`}
-                          </div>
-                        )}
-                        {event.helloasso_form_slug && (() => {
-                          const saleNote = describeSalePeriod(event);
-                          return saleNote && <div className="mt-1 text-xs text-gray-500 whitespace-nowrap">{saleNote}</div>;
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-right">
+                          {countdown && listTab !== "past" && <span className="text-xs text-loom-text-muted">{countdown.replace("dans ", "dans ").replace(" jours", " j")}</span>}
+                        </span>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour « ${event.title} » : modifier, dupliquer, voir sur le site, supprimer`}>
+                              <MoreHorizontal className="h-5 w-5" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/events/${event.slug}`} target="_blank">
-                                <Eye className="mr-2 h-4 w-4" /> Voir l'événement
-                              </Link>
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => editEvent(event)}>
                               <Edit className="mr-2 h-4 w-4" /> Modifier
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => duplicateEvent(event)}>
                               <Copy className="mr-2 h-4 w-4" /> Dupliquer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/events/${event.slug}`} target="_blank">
+                                <Eye className="mr-2 h-4 w-4" /> Voir sur le site
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => togglePublished(event)} disabled={togglingId === event.id}>
                               {event.published ? (
@@ -641,54 +629,21 @@ export default function AdminEvents() {
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(event)}
-                            >
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirmDelete(event)}>
                               <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <PaginationItem key={i}>
-                  <PaginationLink
-                    isActive={currentPage === i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className="cursor-pointer"
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+            <p className="text-xs text-loom-text-muted">
+              Cliquer sur un événement ouvre l'édition. Le menu ⋯ propose Dupliquer (pratique pour les apéros), Voir sur le site, Publier et Supprimer.
+            </p>
+          </div>
         )}
       </div>
 
