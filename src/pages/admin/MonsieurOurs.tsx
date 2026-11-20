@@ -240,7 +240,7 @@ export default function AdminMonsieurOurs() {
                       {([1, 2] as const).map((n) => (
                         <div key={n} className="space-y-3">
                           <div className="space-y-2">
-                            <Label htmlFor={`cub${n}-name`}>Ourson {n}</Label>
+                            <Label htmlFor={`cub${n}-name`}>{n === 1 ? '1er ourson' : '2e ourson'}</Label>
                             <Input
                               id={`cub${n}-name`}
                               value={form[`cub${n}_name`]}
@@ -248,7 +248,7 @@ export default function AdminMonsieurOurs() {
                               placeholder="Prénom nom"
                             />
                           </div>
-                          <PhotoField label={`Photo de l'ourson ${n}`} value={form[`cub${n}_photo`]} onChange={(url) => setForm({ ...form, [`cub${n}_photo`]: url })} />
+                          <PhotoField label={`Photo du ${n === 1 ? '1er' : '2e'} ourson`} value={form[`cub${n}_photo`]} onChange={(url) => setForm({ ...form, [`cub${n}_photo`]: url })} />
                         </div>
                       ))}
                     </div>

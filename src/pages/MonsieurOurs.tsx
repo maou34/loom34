@@ -9,7 +9,7 @@ import { card, container, pageFocus } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
 import { useSiteSettings } from '@/hooks/useSiteSettings';
 import { cn } from '@/lib/utils';
-import { DEFAULT_CTA, DEFAULT_INTRO, cubsOf, parseSteps, useEditions, type Edition } from '@/lib/monsieurOurs';
+import { DEFAULT_CTA, DEFAULT_INTRO, cubLabel, cubsOf, parseSteps, useEditions, type Edition } from '@/lib/monsieurOurs';
 
 const FALLBACK_GROUP_PHOTO = '/gallery/images/Mr-ours-2026_gagnants.jpg';
 
@@ -66,17 +66,17 @@ function EditionRow({ edition, current }: { edition: Edition; current: boolean }
             {edition.description && <span className="text-sm text-loom-band-dark-text">{edition.description}</span>}
           </figcaption>
         </figure>
-        {cubs.map((cub, i) => (
-          <figure key={i} className={cn(card, 'm-0 flex flex-col overflow-hidden rounded-[18px]')}>
+        {cubs.map((cub) => (
+          <figure key={cub.rank} className={cn(card, 'm-0 flex flex-col overflow-hidden rounded-[18px]')}>
             <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[400px] lg:flex-1">
               {cub.photo ? (
-                <img src={cub.photo} alt={`${cub.name}, ourson ${edition.year}`} loading="lazy" className={portraitImg} />
+                <img src={cub.photo} alt={`${cub.name}, ${cubLabel(cub.rank)} ${edition.year}`} loading="lazy" className={portraitImg} />
               ) : (
                 <PhotoPlaceholder />
               )}
             </div>
             <figcaption className="flex flex-col gap-0.5 p-3 sm:p-4">
-              <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-loom-accent-text">Ourson {edition.year}</span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-loom-accent-text">{cubLabel(cub.rank)} {edition.year}</span>
               <span className="font-extrabold leading-tight">{cub.name}</span>
             </figcaption>
           </figure>

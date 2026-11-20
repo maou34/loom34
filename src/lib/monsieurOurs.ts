@@ -27,14 +27,17 @@ export function parseSteps(raw: Json | null | undefined): Step[] {
   return steps.length ? steps : DEFAULT_STEPS;
 }
 
-export type Cub = { name: string; photo: string | null };
+export type Cub = { rank: 1 | 2; name: string; photo: string | null };
 
-/** Oursons renseignés de l'année (0, 1 ou 2). */
+/** Oursons renseignés de l'année (0, 1 ou 2), avec leur rang (1er / 2e ourson). */
 export const cubsOf = (e: Edition): Cub[] =>
   [
-    { name: e.cub1_name, photo: e.cub1_photo },
-    { name: e.cub2_name, photo: e.cub2_photo },
+    { rank: 1 as const, name: e.cub1_name, photo: e.cub1_photo },
+    { rank: 2 as const, name: e.cub2_name, photo: e.cub2_photo },
   ].filter((c): c is Cub => !!c.name?.trim());
+
+/** « 1er ourson » / « 2e ourson » */
+export const cubLabel = (rank: 1 | 2) => (rank === 1 ? '1er ourson' : '2e ourson');
 
 /** Statut d'une année dans l'admin : Complet / Photos manquantes / À compléter. */
 export function editionStatus(e: Edition): 'complete' | 'photos' | 'todo' {
