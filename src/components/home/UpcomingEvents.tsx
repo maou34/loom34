@@ -4,10 +4,13 @@ import { cn } from '@/lib/utils';
 import { formatShortDateTime } from '@/lib/eventDates';
 import { getEventCta } from '@/lib/eventCta';
 import SectionHeader from '@/components/site/SectionHeader';
-import { REGULAR_MEETUPS } from '@/components/site/regularMeetups';
+import { commonTime, meetupWhen, meetupWhenShort, useRegularMeetups } from '@/lib/regularMeetups';
 import { btnDisabled, btnPrimary, btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
 
 function RegularMeetups() {
+  const meetups = useRegularMeetups();
+  if (meetups.length === 0) return null;
+  const time = commonTime(meetups);
   return (
     <aside
       aria-labelledby="regular-title"
@@ -19,20 +22,20 @@ function RegularMeetups() {
       </h3>
       {/* Mobile : version condensée */}
       <ul className="flex flex-col gap-1.5 text-[15px] lg:hidden">
-        {REGULAR_MEETUPS.map((m) => (
+        {meetups.map((m) => (
           <li key={m.title}>
-            <strong>{m.day}</strong> · {m.title}
+            <strong>{time ? m.day : meetupWhenShort(m)}</strong> · {m.title}
           </li>
         ))}
-        <li className="text-sm text-loom-text-2">19:00 · entrée libre</li>
+        <li className="text-sm text-loom-text-2">{time ? `${time} · entrée libre` : 'Entrée libre'}</li>
       </ul>
       {/* Desktop */}
       <div className="hidden flex-col gap-4 lg:flex">
-        {REGULAR_MEETUPS.map((m, i) => (
+        {meetups.map((m, i) => (
           <div key={m.title} className={cn('flex flex-col gap-1', i > 0 && 'border-t border-loom-highlight-border pt-4')}>
-            <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-loom-highlight-label">{m.when}</span>
+            <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-loom-highlight-label">{meetupWhen(m)}</span>
             <span className="font-bold">{m.title}</span>
-            <span className="text-sm text-loom-text-2">{m.text}</span>
+            {m.text && <span className="text-sm text-loom-text-2">{m.text}</span>}
           </div>
         ))}
       </div>

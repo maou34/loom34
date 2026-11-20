@@ -3,7 +3,8 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket, Repeat } from "lucide-react";
+import RegularMeetupsDialog from "@/components/admin/RegularMeetupsDialog";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { slugify } from "@/lib/slug";
@@ -148,6 +149,7 @@ export default function AdminEvents() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [meetupsOpen, setMeetupsOpen] = useState(false);
   const { user } = useAuth();
   
   // Form state for new/edit event
@@ -520,12 +522,19 @@ export default function AdminEvents() {
     <AdminLayout
       title="Événements"
       actions={
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={resetForm}>
-          <Plus className="h-4 w-4 sm:mr-2" />
-          <span className="sr-only sm:not-sr-only">Nouvel événement</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setMeetupsOpen(true)}>
+            <Repeat className="h-4 w-4 sm:mr-2" />
+            <span className="sr-only sm:not-sr-only">Rendez-vous réguliers</span>
+          </Button>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={resetForm}>
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="sr-only sm:not-sr-only">Nouvel événement</span>
+          </Button>
+        </div>
       }
     >
+      <RegularMeetupsDialog open={meetupsOpen} onOpenChange={setMeetupsOpen} />
       <div className="space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div role="tablist" aria-label="Filtrer les événements" className="flex gap-1 rounded-xl bg-loom-surface-2 p-1 ring-1 ring-loom-border">

@@ -599,6 +599,7 @@ export type Database = {
           monsieur_ours_photos_url: string | null
           /** Page Monsieur Ours : 3 étapes [{ when, title, text }] */
           monsieur_ours_steps: Json | null
+          regular_meetups: Json | null
           /** Page Monsieur Ours : texte de l'appel « Et si c'était toi ? » */
           monsieur_ours_cta: string | null
           /** Élément mis en avant sur l'accueil : event | article | url (hero_link + hero_image) */
@@ -622,6 +623,7 @@ export type Database = {
           monsieur_ours_intro?: string | null
           monsieur_ours_photos_url?: string | null
           monsieur_ours_steps?: Json | null
+          regular_meetups?: Json | null
           monsieur_ours_cta?: string | null
           featured_kind?: string | null
           featured_event_id?: string | null
@@ -642,6 +644,7 @@ export type Database = {
           monsieur_ours_intro?: string | null
           monsieur_ours_photos_url?: string | null
           monsieur_ours_steps?: Json | null
+          regular_meetups?: Json | null
           monsieur_ours_cta?: string | null
           featured_kind?: string | null
           featured_event_id?: string | null

@@ -6,7 +6,7 @@ import type { Tables } from '@/db/types';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AgendaEventCard from '@/components/agenda/AgendaEventCard';
-import { REGULAR_MEETUPS } from '@/components/site/regularMeetups';
+import { commonTime, meetupWhenShort, useRegularMeetups } from '@/lib/regularMeetups';
 import { btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
 import { useExternalLinks } from '@/hooks/useSiteSettings';
@@ -49,6 +49,8 @@ const Events = () => {
   const city = searchParams.get('ville');
   const [pastLimit, setPastLimit] = useState(PAST_PAGE_SIZE);
   const { membershipUrl } = useExternalLinks();
+  const meetups = useRegularMeetups();
+  const meetupsTime = commonTime(meetups);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const today = todayISO();
@@ -174,12 +176,12 @@ const Events = () => {
         </div>
 
         {/* Mobile : rendez-vous réguliers en tête de liste */}
-        {period === 'upcoming' && (
+        {period === 'upcoming' && meetups.length > 0 && (
           <div className="flex flex-col gap-1.5 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-4 lg:hidden">
-            <h2 className="font-extrabold">Rendez-vous réguliers · 19:00</h2>
-            {REGULAR_MEETUPS.map((m) => (
+            <h2 className="font-extrabold">Rendez-vous réguliers{meetupsTime ? ` · ${meetupsTime}` : ''}</h2>
+            {meetups.map((m) => (
               <span key={m.title} className="text-[15px]">
-                <strong>{m.day}</strong> · {m.title}
+                <strong>{meetupsTime ? m.day : meetupWhenShort(m)}</strong> · {m.title}
               </span>
             ))}
           </div>
@@ -227,16 +229,18 @@ const Events = () => {
           </div>
 
           <aside aria-label="À savoir" className="hidden min-w-0 flex-[1_1_280px] flex-col gap-4 lg:flex">
-            <div className="flex flex-col gap-3.5 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-6">
-              <h2 className="text-lg font-extrabold">Rendez-vous réguliers</h2>
-              {REGULAR_MEETUPS.map((m) => (
-                <div key={m.title} className="flex flex-col gap-0.5">
-                  <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-loom-highlight-label">{m.whenShort}</span>
-                  <span className="font-bold">{m.title}</span>
-                </div>
-              ))}
-              <span className="text-sm text-loom-text-2">Entrée libre, sans réservation.</span>
-            </div>
+            {meetups.length > 0 && (
+              <div className="flex flex-col gap-3.5 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-6">
+                <h2 className="text-lg font-extrabold">Rendez-vous réguliers</h2>
+                {meetups.map((m) => (
+                  <div key={m.title} className="flex flex-col gap-0.5">
+                    <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-loom-highlight-label">{meetupWhenShort(m)}</span>
+                    <span className="font-bold">{m.title}</span>
+                  </div>
+                ))}
+                <span className="text-sm text-loom-text-2">Entrée libre, sans réservation.</span>
+              </div>
+            )}
             <div className="flex flex-col gap-3 rounded-[18px] bg-loom-join-bg p-6 text-white">
               <h2 className="text-lg font-extrabold">Payez moins cher vos soirées</h2>
               <p className="text-[15px] text-loom-join-text">
