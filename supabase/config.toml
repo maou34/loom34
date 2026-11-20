@@ -41,7 +41,7 @@ api_url = "http://127.0.0.1"
 
 # Boîte mail de test : tous les e-mails envoyés en local (mot de passe oublié,
 # invitations) arrivent sur http://127.0.0.1:54324, jamais chez un vrai destinataire.
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54324
 
@@ -58,10 +58,9 @@ enable_anonymous_sign_ins = false
 minimum_password_length = 8
 
 [auth.email]
-# ⚠ Pour la CLI, ce réglage active la connexion par e-mail tout entière : à false,
-# plus personne ne peut se connecter. Les inscriptions restent fermées par
-# [auth] enable_signup = false ci-dessus.
-enable_signup = true
+# Connexion par e-mail active (CLI ≥ 3 ; avant, ce réglage s'appelait trompeusement
+# enable_signup). Les inscriptions restent fermées par [auth] enable_signup = false.
+enabled = true
 double_confirm_changes = true
 enable_confirmations = false
 max_frequency = "1s"
