@@ -91,14 +91,14 @@ function EventTile({ event }: { event: Tables<'events'> }) {
   );
 }
 
-/** « Les prochaines soirées » : encadré des rendez-vous réguliers + 3 cartes. */
+/** « Nos prochains événements » : encadré des rendez-vous réguliers + 3 cartes. */
 export default function UpcomingEvents({ events, isLoading }: { events: Tables<'events'>[]; isLoading: boolean }) {
   return (
     <section aria-labelledby="agenda-title" className={cn(container, 'flex flex-col gap-6 py-10 sm:gap-7 sm:pb-16 sm:pt-14')}>
       <SectionHeader
         id="agenda-title"
-        title="Les prochaines soirées"
-        mobileTitle="Prochaines soirées"
+        title="Nos prochains événements"
+        mobileTitle="Prochains événements"
         subtitle="Inscrivez-vous en ligne, tarif réduit pour les adhérents."
         link={{ to: '/events', label: "Tout l'agenda →", mobileLabel: 'Tout voir' }}
       />
@@ -109,7 +109,7 @@ export default function UpcomingEvents({ events, isLoading }: { events: Tables<'
           : events.map((event) => <EventTile key={event.id} event={event} />)}
         {!isLoading && events.length === 0 && (
           <p className="flex items-center text-loom-text-muted lg:col-span-3">
-            Les prochaines soirées seront bientôt annoncées.&nbsp;
+            Les prochains événements seront bientôt annoncés.&nbsp;
             <Link to="/events" className={strongLink}>
               Voir l'agenda
             </Link>
