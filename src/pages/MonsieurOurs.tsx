@@ -14,11 +14,13 @@ import { DEFAULT_CTA, DEFAULT_INTRO, cubsOf, parseSteps, useEditions, type Editi
 const FALLBACK_GROUP_PHOTO = '/gallery/images/Mr-ours-2026_gagnants.jpg';
 
 /**
- * Portraits du palmarès : le cadre (souvent plus large que haut) recadre des
- * photos verticales où le visage est dans le tiers supérieur. Centrer l'image
- * montrait l'écharpe et coupait le visage : on cadre à 10 % du haut.
+ * Portraits du palmarès : photos verticales, visage dans le haut (plus ou moins
+ * bas selon la photo). Le cadre est plus large que haut ; centrer l'image
+ * montrait l'écharpe et coupait le visage. On cadre à 12 % du haut, et sur
+ * ordinateur les cartes font 400 px de haut (au lieu de 320) pour montrer plus
+ * de la moitié de la photo : assez pour tous les visages du palmarès.
  */
-const portraitImg = 'absolute inset-0 h-full w-full object-cover object-[50%_10%]';
+const portraitImg = 'absolute inset-0 h-full w-full object-cover object-[50%_12%]';
 
 // Fond toujours sombre : anneau de focus jaune
 const darkFocus =
@@ -51,7 +53,7 @@ function EditionRow({ edition, current }: { edition: Edition; current: boolean }
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <figure className="col-span-2 m-0 flex flex-col overflow-hidden rounded-[18px] bg-loom-band-dark-bg text-white">
-          <div className="relative h-[300px] lg:h-auto lg:min-h-[320px] lg:flex-1">
+          <div className="relative h-[300px] lg:h-auto lg:min-h-[400px] lg:flex-1">
             {edition.image ? (
               <img src={edition.image} alt={`${edition.title}, Monsieur Ours ${edition.year}`} loading="lazy" className={portraitImg} />
             ) : (
@@ -66,7 +68,7 @@ function EditionRow({ edition, current }: { edition: Edition; current: boolean }
         </figure>
         {cubs.map((cub, i) => (
           <figure key={i} className={cn(card, 'm-0 flex flex-col overflow-hidden rounded-[18px]')}>
-            <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[320px] lg:flex-1">
+            <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[400px] lg:flex-1">
               {cub.photo ? (
                 <img src={cub.photo} alt={`${cub.name}, ourson ${edition.year}`} loading="lazy" className={portraitImg} />
               ) : (
