@@ -34,7 +34,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             <div className="overflow-hidden rounded-[18px] bg-loom-header-bg shadow-loom-header ring-1 ring-loom-header-border">
               <div className="flex h-[60px] items-center gap-2 pl-2 pr-1.5">
                 <span className="flex flex-1 items-center gap-2.5">
-                  <img src="/logo-loom.png" alt="" width={44} height={44} className="h-11 w-11 rounded-xl" />
+                  <img src="/logo-loom-ours.png" alt="" width={44} height={44} className="h-11 w-11 rounded-xl" />
                   <DialogPrimitive.Title className="text-[19px] font-extrabold">Menu</DialogPrimitive.Title>
                 </span>
                 <DialogPrimitive.Close

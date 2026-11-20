@@ -35,7 +35,7 @@ const Navbar = () => {
               className={cn('flex flex-1 items-center gap-2.5 rounded-xl text-loom-text xl:flex-none', focusRing)}
             >
               <img
-                src="/logo-loom.png"
+                src="/logo-loom-ours.png"
                 alt=""
                 width={56}
                 height={56}
