@@ -71,6 +71,9 @@ policy = "per_worker"
 inspector_port = 8083
 deno_version = 2
 
+# Fonctions présentes sur cette branche (admin-users, notify-new-message et
+# site-stats arriveront avec la fusion de la refonte : la CLI 3 refuse de
+# démarrer si une fonction déclarée ici n'a pas de dossier).
 # Toutes les fonctions vérifient elles-mêmes l'appelant (session admin, secret
 # partagé ou paramètre ?secret= pour le webhook HelloAsso).
 [functions.admin-create-user]
@@ -82,11 +85,5 @@ verify_jwt = false
 [functions.helloasso-webhook]
 verify_jwt = false
 
-[functions.admin-users]
-verify_jwt = false
 
-[functions.notify-new-message]
-verify_jwt = false
 
-[functions.site-stats]
-verify_jwt = false
