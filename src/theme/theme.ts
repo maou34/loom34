@@ -1,16 +1,14 @@
 // LOOM – gestion du thème jour / nuit
 // -----------------------------------------------------------------------------
-// - Premier passage : on suit le réglage de l'appareil (prefers-color-scheme).
+// - Premier passage : mode nuit par défaut (choix du bureau, nov. 2026), quel
+//   que soit le réglage de l'appareil.
 // - Clic sur le bouton soleil / lune : le choix est mémorisé dans localStorage.
-// - Si le réglage de l'appareil change (ex. passage auto en nuit le soir) et
-//   que le visiteur n'a rien choisi, le site suit.
 // - L'admin n'a pas (encore) de mode nuit : AdminLayout appelle lockTheme('light')
 //   tant qu'il est affiché, sans toucher au choix mémorisé du visiteur.
 
 export type Theme = 'light' | 'dark';
 
 const STORAGE_KEY = 'loom-theme';
-const media = window.matchMedia('(prefers-color-scheme: dark)');
 let locked: Theme | null = null;
 
 function readStoredTheme(): Theme | null {
@@ -22,12 +20,11 @@ function readStoredTheme(): Theme | null {
   }
 }
 
-function systemTheme(): Theme {
-  return media.matches ? 'dark' : 'light';
-}
+/** Thème d'un visiteur qui n'a encore rien choisi. Garder en accord avec le script de index.html. */
+export const DEFAULT_THEME: Theme = 'dark';
 
 export function getTheme(): Theme {
-  return readStoredTheme() ?? systemTheme();
+  return readStoredTheme() ?? DEFAULT_THEME;
 }
 
 function apply(theme: Theme, animate = false): void {
@@ -78,7 +75,4 @@ export function initTheme(): void {
   const path = window.location.pathname;
   if (path.startsWith('/admin') && !path.startsWith('/admin/login')) locked = 'light';
   apply(locked ?? getTheme());
-  media.addEventListener('change', () => {
-    if (!locked && !readStoredTheme()) apply(systemTheme(), true);
-  });
 }

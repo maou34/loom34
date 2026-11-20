@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#FBF8F2" />
+    <meta name="theme-color" content="#17110B" />
     <!-- Thème jour / nuit posé avant le rendu (évite un flash blanc en mode nuit).
          Même logique que src/theme/theme.ts ; l'admin reste en mode jour. -->
     <script>
@@ -15,9 +15,7 @@
             t = 'light';
           } else {
             t = localStorage.getItem('loom-theme');
-            if (t !== 'light' && t !== 'dark') {
-              t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
+            if (t !== 'light' && t !== 'dark') t = 'dark'; // mode nuit par défaut (DEFAULT_THEME)
           }
           document.documentElement.dataset.theme = t;
         } catch (e) {}

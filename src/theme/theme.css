@@ -5,7 +5,8 @@
    puis n'utiliser que les variables dans les composants :
      background: var(--bg);  color: var(--text);
    Le thème est piloté par l'attribut data-theme sur <html> :
-     - absent        → suit le réglage de l'appareil (prefers-color-scheme)
+     - posé avant le premier rendu par index.html / theme.ts : "dark" par défaut
+       (absent seulement sans JavaScript → réglage de l'appareil)
      - "light"/"dark" → choix explicite du visiteur (bouton soleil / lune)
    ========================================================================== */
 
