@@ -17,6 +17,22 @@ import { initTheme } from './theme/theme'
 // Thème jour / nuit (avant le premier rendu)
 initTheme();
 
+// Après une mise en ligne, un onglet resté ouvert sur l'ancienne version ne
+// trouve plus les fichiers de pages qu'il demande (leurs noms changent à chaque
+// build) : on recharge une fois pour récupérer la nouvelle version, au lieu
+// d'afficher une erreur. Garde-fou contre une boucle : une seule fois par minute.
+window.addEventListener('vite:preloadError', (event) => {
+  try {
+    const last = Number(sessionStorage.getItem('loom-reloaded-at') || 0);
+    if (Date.now() - last < 60_000) return;
+    sessionStorage.setItem('loom-reloaded-at', String(Date.now()));
+  } catch {
+    // stockage indisponible : on recharge quand même
+  }
+  event.preventDefault();
+  window.location.reload();
+});
+
 // Initialize performance optimizations
 preloadCriticalResources();
 setupImageLazyLoading();
