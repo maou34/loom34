@@ -8,6 +8,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { getImageUrl } from "@/config";
 import { toast } from "sonner";
 import PublishToggle from "@/components/admin/PublishToggle";
+import { ClearFiltersButton, FilterSelect } from "@/components/admin/ListFilters";
+import { ALL, useUrlFilters } from "@/lib/urlFilters";
 import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
@@ -59,6 +61,11 @@ const LIST_TABS: { id: ListTab; label: string }[] = [
   { id: "drafts", label: "Brouillons" },
 ];
 const PAGE_SIZE = 20;
+const FILTER_KEYS = ["categorie", "annee", "une"] as const;
+const FEATURED_OPTIONS = [
+  { value: "oui", label: "À la une" },
+  { value: "non", label: "Pas à la une" },
+];
 
 /** Longueur conseillée du chapô (≈ deux lignes dans les cartes) */
 const EXCERPT_MAX = 160;
@@ -98,8 +105,19 @@ export default function AdminArticles() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const listTab: ListTab = LIST_TABS.some((t) => t.id === searchParams.get("onglet")) ? (searchParams.get("onglet") as ListTab) : "all";
-  const setListTab = (tab: ListTab) => setSearchParams(tab === "all" ? {} : { onglet: tab }, { replace: true });
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const setListTab = (tab: ListTab) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === "all") next.delete("onglet");
+        else next.set("onglet", tab);
+        return next;
+      },
+      { replace: true },
+    );
+  // Filtres Catégorie / Année / À la une, gardés dans l'adresse
+  const { values: filters, setFilter, clearFilters, activeCount } = useUrlFilters(FILTER_KEYS);
+  const categoryFilter = filters.categorie;
   const [page, setPage] = useState(0);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -115,15 +133,21 @@ export default function AdminArticles() {
       if (listTab === "published" && !a.published) return false;
       if (listTab === "drafts" && a.published) return false;
       if (categoryFilter === "none" && a.category_id) return false;
-      if (categoryFilter !== "all" && categoryFilter !== "none" && a.category_id !== categoryFilter) return false;
+      if (categoryFilter !== ALL && categoryFilter !== "none" && a.category_id !== categoryFilter) return false;
+      if (filters.annee !== ALL && a.date.slice(0, 4) !== filters.annee) return false;
+      if (filters.une === "oui" && !a.is_featured) return false;
+      if (filters.une === "non" && a.is_featured) return false;
       return !q || a.title.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q);
     });
-  }, [articles, listTab, categoryFilter, searchQuery]);
+  }, [articles, listTab, categoryFilter, filters.annee, filters.une, searchQuery]);
   const pageCount = Math.ceil(visibleArticles.length / PAGE_SIZE);
   const pageArticles = visibleArticles.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   // Retour à la première page quand le filtre change
-  useEffect(() => setPage(0), [listTab, categoryFilter, searchQuery]);
+  useEffect(() => setPage(0), [listTab, categoryFilter, filters.annee, filters.une, searchQuery]);
+  const yearOptions = [...new Set(articles.map((a) => a.date.slice(0, 4)))]
+    .sort((a, b) => b.localeCompare(a))
+    .map((y) => ({ value: y, label: y }));
 
   async function fetchArticles() {
     try {
@@ -401,28 +425,25 @@ export default function AdminArticles() {
             ))}
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <div className="w-full sm:w-52">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger aria-label="Filtrer par catégorie">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les catégories</SelectItem>
-                  <SelectItem value="none">Sans catégorie</SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <label className="relative w-full sm:w-72">
               <span className="sr-only">Rechercher un article</span>
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
               <Input type="search" placeholder="Rechercher un article…" className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </label>
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <FilterSelect
+            label="Filtrer par catégorie"
+            allLabel="Toutes les catégories"
+            value={categoryFilter}
+            options={[{ value: "none", label: "Sans catégorie" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+            onChange={(v) => setFilter("categorie", v)}
+          />
+          <FilterSelect label="Filtrer par année" allLabel="Toutes les années" value={filters.annee} options={yearOptions} onChange={(v) => setFilter("annee", v)} />
+          <FilterSelect label="Filtrer « À la une »" allLabel="À la une ou non" value={filters.une} options={FEATURED_OPTIONS} onChange={(v) => setFilter("une", v)} />
+          <ClearFiltersButton count={activeCount} onClick={clearFilters} />
         </div>
 
         {loading ? (
@@ -434,8 +455,8 @@ export default function AdminArticles() {
         ) : visibleArticles.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong px-4 py-12 text-center">
             <FileText aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
-            <p className="font-bold">{searchQuery || categoryFilter !== "all" ? "Aucun article ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun article"}</p>
-            {listTab === "all" && !searchQuery && categoryFilter === "all" && (
+            <p className="font-bold">{searchQuery || activeCount > 0 ? "Aucun article ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun article"}</p>
+            {listTab === "all" && !searchQuery && activeCount === 0 && (
               <Button onClick={resetForm} variant="outline" className="mt-2">
                 Créer un article
               </Button>

@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket, Repeat } from "lucide-react";
 import RegularMeetupsDialog from "@/components/admin/RegularMeetupsDialog";
 import PublishToggle from "@/components/admin/PublishToggle";
+import { ClearFiltersButton, FilterSelect } from "@/components/admin/ListFilters";
+import { ALL, useUrlFilters } from "@/lib/urlFilters";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { slugify } from "@/lib/slug";
@@ -28,9 +30,9 @@ import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import { Badge } from "@/components/ui/badge";
 import { getCapacity, isSaleEnded, normalizeHelloAssoSlug } from "@/lib/ticketing";
-import { eventCity } from "@/lib/eventPlace";
+import { eventCity, sortCities } from "@/lib/eventPlace";
 import { geocodeAddress } from "@/lib/geocode";
-import { dateBlockParts, eventDay, formatCountdown, todayISO } from "@/lib/eventDates";
+import { dateBlockParts, eventDay, formatCountdown, isRecurringApero, todayISO } from "@/lib/eventDates";
 
 import {
   DropdownMenu,
@@ -48,6 +50,14 @@ const LIST_TABS: { id: ListTab; label: string }[] = [
   { id: "upcoming", label: "À venir" },
   { id: "past", label: "Passés" },
   { id: "drafts", label: "Brouillons" },
+];
+
+const FILTER_KEYS = ["ville", "type", "annee"] as const;
+const NO_CITY = "aucune";
+const TYPE_OPTIONS = [
+  { value: "billetterie", label: "Billetterie HelloAsso" },
+  { value: "sans-billetterie", label: "Sans billetterie" },
+  { value: "aperos", label: "Apéros" },
 ];
 
 /** Regroupe des événements déjà triés par mois (« Novembre 2026 »). */
@@ -188,7 +198,16 @@ export default function AdminEvents() {
   // Onglets de la liste : À venir (publiés), Passés, Brouillons (à venir non publiés)
   const [searchParams, setSearchParams] = useSearchParams();
   const listTab = (searchParams.get("onglet") as ListTab) || "upcoming";
-  const setListTab = (tab: ListTab) => setSearchParams(tab === "upcoming" ? {} : { onglet: tab }, { replace: true });
+  const setListTab = (tab: ListTab) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === "upcoming") next.delete("onglet");
+        else next.set("onglet", tab);
+        return next;
+      },
+      { replace: true },
+    );
   const today = todayISO();
   const inTab = (e: Event, tab: ListTab) =>
     tab === "past" ? e.date.slice(0, 10) < today : e.date.slice(0, 10) >= today && (tab === "upcoming" ? e.published : !e.published);
@@ -197,8 +216,28 @@ export default function AdminEvents() {
     past: events.filter((e) => inTab(e, "past")).length,
     drafts: events.filter((e) => inTab(e, "drafts")).length,
   };
+
+  // Filtres Ville / Type / Année (options tirées des événements de l'onglet)
+  const { values: filters, setFilter, clearFilters, activeCount } = useUrlFilters(FILTER_KEYS);
+  const tabEvents = events.filter((e) => inTab(e, listTab));
+  const cityOptions = [
+    ...sortCities([...new Set(tabEvents.map((e) => eventCity(e.location)).filter((c): c is string => !!c))]).map((c) => ({ value: c, label: c })),
+    ...(tabEvents.some((e) => !eventCity(e.location)) ? [{ value: NO_CITY, label: "Ville non reconnue" }] : []),
+  ];
+  const yearOptions = [...new Set(tabEvents.map((e) => e.date.slice(0, 4)))]
+    .sort((a, b) => b.localeCompare(a))
+    .map((y) => ({ value: y, label: y }));
+  const matchesFilters = (e: Event) => {
+    if (filters.ville !== ALL && (eventCity(e.location) ?? NO_CITY) !== filters.ville) return false;
+    if (filters.annee !== ALL && e.date.slice(0, 4) !== filters.annee) return false;
+    if (filters.type === "billetterie" && !e.helloasso_form_slug) return false;
+    if (filters.type === "sans-billetterie" && e.helloasso_form_slug) return false;
+    if (filters.type === "aperos" && !isRecurringApero(e.title)) return false;
+    return true;
+  };
+
   const monthGroups = groupEventsByMonth(
-    filteredEvents.filter((e) => inTab(e, listTab)).sort((x, y) => (listTab === "past" ? y.date.localeCompare(x.date) : x.date.localeCompare(y.date))),
+    filteredEvents.filter((e) => inTab(e, listTab) && matchesFilters(e)).sort((x, y) => (listTab === "past" ? y.date.localeCompare(x.date) : x.date.localeCompare(y.date))),
   );
 
   // Événements à venir sans coordonnées (créés avant le plan OpenStreetMap, ou
@@ -571,6 +610,13 @@ export default function AdminEvents() {
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <FilterSelect label="Filtrer par ville" allLabel="Toutes les villes" value={filters.ville} options={cityOptions} onChange={(v) => setFilter("ville", v)} />
+          <FilterSelect label="Filtrer par type" allLabel="Tous les types" value={filters.type} options={TYPE_OPTIONS} onChange={(v) => setFilter("type", v)} />
+          <FilterSelect label="Filtrer par année" allLabel="Toutes les années" value={filters.annee} options={yearOptions} onChange={(v) => setFilter("annee", v)} />
+          <ClearFiltersButton count={activeCount} onClick={clearFilters} />
+        </div>
+
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -580,8 +626,8 @@ export default function AdminEvents() {
         ) : monthGroups.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong px-4 py-12 text-center">
             <CalendarDays aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
-            <p className="font-bold">{searchQuery ? "Aucun événement ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun événement"}</p>
-            {listTab === "upcoming" && !searchQuery && (
+            <p className="font-bold">{searchQuery || activeCount > 0 ? "Aucun événement ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun événement"}</p>
+            {listTab === "upcoming" && !searchQuery && activeCount === 0 && (
               <Button onClick={resetForm} variant="outline" className="mt-2">
                 Créer un événement
               </Button>
