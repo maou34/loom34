@@ -1,6 +1,12 @@
 import { createRoot } from 'react-dom/client'
 import { HelmetProvider } from 'react-helmet-async'
 import App from './App.tsx'
+// Police Figtree servie par le site (plus par Google Fonts : aucune adresse IP de visiteur transmise à Google)
+import '@fontsource/figtree/latin-400.css'
+import '@fontsource/figtree/latin-500.css'
+import '@fontsource/figtree/latin-600.css'
+import '@fontsource/figtree/latin-700.css'
+import '@fontsource/figtree/latin-800.css'
 import './theme/theme.css'
 import './index.css'
 import './styles/globals.css'

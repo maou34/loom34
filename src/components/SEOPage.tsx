@@ -90,13 +90,10 @@ const SEOPage: React.FC<SEOPageProps> = ({
       <meta name="revisit-after" content="7 days" />
       
       {/* DNS prefetch pour améliorer les performances */}
-      <link rel="dns-prefetch" href="//fonts.googleapis.com" />
       <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
       <link rel="dns-prefetch" href="//www.facebook.com" />
       <link rel="dns-prefetch" href="//www.instagram.com" />
-      
-      {/* Preconnect pour les ressources critiques */}
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+
     </Helmet>
   );
 };
