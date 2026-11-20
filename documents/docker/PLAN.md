@@ -1,6 +1,6 @@
 # Passage de Supabase sur Docker — plan de développement
 
-Rédigé le 20/11/2026, branche `feature/supabase-docker` (partie de `main`). Statut : **phases 1 et 2 faites le 20/11/2026** (CLI Supabase 3.2.0 ; migrations `20261120074827` et `20261120090000` appliquées en prod, secret Vault `project_url` créé, notification et cron vérifiés). Phase 3 en cours depuis le 20/11/2026 : pile installée dans `/opt/supabase` (release self-hosted/v0.8.4), `https://api.lgbt-loom.fr` en HTTPS, migrations appliquées, Vault et fonctions de `main` en place, sync HelloAsso sandbox OK depuis la base. Phases 4 et suivantes : pas commencées.
+Rédigé le 20/11/2026, branche `feature/supabase-docker` (partie de `main`). Statut : **phases 1 et 2 faites le 20/11/2026** (CLI Supabase 3.2.0 ; migrations `20261120074827` et `20261120090000` appliquées en prod, secret Vault `project_url` créé, notification et cron vérifiés). Phases 3 et 4 faites le 20/11/2026 : pile installée dans `/opt/supabase` (release self-hosted/v0.8.4, ~750 Mo de RAM), `https://api.lgbt-loom.fr` en HTTPS, migrations, Vault, fonctions de `main` ; données de prod copiées en 13 s (`deploy/supabase/copy-prod-data.sh`) et site actuel testé en local contre le VPS (pages, connexion admin, mot de passe oublié, contact, édition, photos) — tout passe. Cron du VPS **désactivé** pendant la répétition. Reste : modèles d'e-mails en français, sauvegardes (phase 5), fonctions de la refonte (après fusion de `new-ux-loom`), bascule (phase 6).
 
 ## Objectif
 
