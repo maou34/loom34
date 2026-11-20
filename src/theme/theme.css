@@ -65,6 +65,7 @@
   --band-dark-bg: #2A1A0C;
   --band-dark-text: #E8D9C5;
   --footer-bg: #2A1A0C;
+  --footer-bottom-bg: #1B1108;   /* bandeau du bas du footer (opaque : coupe le grand « LOOM ») */
   --join-bg: #623804;
 
   /* États */
@@ -138,6 +139,7 @@
   --band-dark-bg: #0E0905;
   --band-dark-text: #CDBBA6;
   --footer-bg: #2A1A0C;
+  --footer-bottom-bg: #1B1108;   /* bandeau du bas du footer (opaque : coupe le grand « LOOM ») */
   --join-bg: #623804;
 
   --danger: #F97066;

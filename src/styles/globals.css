@@ -114,6 +114,7 @@ html {
   --band-dark-bg: #000000;
   --band-dark-text: #FFFFFF;
   --footer-bg: #000000;
+  --footer-bottom-bg: #000000;
   --join-bg: #000000;
   --join-text: #FFFFFF;
   --danger: #8F1A10;
@@ -180,6 +181,7 @@ html {
   --band-dark-bg: #000000;
   --band-dark-text: #FFFFFF;
   --footer-bg: #000000;
+  --footer-bottom-bg: #000000;
   --join-bg: #000000;
   --join-text: #FFFFFF;
   --danger: #FF8A80;
