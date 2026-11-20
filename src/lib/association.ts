@@ -1,6 +1,6 @@
 /** Coordonnées officielles de l'association (mentions légales, CGU). */
 export const ASSOCIATION = {
-  name: 'LOOM – Les Ours Occitanie Méditerranée',
+  name: 'LOOM – Les Ours Occitanie Montpellier',
   status: 'Association loi 1901',
   rna: 'W343021918',
   siret: '834 084 212 00010',

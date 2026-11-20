@@ -5,8 +5,8 @@ import useSEO from '@/hooks/useSEO';
 
 const Terms = () => {
   useSEO({
-    title: "Conditions d'utilisation - LOOM | Les Ours Occitanie Méditerranée",
-    description: "Conditions générales d'utilisation du site de LOOM – Les Ours Occitanie Méditerranée.",
+    title: "Conditions d'utilisation - LOOM | Les Ours Occitanie Montpellier",
+    description: "Conditions générales d'utilisation du site de LOOM – Les Ours Occitanie Montpellier.",
     keywords: ['conditions générales utilisation', 'CGU', 'LOOM'],
     type: 'website',
   });

@@ -5,7 +5,7 @@ import useSEO from '@/hooks/useSEO';
 
 const LegalNotice = () => {
   useSEO({
-    title: 'Mentions légales - LOOM | Les Ours Occitanie Méditerranée',
+    title: 'Mentions légales - LOOM | Les Ours Occitanie Montpellier',
     description: "Mentions légales du site de LOOM : éditeur, hébergement, directeur de la publication et protection des données personnelles.",
     keywords: ['LOOM', 'mentions légales', 'association', 'Montpellier', 'données personnelles'],
     type: 'website',
