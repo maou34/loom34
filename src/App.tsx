@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import { useEffect, Suspense, lazy } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import React from "react";
@@ -106,6 +106,25 @@ function RouteReload() {
   return null;
 }
 
+/**
+ * Remonte en haut de la page à chaque changement de page (clic sur un lien).
+ * Sans lui, une application React garde la position de défilement de la page
+ * précédente : on arrivait souvent en bas de la nouvelle page. Exceptions : le
+ * bouton « Retour » du navigateur (il restaure lui-même la position), les liens
+ * vers une ancre (#contact…, gérés par la page) et les changements de filtres
+ * (?ville=… : même page, on garde sa place).
+ */
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+  useEffect(() => {
+    if (navigationType === "POP" || hash) return;
+    window.scrollTo(0, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+  return null;
+}
+
 const App = () => {
   // Scroll to top on initial mount
   useEffect(() => {
@@ -123,6 +142,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <RouteReload />
+            <ScrollToTop />
             <ErrorBoundary>
             <Suspense fallback={<PageLoader />}>
               <Routes>
