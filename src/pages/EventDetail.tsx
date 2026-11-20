@@ -309,7 +309,7 @@ const EventDetail = () => {
                   <img
                     src={event.image}
                     alt={`Affiche : ${event.title}`}
-                    className="mx-auto block max-h-[560px] w-full object-contain"
+                    className="mx-auto block max-h-[420px] w-full object-contain"
                     fetchPriority="high"
                   />
                 </picture>

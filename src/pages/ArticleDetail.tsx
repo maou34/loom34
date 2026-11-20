@@ -148,7 +148,7 @@ const ArticleDetail = () => {
             <div className="hidden overflow-hidden rounded-[22px] bg-loom-surface-2 sm:block">
               <picture>
                 <source media="(max-width: 639px)" srcSet={BLANK_IMAGE} />
-                <img src={article.image} alt="" className="mx-auto block max-h-[560px] w-full object-contain" fetchPriority="high" />
+                <img src={article.image} alt="" className="mx-auto block max-h-[420px] w-full object-contain" fetchPriority="high" />
               </picture>
             </div>
           )}

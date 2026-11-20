@@ -898,11 +898,15 @@ export default function AdminEvents() {
 
             <div className="space-y-2">
               <Label>Image de couverture</Label>
+              <p className="text-sm text-muted-foreground">
+                Format paysage recommandé : <strong>1200 × 628 px</strong> (comme une couverture d'événement Facebook). Sur le site, elle est affichée
+                sur 420 px de haut au maximum ; une image plus haute est réduite avec des bandes sur les côtés.
+              </p>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50">
                 <ImageUpload onUploadComplete={(url) => setEventForm(prev => ({ ...prev, image: url }))} />
                 {eventForm.image && (
-                  <div className="mt-4 relative aspect-video w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-                    <img src={eventForm.image} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="mt-4 relative aspect-[1200/628] w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
+                    <img src={eventForm.image} alt="Aperçu de l'image de couverture" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
