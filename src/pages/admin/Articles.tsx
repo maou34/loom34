@@ -7,6 +7,7 @@ import { Plus, Edit, Trash2, Eye, FileText, Search, MoreHorizontal, CheckCircle2
 import { Link, useSearchParams } from "react-router-dom";
 import { getImageUrl } from "@/config";
 import { toast } from "sonner";
+import PublishToggle from "@/components/admin/PublishToggle";
 import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
@@ -58,14 +59,6 @@ const LIST_TABS: { id: ListTab; label: string }[] = [
   { id: "drafts", label: "Brouillons" },
 ];
 const PAGE_SIZE = 20;
-
-function StatusChip({ published }: { published: boolean }) {
-  return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${published ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
-      {published ? "Publié" : "Brouillon"}
-    </span>
-  );
-}
 
 /** Longueur conseillée du chapô (≈ deux lignes dans les cartes) */
 const EXCERPT_MAX = 160;
@@ -365,7 +358,9 @@ export default function AdminArticles() {
     try {
       const { error } = await db.from('articles').update({ published, updated_at: new Date().toISOString() }).eq('id', article.id);
       if (error) throw error;
-      toast.success(published ? `« ${article.title} » est publié` : `« ${article.title} » est repassé en brouillon`);
+      toast.success(published ? `« ${article.title} » est publié` : `« ${article.title} » est repassé en brouillon`, {
+        action: { label: "Annuler", onClick: () => togglePublished({ ...article, published }) },
+      });
     } catch (error: unknown) {
       setPublished(article.published);
       toast.error("Erreur lors du changement de statut : " + (error instanceof Error ? error.message : String(error)));
@@ -467,9 +462,6 @@ export default function AdminArticles() {
                     <span className="truncate text-sm text-loom-text-muted sm:hidden">
                       {article.article_categories?.name ?? "Sans catégorie"} · {formatDate(article.date)}
                     </span>
-                    <span className="mt-1 sm:hidden">
-                      <StatusChip published={article.published} />
-                    </span>
                   </button>
                   <span className="hidden w-40 flex-none truncate text-sm md:block">
                     {article.article_categories ? (
@@ -479,9 +471,7 @@ export default function AdminArticles() {
                     )}
                   </span>
                   <span className="hidden w-24 flex-none text-sm text-loom-text-muted sm:block">{formatDate(article.date)}</span>
-                  <span className="hidden w-20 flex-none text-right sm:block">
-                    <StatusChip published={article.published} />
-                  </span>
+                  <PublishToggle id={article.id} title={article.title} published={article.published} disabled={togglingId === article.id} onToggle={() => togglePublished(article)} />
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour « ${article.title} » : modifier, dupliquer, voir sur le site, supprimer`}>

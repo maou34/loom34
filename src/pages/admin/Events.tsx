@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket, Repeat } from "lucide-react";
 import RegularMeetupsDialog from "@/components/admin/RegularMeetupsDialog";
+import PublishToggle from "@/components/admin/PublishToggle";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { slugify } from "@/lib/slug";
@@ -441,7 +442,9 @@ export default function AdminEvents() {
         .update({ published, updated_at: new Date().toISOString() })
         .eq('id', event.id);
       if (error) throw error;
-      toast.success(published ? `« ${event.title} » est publié` : `« ${event.title} » est repassé en brouillon`);
+      toast.success(published ? `« ${event.title} » est publié` : `« ${event.title} » est repassé en brouillon`, {
+        action: { label: "Annuler", onClick: () => togglePublished({ ...event, published }) },
+      });
     } catch (error: unknown) {
       setPublished(event.published);
       console.error("Error toggling event publication:", error);
@@ -620,12 +623,10 @@ export default function AdminEvents() {
                             </span>
                           )}
                         </button>
-                        <span className="hidden flex-none flex-col items-end gap-1 sm:flex">
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${event.published ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"}`}>
-                            {event.published ? "Publié" : "Brouillon"}
-                          </span>
-                          {countdown && listTab !== "past" && <span className="text-xs text-loom-text-muted">{countdown.replace("dans ", "dans ").replace(" jours", " j")}</span>}
-                        </span>
+                        {countdown && listTab !== "past" && (
+                          <span className="hidden w-16 flex-none text-right text-xs text-loom-text-muted md:block">{countdown.replace(" jours", " j")}</span>
+                        )}
+                        <PublishToggle id={event.id} title={event.title} published={event.published} disabled={togglingId === event.id} onToggle={() => togglePublished(event)} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour « ${event.title} » : modifier, dupliquer, voir sur le site, supprimer`}>
@@ -664,7 +665,7 @@ export default function AdminEvents() {
               </section>
             ))}
             <p className="text-xs text-loom-text-muted">
-              Cliquer sur un événement ouvre l'édition. Le menu ⋯ propose Dupliquer (pratique pour les apéros), Voir sur le site, Publier et Supprimer.
+              Cliquer sur un événement ouvre l'édition. L'interrupteur publie ou repasse en brouillon d'un clic. Le menu ⋯ propose Dupliquer (pratique pour les apéros), Voir sur le site et Supprimer.
             </p>
           </div>
         )}
