@@ -16,6 +16,10 @@ import { formatLongDate } from '@/lib/eventDates';
 import { shareLink } from '@/lib/share';
 import { ARTICLE_LIST_SELECT, categoryName, readingTime, type ArticleListItem } from '@/lib/articles';
 import { BLANK_IMAGE } from '@/lib/blankImage';
+import ZoomableImage from '@/components/site/ZoomableImage';
+
+/** Images du texte cliquables pour les voir en entier */
+const MARKDOWN_COMPONENTS = { img: ZoomableImage };
 
 type ArticleRow = ArticleListItem & { updated_at: string };
 
@@ -150,9 +154,9 @@ const ArticleDetail = () => {
           )}
 
           <div className={cn(card, 'rounded-[18px] p-5 sm:p-6')}>
-            {/* Images de l'article : hauteur limitée, centrées */}
-            <div className="prose prose-loom max-w-none sm:prose-lg prose-blockquote:not-italic prose-img:mx-auto prose-img:max-h-[min(70vh,440px)] prose-img:w-auto prose-img:rounded-xl">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content}</ReactMarkdown>
+            {/* Images de l'article : hauteur limitée, centrées, un clic les affiche en entier */}
+            <div className="prose prose-loom max-w-none sm:prose-lg prose-blockquote:not-italic prose-img:mx-auto prose-img:max-h-[min(75vh,560px)] prose-img:w-auto prose-img:rounded-xl">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{article.content}</ReactMarkdown>
             </div>
           </div>
         </article>

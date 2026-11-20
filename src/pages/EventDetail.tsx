@@ -38,6 +38,10 @@ import {
 } from '@/lib/ticketing';
 import { SOCIAL_LINKS } from '@/components/site/navigation';
 import { BLANK_IMAGE } from '@/lib/blankImage';
+import ZoomableImage from '@/components/site/ZoomableImage';
+
+/** Images du texte cliquables pour les voir en entier */
+const MARKDOWN_COMPONENTS = { img: ZoomableImage };
 
 const HELLOASSO_ORIGIN = new URL(HELLOASSO_BASE_URL).origin;
 const IFRAME_DEFAULT_HEIGHT = 750;
@@ -323,9 +327,9 @@ const EventDetail = () => {
 
               {event.description && (
                 <div className={cn(card, 'rounded-[18px] p-5 sm:p-6')}>
-                  {/* Images de la description : hauteur limitée, centrées */}
-                  <div className="prose prose-loom max-w-none sm:prose-lg prose-img:mx-auto prose-img:max-h-[min(70vh,440px)] prose-img:w-auto prose-img:rounded-xl">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+                  {/* Images de la description : hauteur limitée, centrées, un clic les affiche en entier */}
+                  <div className="prose prose-loom max-w-none sm:prose-lg prose-img:mx-auto prose-img:max-h-[min(75vh,560px)] prose-img:w-auto prose-img:rounded-xl">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{event.description}</ReactMarkdown>
                   </div>
                 </div>
               )}
