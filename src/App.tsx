@@ -125,10 +125,32 @@ function ScrollToTop() {
   return null;
 }
 
+/**
+ * Précharge le code des pages publiques une fois l'accueil affiché (quand le
+ * navigateur n'a rien d'autre à faire) : un clic ensuite ouvre la page sans
+ * attendre son téléchargement.
+ */
+function preloadPublicPages() {
+  const load = () => {
+    void import("./pages/Events");
+    void import("./pages/EventDetail");
+    void import("./pages/Articles");
+    void import("./pages/ArticleDetail");
+    void import("./pages/About");
+    void import("./pages/MonsieurOurs");
+    void import("./pages/Gallery");
+    void import("./pages/AlbumDetail");
+    void import("./pages/Partners");
+  };
+  if ("requestIdleCallback" in window) window.requestIdleCallback(load, { timeout: 4000 });
+  else setTimeout(load, 2500);
+}
+
 const App = () => {
   // Scroll to top on initial mount
   useEffect(() => {
     window.scrollTo(0, 0);
+    preloadPublicPages();
   }, []);
 
   return (
@@ -140,7 +162,7 @@ const App = () => {
 
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <RouteReload />
             <ScrollToTop />
             <ErrorBoundary>
