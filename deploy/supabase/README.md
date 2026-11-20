@@ -60,13 +60,19 @@ supabase db push --remote "postgresql://postgres:$PGPW@127.0.0.1:5433/postgres"
 ```
 
 ### 5. Secrets du Vault (sur le serveur)
+L'adresse interne des fonctions, puis les deux secrets partagés **lus directement dans `functions.env`** (les recopier à la main a donné un 401 lors de l'installation du 20/11/2026). À l'invite du serveur (`ubuntu@…$`), pas dans psql :
 ```bash
-sudo docker exec -it supabase-db psql -U postgres
+sudo docker exec supabase-db psql -U postgres -c "SELECT vault.create_secret('http://kong:8000', 'project_url')"
+for n in SYNC_EVENTS_SECRET:sync_events_secret NOTIFY_MESSAGE_SECRET:notify_message_secret; do
+  V=$(sudo grep "^${n%%:*}=" /opt/supabase/functions.env | cut -d= -f2- | tr -d '\r\n')
+  echo "SELECT vault.create_secret(:'v', '${n#*:}');" \
+    | sudo docker exec -i supabase-db psql -U postgres -At -v v="$V" >/dev/null && echo "${n#*:} créé"
+done; unset V
 ```
-```sql
-SELECT vault.create_secret('http://kong:8000', 'project_url');
-SELECT vault.create_secret('<même valeur que SYNC_EVENTS_SECRET de functions.env>', 'sync_events_secret');
-SELECT vault.create_secret('<même valeur que NOTIFY_MESSAGE_SECRET de functions.env>', 'notify_message_secret');
+(Pour corriger un secret existant : même boucle avec `SELECT vault.update_secret(id, :'v') FROM vault.secrets WHERE name = '…'`.) Vérifier par empreintes (le ` -` final de `md5sum` est normal) :
+```bash
+sudo grep -E '^(SYNC_EVENTS|NOTIFY_MESSAGE)_SECRET=' /opt/supabase/functions.env | cut -d= -f2- | while read -r v; do printf %s "$v" | md5sum; done
+sudo docker exec supabase-db psql -U postgres -At -c "SELECT md5(decrypted_secret) FROM vault.decrypted_secrets WHERE name IN ('sync_events_secret','notify_message_secret') ORDER BY name DESC"
 ```
 
 ### 6. Fonctions
