@@ -1,4 +1,13 @@
-/* Accessibilité */
+/* ==========================================================================
+   Options d'accessibilité (panneau AccessibilityMenu, classes posées sur <html>)
+   --------------------------------------------------------------------------
+   Règle : ne jamais forcer de couleurs élément par élément (l'ancienne version
+   mettait tout en transparent/noir et rendait des textes ou les interrupteurs
+   invisibles). Les options changent les variables du thème (theme.css et les
+   variables shadcn d'index.css) : tout le site et le panneau suivent, en
+   thème clair comme en mode nuit.
+   ========================================================================== */
+
 :root {
   --text-size: 100%;
 }
@@ -7,137 +16,203 @@ html {
   font-size: var(--text-size);
 }
 
-/* Mode Dyslexique */
-.dyslexic-font {
-  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Chalkboard SE', sans-serif !important;
+/* --- Police dyslexique ---------------------------------------------------- */
+/* OpenDyslexic (SIL OFL 1.1, public/fonts/opendyslexic/LICENSE), hébergée sur
+   le site : le navigateur ne la télécharge que si l'option est activée. */
+@font-face {
+  font-family: 'OpenDyslexic';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/opendyslexic/opendyslexic-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'OpenDyslexic';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/opendyslexic/opendyslexic-latin-700-normal.woff2') format('woff2');
 }
 
+.dyslexic-font,
 .dyslexic-font * {
-  font-family: 'OpenDyslexic', 'Comic Sans MS', 'Chalkboard SE', sans-serif !important;
+  font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
 }
 
-/* Mode Grayscale */
+/* --- Monochrome ------------------------------------------------------------ */
 .grayscale-mode {
   filter: grayscale(100%);
 }
 
-/* Curseur Agrandie */
-.big-cursor, .big-cursor * {
+/* --- Curseur agrandi ------------------------------------------------------- */
+.big-cursor,
+.big-cursor * {
   cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="black" stroke="white" stroke-width="2"><path d="M5.5 3.21l10.08 5.31-4.53 1.42-1.42 4.53L5.5 3.21z"></path></svg>') 0 0, auto !important;
 }
 
-/* Liens Soulignés */
-.underline-links a {
+/* --- Liens soulignés ------------------------------------------------------- */
+.underline-links a,
+.high-contrast a {
   text-decoration: underline !important;
   text-decoration-thickness: 2px !important;
   text-underline-offset: 4px !important;
 }
 
-/* Contraste Élevé */
-.high-contrast {
-  --background-color: #000000;
-  --text-color: #ffffff;
-  --link-color: #ffff00;
-  --heading-color: #00ffff;
-  --border-color: #ffffff;
+/* --- Lecture confortable (espacement du texte, WCAG 1.4.12) ---------------- */
+/* Remplace l'ancien « mode lecture simple », qui cassait la mise en page. */
+.comfort-reading body {
+  line-height: 1.8 !important;
+  letter-spacing: 0.04em !important;
+  word-spacing: 0.12em !important;
 }
-
-.high-contrast body {
-  background-color: var(--background-color) !important;
-  color: var(--text-color) !important;
-}
-
-.high-contrast * {
-  background-color: transparent; /* Reset background to allow body bg to show through mostly, but handle specific elements below */
-  color: inherit;
-  border-color: var(--border-color);
-}
-
-.high-contrast div, 
-.high-contrast section, 
-.high-contrast article, 
-.high-contrast header, 
-.high-contrast footer, 
-.high-contrast nav,
-.high-contrast main {
-  background-color: #000000 !important;
-  color: #ffffff !important;
-}
-
-.high-contrast a {
-  color: var(--link-color) !important;
-  text-decoration: underline;
-}
-
-.high-contrast h1, 
-.high-contrast h2, 
-.high-contrast h3, 
-.high-contrast h4, 
-.high-contrast h5, 
-.high-contrast h6 {
-  color: var(--heading-color) !important;
-}
-
-.high-contrast button, 
-.high-contrast input, 
-.high-contrast select, 
-.high-contrast textarea {
-  background-color: #000000 !important;
-  color: #ffff00 !important;
-  border: 2px solid #ffffff !important;
-}
-
-.high-contrast img {
-  filter: grayscale(100%) contrast(120%);
-}
-
-/* Mode Lecture Simple (Lecture Confortable) */
-.simple-mode body {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-  background-color: #fdf6e3 !important; /* Solarized Light background */
-  color: #002b36 !important; /* Solarized Light text */
-  font-family: Georgia, serif !important;
+.comfort-reading p,
+.comfort-reading li {
   line-height: 1.8 !important;
 }
-
-.simple-mode * {
-  background-color: transparent !important;
-  color: inherit !important;
-  box-shadow: none !important;
-  text-shadow: none !important;
-  border: none !important;
-}
-
-.simple-mode img, 
-.simple-mode svg, 
-.simple-mode video,
-.simple-mode .bg-image {
-  display: none !important;
-}
-
-.simple-mode a {
-  color: #268bd2 !important;
-  text-decoration: underline !important;
-}
-
-.simple-mode h1, .simple-mode h2, .simple-mode h3 {
-  color: #cb4b16 !important;
-  margin-top: 2rem;
-  border-bottom: 1px solid #93a1a1 !important;
-}
-
-.simple-mode button, .simple-mode input, .simple-mode select, .simple-mode textarea {
-  font-size: 1em;
-  color: #111 !important;
-  background: #fff !important;
-  border: 1px solid #888 !important;
-  padding: 0.3em 0.6em;
+.comfort-reading p {
   margin-bottom: 1em;
+}
+
+/* --- Contraste élevé -------------------------------------------------------- */
+/* Thème clair : noir sur blanc. */
+:root.high-contrast:not([data-theme="dark"]) {
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #F2F2F2;
+  --border: #1A1A1A;
+  --border-strong: #000000;
+  --divider-outline: #000000;
+  --text: #000000;
+  --text-2: #000000;
+  --text-muted: #262626;
+  --accent-text: #7A3500;
+  --initial: #A84D00;
+  --title-accent: #3D2300;
+  --stat: #3D2300;
+  --link: #3D2300;
+  --link-hover: #000000;
+  --primary-bg: #3D2300;
+  --primary-fg: #FFFFFF;
+  --primary-hover: #000000;
+  --secondary-bg: #FFFFFF;
+  --secondary-fg: #000000;
+  --secondary-border: #000000;
+  --chip-bg: #FFFFFF;
+  --chip-fg: #000000;
+  --chip-hot-bg: #7A3500;
+  --chip-hot-fg: #FFFFFF;
+  --highlight-bg: #FFF6D6;
+  --highlight-border: #000000;
+  --highlight-label: #7A3500;
+  --header-bg: #FFFFFF;
+  --header-border: #000000;
+  --nav-fg: #000000;
+  --nav-active-bg: #FEE6B8;
+  --nav-active-fg: #000000;
+  --theme-toggle-bg: #FFFFFF;
+  --theme-toggle-fg: #000000;
+  --band-dark-bg: #000000;
+  --band-dark-text: #FFFFFF;
+  --footer-bg: #000000;
+  --join-bg: #000000;
+  --join-text: #FFFFFF;
+  --danger: #8F1A10;
+  --success: #1E4D1E;
+  --warning-fg: #6B2D00;
+  --shadow-card: none;
+  --shadow-header: none;
+
+  /* Variables shadcn (HSL) : panneaux, interrupteurs, champs */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  --primary: 33 88% 12%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 80%;
+  --secondary-foreground: 0 0% 0%;
+  --muted: 0 0% 95%;
+  --muted-foreground: 0 0% 15%;
+  --ui-border: 0 0% 10%;
+  --input: 0 0% 45%;            /* interrupteur éteint gris, bien distinct de l'allumé */
+  --ring: 0 0% 0%;
+}
+
+/* Mode nuit : blanc et jaune sur noir. */
+:root.high-contrast[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #000000;
+  --surface-2: #141414;
+  --border: #D9D9D9;
+  --border-strong: #FFFFFF;
+  --divider-outline: #FFFFFF;
+  --text: #FFFFFF;
+  --text-2: #FFFFFF;
+  --text-muted: #E6E6E6;
+  --accent-text: #FFC266;
+  --initial: #FFC266;
+  --title-accent: #FFE58A;
+  --stat: #FFE58A;
+  --link: #FFE58A;
+  --link-hover: #FFFFFF;
+  --primary-bg: #FFE58A;
+  --primary-fg: #000000;
+  --primary-hover: #FFFFFF;
+  --secondary-bg: #000000;
+  --secondary-fg: #FFFFFF;
+  --secondary-border: #FFFFFF;
+  --chip-bg: #000000;
+  --chip-fg: #FFE58A;
+  --chip-hot-bg: #FFC266;
+  --chip-hot-fg: #000000;
+  --highlight-bg: #000000;
+  --highlight-border: #FFE58A;
+  --highlight-label: #FFE58A;
+  --header-bg: #000000;
+  --header-border: #FFFFFF;
+  --nav-fg: #FFFFFF;
+  --nav-active-bg: #333333;
+  --nav-active-fg: #FFE58A;
+  --theme-toggle-bg: #000000;
+  --theme-toggle-fg: #FFE58A;
+  --band-dark-bg: #000000;
+  --band-dark-text: #FFFFFF;
+  --footer-bg: #000000;
+  --join-bg: #000000;
+  --join-text: #FFFFFF;
+  --danger: #FF8A80;
+  --success: #9BE29B;
+  --success-bg: #000000;
+  --warning-fg: #FFE58A;
+  --shadow-card: none;
+  --shadow-header: none;
+
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 0%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 0%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 47 100% 77%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 40%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 90%;
+  --ui-border: 0 0% 85%;
+  --input: 0 0% 60%;
+  --ring: 47 100% 77%;
+}
+
+/* Bordures visibles sur les cartes et les champs, anneau de focus épais */
+.high-contrast :focus-visible {
+  outline: 3px solid var(--text) !important;
+  outline-offset: 2px !important;
 }
 
 /* Fix: force white text on brown disabled buttons */
 button.bg-brown:disabled, .bg-brown:disabled {
   color: #fff !important;
-} 
+}

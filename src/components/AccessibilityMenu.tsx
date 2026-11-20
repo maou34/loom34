@@ -1,269 +1,183 @@
-import { useState, useEffect } from 'react';
-import { 
-  Type, 
-  Eye, 
-  MousePointer2, 
-  Palette, 
-  RotateCcw
-} from 'lucide-react';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { useEffect, useState, type ReactNode } from 'react';
+import { Eye, MousePointer2, Palette, RotateCcw, Type } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 
 interface AccessibilityMenuProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/** Options booléennes : clé localStorage → classe posée sur <html> (styles dans src/styles/globals.css). */
+const OPTIONS = {
+  dyslexicFont: 'dyslexic-font',
+  highContrast: 'high-contrast',
+  grayscaleMode: 'grayscale-mode',
+  bigCursor: 'big-cursor',
+  underlineLinks: 'underline-links',
+  comfortReading: 'comfort-reading',
+} as const;
+type OptionKey = keyof typeof OPTIONS;
+
+const NO_OPTION: Record<OptionKey, boolean> = {
+  dyslexicFont: false,
+  highContrast: false,
+  grayscaleMode: false,
+  bigCursor: false,
+  underlineLinks: false,
+  comfortReading: false,
+};
+
+const read = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const write = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // navigation privée : l'option s'applique sans être mémorisée
+  }
+};
+
+function OptionRow({ id, label, hint, checked, onChange }: { id: string; label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3">
+      <div className="flex flex-col gap-0.5">
+        <label htmlFor={id} className="cursor-pointer text-base font-semibold text-loom-text">
+          {label}
+        </label>
+        <p id={`${id}-hint`} className="text-sm text-loom-text-muted">
+          {hint}
+        </p>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onChange} aria-describedby={`${id}-hint`} />
+    </div>
+  );
+}
+
+function Group({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-loom-text-2">
+        {icon}
+        {title}
+      </h3>
+      <div className="divide-y divide-loom-border rounded-xl border border-loom-border bg-loom-surface-2 px-4">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * Panneau « Options d'accessibilité » (ouvert depuis le pied de page). Les
+ * réglages sont mémorisés dans le navigateur et appliqués par des classes sur
+ * <html> ; les couleurs viennent du thème, donc le panneau reste lisible en
+ * thème clair, en mode nuit et en contraste élevé.
+ */
 const AccessibilityMenu = ({ isOpen, onClose }: AccessibilityMenuProps) => {
   const [textSize, setTextSize] = useState(100);
-  const [highContrast, setHighContrast] = useState(false);
-  const [underlineLinks, setUnderlineLinks] = useState(false);
-  const [simpleMode, setSimpleMode] = useState(false);
-  const [dyslexicFont, setDyslexicFont] = useState(false);
-  const [grayscaleMode, setGrayscaleMode] = useState(false);
-  const [bigCursor, setBigCursor] = useState(false);
+  const [options, setOptions] = useState<Record<OptionKey, boolean>>(NO_OPTION);
+  const [loaded, setLoaded] = useState(false);
 
-  // Charger les paramètres au montage
+  // Réglages mémorisés
   useEffect(() => {
-    loadSavedSettings();
+    const size = Number(read('textSize'));
+    if (size >= 75 && size <= 150) setTextSize(size);
+    const saved = { ...NO_OPTION };
+    for (const key of Object.keys(OPTIONS) as OptionKey[]) saved[key] = read(key) === 'true';
+    setOptions(saved);
+    // L'ancien « mode lecture simple » cassait la mise en page : abandonné
+    try {
+      localStorage.removeItem('simpleMode');
+    } catch {
+      // ignoré
+    }
+    document.documentElement.classList.remove('simple-mode');
+    setLoaded(true);
   }, []);
 
-  // Appliquer les paramètres dès qu'ils changent
+  // Application + mémorisation (après la lecture, pour ne pas écraser les réglages)
   useEffect(() => {
-    applyAccessibilitySettings();
-  }, [textSize, highContrast, underlineLinks, simpleMode, dyslexicFont, grayscaleMode, bigCursor]);
-
-  const loadSavedSettings = () => {
-    try {
-      const savedTextSize = localStorage.getItem('textSize');
-      const savedHighContrast = localStorage.getItem('highContrast');
-      const savedUnderlineLinks = localStorage.getItem('underlineLinks');
-      const savedSimpleMode = localStorage.getItem('simpleMode');
-      const savedDyslexicFont = localStorage.getItem('dyslexicFont');
-      const savedGrayscaleMode = localStorage.getItem('grayscaleMode');
-      const savedBigCursor = localStorage.getItem('bigCursor');
-
-      if (savedTextSize) setTextSize(Number(savedTextSize));
-      if (savedHighContrast === 'true') setHighContrast(true);
-      if (savedUnderlineLinks === 'true') setUnderlineLinks(true);
-      if (savedSimpleMode === 'true') setSimpleMode(true);
-      if (savedDyslexicFont === 'true') setDyslexicFont(true);
-      if (savedGrayscaleMode === 'true') setGrayscaleMode(true);
-      if (savedBigCursor === 'true') setBigCursor(true);
-    } catch (error) {
-      console.error('Erreur lors du chargement des paramètres:', error);
+    if (!loaded) return;
+    const root = document.documentElement;
+    root.style.setProperty('--text-size', `${textSize}%`);
+    write('textSize', String(textSize));
+    for (const key of Object.keys(OPTIONS) as OptionKey[]) {
+      root.classList.toggle(OPTIONS[key], options[key]);
+      write(key, String(options[key]));
     }
-  };
+  }, [loaded, textSize, options]);
 
-  const applyAccessibilitySettings = () => {
-    try {
-      // Sauvegarder les paramètres
-      localStorage.setItem('textSize', textSize.toString());
-      localStorage.setItem('highContrast', highContrast.toString());
-      localStorage.setItem('underlineLinks', underlineLinks.toString());
-      localStorage.setItem('simpleMode', simpleMode.toString());
-      localStorage.setItem('dyslexicFont', dyslexicFont.toString());
-      localStorage.setItem('grayscaleMode', grayscaleMode.toString());
-      localStorage.setItem('bigCursor', bigCursor.toString());
-
-      // Appliquer les styles
-      document.documentElement.style.setProperty('--text-size', `${textSize}%`);
-      
-      // Helper pour toggle les classes sur html (documentElement) pour que les sélecteurs CSS globaux fonctionnent
-      const toggleHtmlClass = (className: string, isActive: boolean) => {
-        if (isActive) document.documentElement.classList.add(className);
-        else document.documentElement.classList.remove(className);
-      };
-
-      toggleHtmlClass('high-contrast', highContrast);
-      toggleHtmlClass('underline-links', underlineLinks);
-      toggleHtmlClass('simple-mode', simpleMode);
-      toggleHtmlClass('dyslexic-font', dyslexicFont);
-      toggleHtmlClass('grayscale-mode', grayscaleMode);
-      toggleHtmlClass('big-cursor', bigCursor);
-
-    } catch (error) {
-      console.error('Erreur lors de l\'application des paramètres:', error);
-    }
-  };
-
-  const resetSettings = () => {
-    setTextSize(100);
-    setHighContrast(false);
-    setUnderlineLinks(false);
-    setSimpleMode(false);
-    setDyslexicFont(false);
-    setGrayscaleMode(false);
-    setBigCursor(false);
-  };
+  const set = (key: OptionKey) => (value: boolean) => setOptions((o) => ({ ...o, [key]: value }));
+  const active = textSize !== 100 || Object.values(options).some(Boolean);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto bg-white/95 backdrop-blur-xl border-l border-white/20 shadow-2xl">
-        <SheetHeader className="mb-6">
-          <SheetTitle className="text-2xl font-bold flex items-center gap-2 text-gray-900">
-            <Eye className="h-6 w-6 text-orange" />
+      <SheetContent className="w-full overflow-y-auto border-l border-loom-border bg-loom-surface text-loom-text sm:max-w-md">
+        <SheetHeader className="mb-5 text-left">
+          <SheetTitle className="flex items-center gap-2 text-2xl font-extrabold text-loom-text">
+            <Eye aria-hidden="true" className="h-6 w-6 text-loom-accent-text" />
             Accessibilité
           </SheetTitle>
-          <SheetDescription className="text-gray-500">
-            Personnalisez l'affichage du site pour une expérience adaptée à vos besoins.
-          </SheetDescription>
+          <SheetDescription className="text-loom-text-muted">Adaptez l'affichage du site à vos besoins. Vos choix sont mémorisés sur cet appareil.</SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-8">
-          {/* Section Affichage */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-              <Type className="h-4 w-4" />
-              Affichage du texte
-            </h3>
-            
-            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <Label className="text-base font-medium">Taille du texte</Label>
-                  <span className="text-sm font-bold text-orange bg-orange/10 px-2 py-1 rounded-md">{textSize}%</span>
-                </div>
-                <Slider
-                  value={[textSize]}
-                  min={75}
-                  max={150}
-                  step={5}
-                  onValueChange={(value) => setTextSize(value[0])}
-                  className="py-2"
-                />
-                <div className="flex justify-between text-xs text-gray-400 px-1">
-                  <span>A-</span>
-                  <span>A</span>
-                  <span>A+</span>
-                </div>
-              </div>
-
-              <Separator className="bg-gray-200" />
-
+        <div className="flex flex-col gap-6">
+          <Group icon={<Type aria-hidden="true" className="h-4 w-4" />} title="Texte">
+            <div className="flex flex-col gap-3 py-4">
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Police dyslexique</Label>
-                  <p className="text-xs text-gray-500">Police optimisée pour la lecture</p>
-                </div>
-                <Switch
-                  checked={dyslexicFont}
-                  onCheckedChange={setDyslexicFont}
-                />
+                <span id="a11y-size-label" className="text-base font-semibold text-loom-text">
+                  Taille du texte
+                </span>
+                <span className="rounded-md bg-loom-surface px-2 py-0.5 text-sm font-bold text-loom-text ring-1 ring-loom-border">{textSize} %</span>
+              </div>
+              <Slider value={[textSize]} min={75} max={150} step={5} onValueChange={(v) => setTextSize(v[0])} aria-labelledby="a11y-size-label" className="py-2" />
+              <div aria-hidden="true" className="flex justify-between px-1 text-sm text-loom-text-muted">
+                <span className="text-xs">A</span>
+                <span>A</span>
+                <span className="text-lg">A</span>
               </div>
             </div>
-          </div>
+            <OptionRow id="a11y-dyslexic" label="Police dyslexique" hint="Police OpenDyslexic, conçue pour faciliter la lecture" checked={options.dyslexicFont} onChange={set('dyslexicFont')} />
+            <OptionRow id="a11y-comfort" label="Lecture confortable" hint="Texte plus espacé (lignes, lettres et mots)" checked={options.comfortReading} onChange={set('comfortReading')} />
+          </Group>
 
-          {/* Section Couleurs & Visuel */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-              <Palette className="h-4 w-4" />
-              Couleurs & Visuel
-            </h3>
-            
-            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Contraste élevé</Label>
-                  <p className="text-xs text-gray-500">Augmente le contraste des couleurs</p>
-                </div>
-                <Switch
-                  checked={highContrast}
-                  onCheckedChange={(checked) => {
-                    setHighContrast(checked);
-                    if (checked) setSimpleMode(false);
-                  }}
-                />
-              </div>
+          <Group icon={<Palette aria-hidden="true" className="h-4 w-4" />} title="Couleurs">
+            <OptionRow
+              id="a11y-contrast"
+              label="Contraste élevé"
+              hint="Noir sur blanc (ou blanc sur noir en mode nuit), liens soulignés"
+              checked={options.highContrast}
+              onChange={set('highContrast')}
+            />
+            <OptionRow id="a11y-grayscale" label="Monochrome" hint="Affiche le site en nuances de gris" checked={options.grayscaleMode} onChange={set('grayscaleMode')} />
+          </Group>
 
-              <Separator className="bg-gray-200" />
+          <Group icon={<MousePointer2 aria-hidden="true" className="h-4 w-4" />} title="Navigation">
+            <OptionRow id="a11y-cursor" label="Curseur agrandi" hint="Agrandit le pointeur de la souris" checked={options.bigCursor} onChange={set('bigCursor')} />
+            <OptionRow id="a11y-links" label="Souligner les liens" hint="Rend les liens plus faciles à repérer" checked={options.underlineLinks} onChange={set('underlineLinks')} />
+          </Group>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Monochrome</Label>
-                  <p className="text-xs text-gray-500">Convertit le site en nuances de gris</p>
-                </div>
-                <Switch
-                  checked={grayscaleMode}
-                  onCheckedChange={setGrayscaleMode}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section Navigation */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-              <MousePointer2 className="h-4 w-4" />
-              Navigation & Aide
-            </h3>
-            
-            <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Curseur agrandi</Label>
-                  <p className="text-xs text-gray-500">Agrandit le curseur de la souris</p>
-                </div>
-                <Switch
-                  checked={bigCursor}
-                  onCheckedChange={setBigCursor}
-                />
-              </div>
-
-              <Separator className="bg-gray-200" />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Souligner les liens</Label>
-                  <p className="text-xs text-gray-500">Rend les liens plus visibles</p>
-                </div>
-                <Switch
-                  checked={underlineLinks}
-                  onCheckedChange={setUnderlineLinks}
-                />
-              </div>
-
-              <Separator className="bg-gray-200" />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-base font-medium">Mode lecture simple</Label>
-                  <p className="text-xs text-gray-500">Supprime les images et simplifie la mise en page</p>
-                </div>
-                <Switch
-                  checked={simpleMode}
-                  onCheckedChange={(checked) => {
-                    setSimpleMode(checked);
-                    if (checked) setHighContrast(false);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Reset Button */}
-          <Button 
-            variant="outline" 
-            className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
-            onClick={resetSettings}
+          <button
+            type="button"
+            onClick={() => {
+              setTextSize(100);
+              setOptions(NO_OPTION);
+            }}
+            disabled={!active}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border-[1.5px] border-loom-secondary-border bg-loom-secondary-bg font-semibold text-loom-secondary-fg transition-colors hover:border-loom-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Réinitialiser les paramètres
-          </Button>
+            <RotateCcw aria-hidden="true" className="h-4 w-4" />
+            Réinitialiser
+          </button>
         </div>
       </SheetContent>
     </Sheet>
   );
 };
 
-export default AccessibilityMenu; 
+export default AccessibilityMenu;
