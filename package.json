@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:localdb": "vite --mode localdb",
+    "dev:vps": "vite --mode vps",
     "build": "vite build",
     "postbuild": "node scripts/generate-seo.js",
     "build:dev": "vite build --mode development",
@@ -16,6 +17,7 @@
     "pull:gallery": "node scripts/pull-gallery.js",
     "server:upload": "node server/upload.js",
     "server:upload:localdb": "node --env-file=.env.localdb -e \"process.env.SUPABASE_URL=process.env.VITE_SUPABASE_URL;process.env.SUPABASE_ANON_KEY=process.env.VITE_SUPABASE_ANON_KEY;import('./server/upload.js')\"",
+    "server:upload:vps": "node --env-file=.env.vps.local -e \"process.env.SUPABASE_URL=process.env.VITE_SUPABASE_URL;process.env.SUPABASE_ANON_KEY=process.env.VITE_SUPABASE_ANON_KEY;import('./server/upload.js')\"",
     "seo:generate": "node scripts/generate-seo.js",
     "seo:validate": "node scripts/validate-seo.js",
     "db:start": "supabase start",
