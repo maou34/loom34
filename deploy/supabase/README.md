@@ -90,3 +90,12 @@ sudo REPO=/var/www/loom34 sh ~/supabase-loom/deploy-functions.sh
 - Modèles d'e-mails en français : fichiers dans `/opt/supabase-loom/email-templates/` + variables `GOTRUE_MAILER_TEMPLATES_*` / `GOTRUE_MAILER_SUBJECTS_*` sur le service `auth`.
 - Sauvegardes chiffrées hors du VPS (phase 5).
 - Mises à jour : `sh update.sh --dry-run`, puis `sh update.sh && sh run.sh pull && sh run.sh recreate` (après sauvegarde).
+
+## Phase 4 : répétition avec les vraies données
+
+1. Couper le cron sur le VPS pendant la répétition (sinon il importe les formulaires **sandbox** dans les vraies données) :
+   `sudo docker exec supabase-db psql -U postgres -c "SELECT cron.alter_job(jobid, active := false) FROM cron.job WHERE jobname = 'helloasso-sync-events'"`
+   (le remettre avec `active := true` à la bascule).
+2. Depuis le poste : `bash deploy/supabase/copy-prod-data.sh` — lit la prod, **efface puis remplit** la base du VPS (une transaction, triggers coupés, fichier temporaire supprimé). Rejouable autant de fois que nécessaire ; c'est aussi la commande du jour de la bascule.
+3. Front et serveur d'images locaux branchés sur le VPS : créer `.env.vps.local` (non suivi) avec `VITE_SUPABASE_URL=https://api.lgbt-loom.fr` et `VITE_SUPABASE_ANON_KEY=<ANON_KEY du .env du VPS>`, puis `npm run dev:vps` et `npm run server:upload:vps`.
+
