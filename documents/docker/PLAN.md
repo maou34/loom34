@@ -1,6 +1,6 @@
 # Passage de Supabase sur Docker — plan de développement
 
-Rédigé le 20/11/2026. Statut : **proposition, rien n'est commencé**. À démarrer **après la fusion de `new-ux-loom` dans `main`**.
+Rédigé le 20/11/2026, branche `feature/supabase-docker` (partie de `main`). Statut : **phases 1 et 2 faites le 20/11/2026** (CLI Supabase 3.2.0 ; migrations `20261120074827` et `20261120090000` appliquées en prod, secret Vault `project_url` créé, notification et cron vérifiés). Phases 3 et suivantes : pas commencées.
 
 ## Objectif
 
