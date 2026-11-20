@@ -21,11 +21,18 @@ const Footer = () => {
         <div aria-hidden="true" className="h-1 bg-bear" />
         <div className="mx-auto flex max-w-[1200px] flex-col gap-9 px-5 pb-6 pt-12 sm:px-8">
           <div className="flex flex-wrap gap-x-12 gap-y-8">
-            <div className="flex min-w-0 flex-[2_1_260px] flex-col gap-3.5">
-              <div className="flex items-center gap-3">
-                <img src="/logo-loom.png" alt="" width={48} height={48} className="h-12 w-12 rounded-xl" loading="lazy" />
-                <span className="text-[22px] font-extrabold text-white">LOOM</span>
-              </div>
+            <div className="flex min-w-0 flex-[2_1_260px] flex-col gap-4">
+              {/* Logo en grand : il porte déjà « LOOM – Les Ours Occitanie Montpellier » */}
+              <Link to="/" aria-label="LOOM – Les Ours Occitanie Montpellier, retour à l'accueil" className={cn('self-start rounded-[22px]', footerFocus)}>
+                <img
+                  src="/logo-loom-ours.png"
+                  alt=""
+                  width={144}
+                  height={144}
+                  loading="lazy"
+                  className="h-32 w-32 rounded-[22px] shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:h-36 sm:w-36"
+                />
+              </Link>
               <p className="m-0 max-w-[320px]">
                 Association Bear fondée en 2017. Un espace inclusif pour les Bears et tous ceux qui aiment les ours, du XS
                 au XXXXXL.
@@ -48,11 +55,16 @@ const Footer = () => {
               <h2 id="footer-site" className="mb-1 text-[15px] font-extrabold text-white">
                 Le site
               </h2>
-              {SITE_NAV_LINKS.map((link) => (
-                <Link key={link.to} to={link.to} className={cn('self-start hover:text-white', footerFocus)}>
-                  {link.longLabel ?? link.label}
-                </Link>
-              ))}
+              {/* Deux colonnes sur mobile pour raccourcir le footer */}
+              <ul className="m-0 grid list-none grid-cols-2 gap-x-6 gap-y-2 p-0 sm:grid-cols-1">
+                {SITE_NAV_LINKS.map((link) => (
+                  <li key={link.to}>
+                    <Link to={link.to} className={cn('inline-block hover:text-white', footerFocus)}>
+                      {link.longLabel ?? link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </nav>
 
             <div className="flex flex-[1_1_220px] flex-col gap-2.5">
@@ -62,10 +74,7 @@ const Footer = () => {
                 <br />
                 34000 Montpellier
               </address>
-              <a href="mailto:contactloom34@gmail.com" className={cn('self-start text-loom-yellow hover:underline', footerFocus)}>
-                contactloom34@gmail.com
-              </a>
-              <Link to="/about#contact" className={cn('self-start hover:text-white', footerFocus)}>
+              <Link to="/about#contact" className={cn('self-start font-semibold text-loom-yellow hover:underline', footerFocus)}>
                 Nous écrire →
               </Link>
             </div>
