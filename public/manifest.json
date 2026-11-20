@@ -4,47 +4,77 @@
   "description": "Association Bear fondée en 2017 à Montpellier. Rejoignez une communauté dynamique de plus de 150 personnes.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F5E6D3",
-  "theme_color": "#8B4513",
+  "background_color": "#17110B",
+  "theme_color": "#17110B",
   "orientation": "portrait-primary",
-  "categories": ["social", "lifestyle"],
+  "categories": [
+    "social",
+    "lifestyle"
+  ],
   "lang": "fr",
   "dir": "ltr",
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/logo.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Articles",
-      "short_name": "Articles",
-      "description": "Derniers articles de LOOM",
-      "url": "/articles",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Événements",
-      "short_name": "Events",
+      "name": "Agenda",
+      "short_name": "Agenda",
       "description": "Prochains événements",
       "url": "/events",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
-      "name": "Galerie",
-      "short_name": "Gallery",
-      "description": "Photos de la communauté",
+      "name": "Actualités",
+      "short_name": "Actualités",
+      "description": "Dernières actualités de LOOM",
+      "url": "/articles",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Photos",
+      "short_name": "Photos",
+      "description": "Albums photos",
       "url": "/gallery",
-      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
