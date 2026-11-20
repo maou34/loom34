@@ -198,8 +198,8 @@ const Events = () => {
               <p className={cn(card, 'p-6 text-loom-text-muted')}>
                 {period === 'upcoming'
                   ? activeCity
-                    ? `Aucune soirée annoncée à ${activeCity} pour le moment.`
-                    : 'Les prochaines soirées seront bientôt annoncées. En attendant, les apéros mensuels continuent !'
+                    ? `Aucun événement annoncé à ${activeCity} pour le moment.`
+                    : 'Les prochains événements seront bientôt annoncés. En attendant, les apéros mensuels continuent !'
                   : 'Aucun événement passé.'}
               </p>
             ) : (
