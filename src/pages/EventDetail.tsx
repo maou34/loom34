@@ -37,6 +37,7 @@ import {
   type TicketingInfo,
 } from '@/lib/ticketing';
 import { SOCIAL_LINKS } from '@/components/site/navigation';
+import { BLANK_IMAGE } from '@/lib/blankImage';
 
 const HELLOASSO_ORIGIN = new URL(HELLOASSO_BASE_URL).origin;
 const IFRAME_DEFAULT_HEIGHT = 750;
@@ -296,13 +297,18 @@ const EventDetail = () => {
           <div className="flex flex-wrap items-start gap-8">
             {/* Colonne principale */}
             <article aria-labelledby="event-title" className="flex min-w-0 flex-[999_1_560px] flex-col gap-6">
-              <div className="-mx-4 overflow-hidden bg-loom-surface-2 sm:mx-0 sm:rounded-[22px]">
-                <img
-                  src={event.image}
-                  alt={`Affiche : ${event.title}`}
-                  className="mx-auto block max-h-[560px] w-full object-contain"
-                  fetchPriority="high"
-                />
+              {/* Pas d'affiche en en-tête sur mobile : on arrive directement aux infos. La
+                  <source> vide évite aussi que le téléphone télécharge l'image cachée. */}
+              <div className="hidden overflow-hidden rounded-[22px] bg-loom-surface-2 sm:block">
+                <picture>
+                  <source media="(max-width: 639px)" srcSet={BLANK_IMAGE} />
+                  <img
+                    src={event.image}
+                    alt={`Affiche : ${event.title}`}
+                    className="mx-auto block max-h-[560px] w-full object-contain"
+                    fetchPriority="high"
+                  />
+                </picture>
               </div>
 
               <div className="flex flex-col gap-2.5">

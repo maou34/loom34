@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { formatLongDate } from '@/lib/eventDates';
 import { shareLink } from '@/lib/share';
 import { ARTICLE_LIST_SELECT, categoryName, readingTime, type ArticleListItem } from '@/lib/articles';
+import { BLANK_IMAGE } from '@/lib/blankImage';
 
 type ArticleRow = ArticleListItem & { updated_at: string };
 
@@ -138,8 +139,13 @@ const ArticleDetail = () => {
           </header>
 
           {article.image && (
-            <div className="-mx-4 overflow-hidden bg-loom-surface-2 sm:mx-0 sm:rounded-[22px]">
-              <img src={article.image} alt="" className="mx-auto block max-h-[560px] w-full object-contain" fetchPriority="high" />
+            // Pas d'image d'en-tête sur mobile : on arrive directement au texte. La
+            // <source> vide évite aussi que le téléphone télécharge l'image cachée.
+            <div className="hidden overflow-hidden rounded-[22px] bg-loom-surface-2 sm:block">
+              <picture>
+                <source media="(max-width: 639px)" srcSet={BLANK_IMAGE} />
+                <img src={article.image} alt="" className="mx-auto block max-h-[560px] w-full object-contain" fetchPriority="high" />
+              </picture>
             </div>
           )}
 
