@@ -1,167 +1,140 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Mail, Phone, MapPin, Heart, ArrowUp } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Facebook, Instagram } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import AccessibilityMenu from './AccessibilityMenu';
-import { InternalLinks } from './InternalLinks';
-import { Button } from '@/components/ui/button';
+import { SITE_NAV_LINKS, SOCIAL_LINKS } from './site/navigation';
+
+// Le footer est toujours sur fond brun foncé (jour comme nuit) : anneau de
+// focus jaune, lisible sur ce fond.
+const footerFocus =
+  'rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loom-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-loom-footer-bg';
 
 const Footer = () => {
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
     <>
-      <footer className="bg-gradient-to-b from-gray-900 to-black text-white pt-20 pb-10 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
-          <div className="absolute top-[-10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-brown blur-3xl"></div>
-          <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-orange blur-3xl"></div>
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-            {/* About Section */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-2">
-                <img src="/loom_logo_round.png" alt="LOOM Logo" className="h-16 w-auto" />
-                <span className="text-5xl font-bold tracking-tight">LOOM</span>
-              </div>
-              <p className="text-gray-400 leading-relaxed">
-                Association Bear fondée en 2017. Un espace inclusif pour les Bears et tous ceux qui aiment les Ours, les poils et la convivialité, du XS au XXXXXL.
+      <footer className="overflow-hidden bg-loom-footer-bg text-[15px] leading-normal text-loom-band-dark-text">
+        <div className="mx-auto flex max-w-[1200px] flex-col px-5 pt-12 sm:px-8">
+          <div className="flex flex-wrap gap-x-12 gap-y-9">
+            {/* Accroche + contact */}
+            <div className="flex min-w-0 flex-[2_1_300px] flex-col items-start gap-5">
+              <p className="m-0 max-w-[22ch] text-[22px] font-extrabold leading-snug text-white sm:text-2xl">
+                Du XS au XXXXXL, il y a une place pour vous dans la tanière.
               </p>
-              <Link to="/about" className="inline-flex items-center text-orange hover:text-orange-light transition-colors font-medium group">
-                En savoir plus 
-                <span className="ml-2 transform group-hover:translate-x-1 transition-transform">→</span>
+              <Link
+                to="/about#contact"
+                className={cn(
+                  'inline-flex h-11 items-center rounded-full bg-loom-yellow px-5 font-bold text-loom-on-yellow transition-transform hover:-translate-y-px',
+                  footerFocus,
+                  'rounded-full',
+                )}
+              >
+                Nous écrire
               </Link>
             </div>
-            
-            {/* Navigation Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-bold text-white relative inline-block">
-                Navigation
-                <span className="absolute -bottom-2 left-0 w-10 h-1 bg-orange rounded-full"></span>
-              </h3>
-              <div className="flex flex-col space-y-3">
-                <Link to="/" className="text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200">Accueil</Link>
-                <Link to="/about" className="text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200">À propos</Link>
-                <Link to="/articles" className="text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200">Actualités</Link>
-                <Link to="/events" className="text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200">Événements</Link>
-                <Link to="/gallery" className="text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200">Galerie</Link>
-              </div>
-            </div>
-            
-            {/* Contact Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-bold text-white relative inline-block">
-                Contact
-                <span className="absolute -bottom-2 left-0 w-10 h-1 bg-orange rounded-full"></span>
-              </h3>
-              <div className="space-y-4 text-gray-400">
-                <div className="flex items-start group">
-                  <div className="bg-white/10 p-2 rounded-lg mr-3 group-hover:bg-orange/20 group-hover:text-orange transition-colors">
-                    <MapPin className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                  <span className="leading-relaxed">49 Rue du faubourg St. Jaumes,<br/>Bat E, 34000 Montpellier</span>
-                </div>
-                <div className="flex items-center group">
-                  <div className="bg-white/10 p-2 rounded-lg mr-3 group-hover:bg-orange/20 group-hover:text-orange transition-colors">
-                    <Mail className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                  <a href="mailto:contactloom34@gmail.com" className="hover:text-white transition-colors">
-                    contactloom34@gmail.com
-                  </a>
-                </div>
-                <div className="flex items-center group">
-                  <div className="bg-white/10 p-2 rounded-lg mr-3 group-hover:bg-orange/20 group-hover:text-orange transition-colors">
-                    <Phone className="h-5 w-5 flex-shrink-0" />
-                  </div>
-                  <a href="tel:0767179100" className="hover:text-white transition-colors">
-                    07 67 17 91 00
-                  </a>
-                </div>
-              </div>
-            </div>
-            
-            {/* Social & Actions Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-bold text-white relative inline-block">
-                Suivez-nous
-                <span className="absolute -bottom-2 left-0 w-10 h-1 bg-orange rounded-full"></span>
-              </h3>
-              <div className="flex space-x-4">
-                <motion.a 
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  whileTap={{ scale: 0.9 }}
-                  href="https://www.facebook.com/groups/1868760663424464/?ref=share_group_link" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="bg-white/10 p-3 rounded-full text-white hover:bg-[#1877F2] transition-colors"
-                  aria-label="Suivez LOOM sur Facebook"
+
+            <nav aria-labelledby="footer-site" className="flex flex-[1_1_160px] flex-col gap-2">
+              <h2 id="footer-site" className="mb-1 text-xs font-extrabold uppercase tracking-[0.08em] text-loom-yellow">
+                Le site
+              </h2>
+              {/* Deux colonnes sur mobile pour raccourcir le footer */}
+              <ul className="m-0 grid list-none grid-cols-2 gap-x-6 gap-y-1.5 p-0 sm:grid-cols-1">
+                {SITE_NAV_LINKS.map((link) => (
+                  <li key={link.to}>
+                    <Link to={link.to} className={cn('inline-block hover:text-white', footerFocus)}>
+                      {link.longLabel ?? link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="flex flex-[1_1_240px] flex-col gap-2">
+              <h2 className="mb-1 text-xs font-extrabold uppercase tracking-[0.08em] text-loom-yellow">Contact</h2>
+              <address className="not-italic">
+                49 rue du Faubourg Saint-Jaumes, bât. E
+                <br />
+                34000 Montpellier
+              </address>
+              <div className="mt-2 flex flex-wrap gap-2.5">
+                <a
+                  href={SOCIAL_LINKS.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LOOM sur Facebook (nouvel onglet)"
+                  className={cn('flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20', footerFocus, 'rounded-full')}
                 >
-                  <Facebook className="h-5 w-5" />
-                </motion.a>
-                <motion.a 
-                  whileHover={{ scale: 1.1, rotate: -5 }}
-                  whileTap={{ scale: 0.9 }}
-                  href="https://www.instagram.com/loom_ours_34/" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="bg-white/10 p-3 rounded-full text-white hover:bg-[#E4405F] transition-colors"
-                  aria-label="Suivez LOOM sur Instagram"
+                  <Facebook aria-hidden="true" size={18} />
+                </a>
+                <a
+                  href={SOCIAL_LINKS.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="LOOM sur Instagram (nouvel onglet)"
+                  className={cn('flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20', footerFocus, 'rounded-full')}
                 >
-                  <Instagram className="h-5 w-5" />
-                </motion.a>
-              </div>
-              
-              <div className="pt-4">
-                <button 
-                  onClick={() => setIsAccessibilityOpen(true)} 
-                  className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-center gap-2 transition-all group"
+                  <Instagram aria-hidden="true" size={18} />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsAccessibilityOpen(true)}
+                  aria-label="Options d'accessibilité"
+                  className={cn('h-11 rounded-full border border-white/25 bg-transparent px-4 font-semibold text-white hover:bg-white/10', footerFocus, 'rounded-full')}
                 >
-                  <span className="bg-blue-600 text-white p-1 rounded-md group-hover:scale-110 transition-transform">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m0 14v1m8-8h-1M5 12H4m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
-                    </svg>
-                  </span>
-                  <span className="font-medium">Options d'accessibilité</span>
+                  Accessibilité
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Bottom Bar */}
-          <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-gray-500 text-sm text-center md:text-left">
-              <p>© {new Date().getFullYear()} LOOM - Les Ours Occitanie Montpellier.</p>
-              <div className="flex items-center justify-center md:justify-start mt-1 gap-1">
-                <span>Made with</span>
-                <Heart className="h-3 w-3 text-red-500 fill-red-500 animate-pulse" />
-                <span>in Montpellier</span>
-              </div>
+          {/* Grand « LOOM » aux couleurs du drapeau bear, coupé par le bandeau du bas + logo */}
+          <div className="mt-10 flex flex-col-reverse gap-6 sm:mt-12 sm:flex-row sm:items-end sm:justify-between">
+            <div aria-hidden="true" className="-mb-[0.1em] select-none overflow-hidden text-[clamp(84px,24vw,200px)] font-extrabold leading-[0.8] tracking-[-0.02em]">
+              <span className="inline-block translate-y-[0.06em] bg-bear bg-clip-text pr-[0.04em] text-transparent">LOOM</span>
             </div>
-
-            <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
-              <Link to="/terms" className="hover:text-white transition-colors">Conditions d'utilisation</Link>
-              <Link to="/legal-notice" className="hover:text-white transition-colors">Mentions Légales</Link>
-              <Link to="/monsieur-ours" className="hover:text-white transition-colors">Monsieur Ours</Link>
-            </div>
-
-            <motion.button
-              whileHover={{ y: -3 }}
-              onClick={scrollToTop}
-              className="bg-orange/20 hover:bg-orange text-orange hover:text-white p-2 rounded-lg transition-colors"
-              aria-label="Retour en haut"
+            <Link
+              to="/"
+              aria-label="LOOM – Les Ours Occitanie Montpellier, retour à l'accueil"
+              className={cn('flex items-center gap-4 self-end rounded-[18px] sm:mb-2', footerFocus)}
             >
-              <ArrowUp className="h-5 w-5" />
-            </motion.button>
+              <span aria-hidden="true" className="text-right text-sm font-extrabold leading-tight text-white">
+                Les Ours
+                <br />
+                Occitanie
+                <br />
+                Montpellier
+              </span>
+              <img src="/logo-loom-ours.png" alt="" width={72} height={72} loading="lazy" className="h-[72px] w-[72px] rounded-[18px] shadow-[0_8px_24px_rgba(0,0,0,0.35)]" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="relative bg-loom-footer-bottom-bg">
+          <div className="mx-auto flex max-w-[1200px] flex-wrap justify-between gap-x-6 gap-y-2 px-5 py-4 text-[13px] sm:px-8">
+            <p className="m-0">
+              © {new Date().getFullYear()} LOOM ·{' '}
+              <span className="inline-flex items-center gap-[5px] whitespace-nowrap">
+                Fait avec
+                <svg role="img" aria-label="amour" width="14" height="14" viewBox="0 0 24 24" className="flex-none fill-loom-heart">
+                  <path d="M12 21s-7.5-4.6-10-9.3C.4 8.4 2.2 4.5 5.9 4.1 8.2 3.8 10.2 5 12 7.1c1.8-2.1 3.8-3.3 6.1-3 3.7.4 5.5 4.3 3.9 7.6C19.5 16.4 12 21 12 21z" />
+                </svg>
+                à Montpellier
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-[18px]">
+              <Link to="/legal-notice" className={cn('hover:text-white', footerFocus)}>
+                Mentions légales
+              </Link>
+              <Link to="/terms" className={cn('hover:text-white', footerFocus)}>
+                Conditions d'utilisation
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
-      
+
       <AccessibilityMenu isOpen={isAccessibilityOpen} onClose={() => setIsAccessibilityOpen(false)} />
     </>
   );

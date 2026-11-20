@@ -1,11 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CategoriesDialog from "@/components/admin/CategoriesDialog";
+import { usePartnerCategories } from "@/lib/partners";
+import { Tags } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Tables } from "@/db/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, ExternalLink, Search, Globe, ImageIcon, MoreHorizontal } from "lucide-react";
+import { Plus, Edit, Trash2, ExternalLink, Search, MoreHorizontal, Store, Globe, ImageIcon } from "lucide-react";
+import { getImageUrl } from "@/config";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,14 +21,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/** Nombre de cartes avant « Voir les N autres » */
+const INITIAL_COUNT = 12;
+
+/** Initiales affichées quand le partenaire n'a pas de logo */
+function initials(name: string) {
+  const words = name.replace(/['’]/g, " ").split(/\s+/).filter((w) => /[\p{L}\d]/u.test(w));
+  return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? "?").slice(0, 2)).toUpperCase();
+}
+
 export default function AdminPartners() {
   const [partners, setPartners] = useState<Tables<'partners'>[]>([]);
-  const [filteredPartners, setFilteredPartners] = useState<Tables<'partners'>[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -33,33 +45,48 @@ export default function AdminPartners() {
   const [isCreating, setIsCreating] = useState(true);
   const [selectedPartner, setSelectedPartner] = useState<Tables<'partners'> | null>(null);
   const [form, setForm] = useState<Partial<Tables<'partners'>>>({});
+  const queryClient = useQueryClient();
+  const { data: categories = [] } = usePartnerCategories();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoryName = (id: string | null | undefined) => categories.find((c) => c.id === id)?.name;
+  const categoryCounts = partners.reduce<Record<string, number>>((acc, p) => {
+    if (p.category_id) acc[p.category_id] = (acc[p.category_id] ?? 0) + 1;
+    return acc;
+  }, {});
 
   useEffect(() => { 
     fetchPartners(); 
   }, []);
 
-  useEffect(() => {
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
-      const filtered = partners.filter(partner => 
-        (partner.name?.toLowerCase() || '').includes(lowerQuery) ||
-        (partner.type?.toLowerCase() || '').includes(lowerQuery)
-      );
-      setFilteredPartners(filtered);
-    } else {
-      setFilteredPartners(partners);
-    }
-  }, [searchQuery, partners]);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => setShowAll(false), [categoryFilter, searchQuery]);
+
+  const uncategorized = partners.filter((p) => !p.category_id).length;
+  const filterChips = [
+    { id: "all", label: "Tous", count: partners.length },
+    ...categories.filter((c) => categoryCounts[c.id]).map((c) => ({ id: c.id, label: c.name, count: categoryCounts[c.id] })),
+    ...(uncategorized ? [{ id: "none", label: "Sans catégorie", count: uncategorized }] : []),
+  ];
+
+  const visiblePartners = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return partners.filter((p) => {
+      if (categoryFilter === "none" && p.category_id) return false;
+      if (categoryFilter !== "all" && categoryFilter !== "none" && p.category_id !== categoryFilter) return false;
+      return !q || [p.name, p.type, p.city, p.description].some((v) => (v ?? "").toLowerCase().includes(q));
+    });
+  }, [partners, categoryFilter, searchQuery]);
+  const shownPartners = showAll ? visiblePartners : visiblePartners.slice(0, INITIAL_COUNT);
 
   async function fetchPartners() {
     setLoading(true);
-    const { data, error } = await db.from('partners').select('*').order('created_at', { ascending: false });
+    const { data, error } = await db.from('partners').select('*').order('name', { ascending: true });
     if (error) {
       console.error("Error fetching partners:", error);
       toast.error("Erreur lors du chargement");
     }
     setPartners(data || []);
-    setFilteredPartners(data || []);
     setLoading(false);
   }
 
@@ -102,6 +129,7 @@ export default function AdminPartners() {
       setForm({});
       setSelectedPartner(null);
       fetchPartners();
+      queryClient.invalidateQueries({ queryKey: ['partners'] });
     } catch (error: any) {
       console.error("Error saving partner:", error);
       toast.error("Erreur lors de l'enregistrement: " + error.message);
@@ -129,134 +157,131 @@ export default function AdminPartners() {
   };
 
   return (
-    <AdminLayout title="Partenaires">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="Rechercher un partenaire..." 
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <AdminLayout
+      title="Partenaires"
+      actions={
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={openCreateDialog}>
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="sr-only sm:not-sr-only">Nouveau partenaire</span>
+        </Button>
+      }
+    >
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div role="group" aria-label="Filtrer par catégorie" className="flex gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible xl:pb-0">
+            {filterChips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                aria-pressed={categoryFilter === chip.id}
+                onClick={() => setCategoryFilter(chip.id)}
+                className={`h-9 flex-none whitespace-nowrap rounded-full border px-3.5 text-sm ${
+                  categoryFilter === chip.id
+                    ? "border-primary bg-primary font-semibold text-primary-foreground"
+                    : "border-loom-border-strong bg-loom-surface font-medium text-loom-text-2 hover:bg-loom-surface-2"
+                }`}
+              >
+                {chip.label} <span className={categoryFilter === chip.id ? "opacity-80" : "text-loom-text-muted"}>· {chip.count}</span>
+              </button>
+            ))}
           </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
-            onClick={openCreateDialog}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouveau partenaire
-          </Button>
+          <label className="relative w-full xl:w-72 xl:flex-none">
+            <span className="sr-only">Rechercher un partenaire</span>
+            <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
+            <Input type="search" placeholder="Rechercher un partenaire…" className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          </label>
         </div>
 
-        {/* Partners List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredPartners.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Globe className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun partenaire trouvé</h3>
-              <p className="text-gray-500 mb-6">Commencez par ajouter votre premier partenaire.</p>
-              <Button onClick={openCreateDialog} variant="outline">
+        {loading ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-36 w-full rounded-2xl" />
+            ))}
+          </div>
+        ) : visiblePartners.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong px-4 py-12 text-center">
+            <Store aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
+            <p className="font-bold">{partners.length ? "Aucun partenaire ne correspond" : "Aucun partenaire"}</p>
+            {!partners.length && (
+              <Button onClick={openCreateDialog} variant="outline" className="mt-2">
                 Ajouter un partenaire
               </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead>Partenaire</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Site Web</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPartners.map((partner) => (
-                    <TableRow key={partner.id} className="hover:bg-gray-50/50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {partner.logo ? (
-                              <img src={partner.logo} alt={partner.name} className="h-full w-full object-contain p-1" />
-                            ) : (
-                              <ImageIcon className="h-6 w-6 text-gray-300" />
-                            )}
-                          </div>
-                          <div className="font-medium text-gray-900">{partner.name}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          {partner.type || 'Autre'}
+            )}
+          </div>
+        ) : (
+          <>
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {shownPartners.map((partner) => (
+                <li key={partner.id} className="flex flex-col gap-3 rounded-2xl border border-loom-border bg-loom-surface p-4">
+                  <div className="flex items-start gap-3">
+                    <span aria-hidden="true" className="flex h-12 w-12 flex-none items-center justify-center overflow-hidden rounded-xl border border-loom-border bg-white text-sm font-bold text-[#623804]">
+                      {partner.logo ? <img src={getImageUrl(partner.logo)} alt="" loading="lazy" className="h-full w-full object-contain p-1" /> : initials(partner.name)}
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1">
+                      <button type="button" onClick={() => openEditDialog(partner)} className="truncate text-left font-bold hover:underline">
+                        {partner.name}
+                      </button>
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-loom-text-muted">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${partner.category_id ? "bg-loom-chip-bg text-loom-chip-fg" : "bg-loom-surface-2 text-loom-text-muted"}`}>
+                          {categoryName(partner.category_id) ?? "Sans catégorie"}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-xs truncate text-sm text-gray-500" title={partner.description || undefined}>
-                          {partner.description || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {partner.website ? (
-                          <a 
-                            href={partner.website} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-                          >
-                            <ExternalLink className="w-3 h-3" /> Visiter
-                          </a>
-                        ) : (
-                          <span className="text-sm text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => openEditDialog(partner)}>
-                              <Edit className="mr-2 h-4 w-4" /> Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(partner)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        {[partner.type, partner.city].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="-mr-2 -mt-2 h-11 w-11 flex-none p-0" aria-label={`Actions pour « ${partner.name} » : modifier, supprimer`}>
+                          <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditDialog(partner)}>
+                          <Edit className="mr-2 h-4 w-4" /> Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirmDelete(partner)}>
+                          <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {partner.description ? (
+                    <p className="line-clamp-2 text-sm">{partner.description}</p>
+                  ) : (
+                    <p className="text-sm italic text-loom-text-muted">Avantage adhérent non renseigné</p>
+                  )}
+                  {(partner.website || !partner.city) && (
+                    <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      {partner.website && (
+                        <a href={partner.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-semibold text-loom-accent-text hover:underline">
+                          <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" /> Site web
+                        </a>
+                      )}
+                      {!partner.city && <span className="text-xs font-semibold text-loom-danger">Ville à renseigner</span>}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-loom-text-muted">
+              <span>
+                {shownPartners.length} sur {visiblePartners.length} partenaire{visiblePartners.length > 1 ? "s" : ""}
+                {shownPartners.length < visiblePartners.length && (
+                  <>
+                    {" · "}
+                    <button type="button" onClick={() => setShowAll(true)} className="font-semibold text-loom-accent-text hover:underline">
+                      Voir les {visiblePartners.length - shownPartners.length} autres
+                    </button>
+                  </>
+                )}
+              </span>
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        <button type="button" onClick={() => setCategoriesOpen(true)} className="flex items-center gap-1.5 text-sm font-semibold text-loom-accent-text hover:underline">
+          <Tags aria-hidden="true" className="h-4 w-4" /> Gérer les catégories →
+        </button>
       </div>
 
       {/* Create/Edit Dialog */}
@@ -290,6 +315,34 @@ export default function AdminPartners() {
                   placeholder="Ex: Bar, Restaurant..." 
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Catégorie (filtre de la page)</Label>
+                <Select value={form.category_id ?? ""} onValueChange={(v) => setForm((f) => ({ ...f, category_id: v }))}>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Choisir une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">Ville</Label>
+                <Input id="city" name="city" value={form.city || ''} onChange={handleInputChange} placeholder="Montpellier" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Adresse (facultatif)</Label>
+              <Input id="address" name="address" value={form.address || ''} onChange={handleInputChange} placeholder="3 rue Saint-Ravy, 34000 Montpellier" aria-describedby="address-help" />
+              <p id="address-help" className="text-xs text-gray-500">Affiche le lien « Itinéraire ». À laisser vide pour une boutique en ligne ou un service sans adresse.</p>
             </div>
 
             <div className="space-y-2">
@@ -333,14 +386,14 @@ export default function AdminPartners() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Avantage adhérent</Label>
               <Textarea 
                 id="description" 
                 name="description" 
                 value={form.description || ''} 
                 onChange={handleInputChange} 
                 className="min-h-[100px]"
-                placeholder="Courte description du partenaire..." 
+                placeholder="10 % de remise sur l'addition, sur présentation de la carte LOOM" 
               />
             </div>
           </div>
@@ -350,7 +403,7 @@ export default function AdminPartners() {
               Annuler
             </Button>
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={handleSubmit}
             >
               {isCreating ? "Ajouter" : "Enregistrer"}
@@ -379,6 +432,14 @@ export default function AdminPartners() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <CategoriesDialog
+        kind="partners"
+        open={categoriesOpen}
+        onOpenChange={setCategoriesOpen}
+        categories={categories}
+        counts={categoryCounts}
+        onChanged={fetchPartners}
+      />
     </AdminLayout>
   );
 }

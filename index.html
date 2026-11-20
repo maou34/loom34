@@ -4,7 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#8B4513" />
+    <meta name="theme-color" content="#17110B" />
+    <!-- Thème jour / nuit posé avant le rendu (évite un flash blanc en mode nuit).
+         Même logique que src/theme/theme.ts ; l'admin reste en mode jour. -->
+    <script>
+      (function () {
+        try {
+          var p = location.pathname, t;
+          if (p.indexOf('/admin') === 0 && p.indexOf('/admin/login') !== 0) {
+            t = 'light';
+          } else {
+            t = localStorage.getItem('loom-theme');
+            if (t !== 'light' && t !== 'dark') t = 'dark'; // mode nuit par défaut (DEFAULT_THEME)
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
     
     <!-- SEO Meta Tags (will be updated dynamically) -->
     <title>LOOM - Les Ours Occitanie Montpellier</title>
@@ -34,16 +50,15 @@
     <link rel="manifest" href="/manifest.json" />
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/loom_logo_round.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="LOOM" />
     <meta name="mobile-web-app-capable" content="yes">
 
     <!-- Preconnect for performance -->
     <link rel="preload" href="/gallery/loom_logo_round.png" as="image">
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="/logo-loom-ours.png" as="image">
 
     <!-- Cloudflare Web Analytics -->
     <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "bba91af7c88d4a8bbf730ecdc35ff9b3"}'></script>
@@ -52,8 +67,6 @@
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

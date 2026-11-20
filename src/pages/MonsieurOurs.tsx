@@ -1,244 +1,224 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Heart, Crown, Calendar, Trophy, Expand } from "lucide-react";
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { UserRound } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import BearDivider from '@/components/site/BearDivider';
+import SectionHeader from '@/components/site/SectionHeader';
+import { card, container, pageFocus } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
-import { motion } from "framer-motion";
-import { db } from "@/db/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { useSiteSettings } from '@/hooks/useSiteSettings';
+import { cn } from '@/lib/utils';
+import { DEFAULT_CTA, DEFAULT_INTRO, cubsOf, parseSteps, useEditions, type Edition } from '@/lib/monsieurOurs';
 
-const DEFAULT_HERO_IMAGE = "/gallery/images/election_2025_vainqueurs.jpg";
+const FALLBACK_GROUP_PHOTO = '/gallery/images/Mr-ours-2026_gagnants.jpg';
+
+/**
+ * Portraits du palmarès : photos verticales, visage dans le haut (plus ou moins
+ * bas selon la photo). Le cadre est plus large que haut ; centrer l'image
+ * montrait l'écharpe et coupait le visage. On cadre à 12 % du haut, et sur
+ * ordinateur les cartes font 400 px de haut (au lieu de 320) pour montrer plus
+ * de la moitié de la photo : assez pour tous les visages du palmarès.
+ */
+const portraitImg = 'absolute inset-0 h-full w-full object-cover object-[50%_12%]';
+
+// Fond toujours sombre : anneau de focus jaune
+const darkFocus =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loom-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-loom-band-dark-bg';
+
+function PhotoPlaceholder({ dark }: { dark?: boolean }) {
+  return (
+    <div
+      role="img"
+      aria-label="Photo à venir"
+      className={cn('flex h-full w-full flex-col items-center justify-center gap-2', dark ? 'bg-white/10 text-loom-yellow' : 'bg-loom-chip-bg text-loom-chip-fg')}
+    >
+      <UserRound aria-hidden="true" size={40} strokeWidth={1.6} />
+      <span className="text-xs font-bold">Photo à venir</span>
+    </div>
+  );
+}
+
+/** Une année du palmarès : grande carte du lauréat + 2 cartes deux fois moins larges pour les oursons. */
+function EditionRow({ edition, current }: { edition: Edition; current: boolean }) {
+  const cubs = cubsOf(edition);
+  return (
+    <li id={`mo-${edition.year}`} aria-labelledby={`y-${edition.year}`} className="flex scroll-mt-28 flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <h3 id={`y-${edition.year}`} className="text-[28px] font-extrabold text-loom-title-accent">
+          {edition.year}
+        </h3>
+        {current && <span className="rounded-full bg-loom-yellow px-2.5 py-0.5 text-xs font-extrabold text-loom-on-yellow">En titre</span>}
+        <span aria-hidden="true" className="h-px flex-1 bg-loom-border-strong" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        <figure className="col-span-2 m-0 flex flex-col overflow-hidden rounded-[18px] bg-loom-band-dark-bg text-white">
+          <div className="relative h-[300px] lg:h-auto lg:min-h-[400px] lg:flex-1">
+            {edition.image ? (
+              <img src={edition.image} alt={`${edition.title}, Monsieur Ours ${edition.year}`} loading="lazy" className={portraitImg} />
+            ) : (
+              <PhotoPlaceholder dark />
+            )}
+          </div>
+          <figcaption className="flex flex-col gap-0.5 p-4 sm:px-5">
+            <span className="text-xs font-bold uppercase tracking-[0.06em] text-loom-yellow">Monsieur Ours {edition.year}</span>
+            <span className="text-xl font-extrabold">{edition.title}</span>
+            {edition.description && <span className="text-sm text-loom-band-dark-text">{edition.description}</span>}
+          </figcaption>
+        </figure>
+        {cubs.map((cub, i) => (
+          <figure key={i} className={cn(card, 'm-0 flex flex-col overflow-hidden rounded-[18px]')}>
+            <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[400px] lg:flex-1">
+              {cub.photo ? (
+                <img src={cub.photo} alt={`${cub.name}, ourson ${edition.year}`} loading="lazy" className={portraitImg} />
+              ) : (
+                <PhotoPlaceholder />
+              )}
+            </div>
+            <figcaption className="flex flex-col gap-0.5 p-3 sm:p-4">
+              <span className="text-[11px] font-bold uppercase tracking-[0.06em] text-loom-accent-text">Ourson {edition.year}</span>
+              <span className="font-extrabold leading-tight">{cub.name}</span>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </li>
+  );
+}
 
 const MonsieurOurs = () => {
-  // SEO Configuration
   useSEO({
-    title: 'Monsieur Ours - LOOM | Concours et représentants de notre communauté',
-    description: 'Découvrez les Monsieur Ours élus de LOOM depuis 2018. Histoire du concours, galerie des lauréats et informations sur ce titre emblématique de notre communauté Bear.',
-    keywords: ['Monsieur Ours', 'LOOM concours', 'représentant Bear', 'lauréats', 'communauté Bear', 'élection', 'titre'],
-    type: 'website'
+    title: 'Monsieur Ours - LOOM | Le palmarès depuis 2018',
+    description:
+      "Monsieur Ours et ses oursons, élus chaque année en juin lors de la Montpell'Bears par la communauté Bear de Montpellier. Le palmarès depuis 2018.",
+    keywords: ['Monsieur Ours', 'Mister Bear', 'Montpellier', "Montpell'Bears", 'LOOM', 'oursons'],
+    type: 'website',
   });
 
-  const MEMBERSHIP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
+  const { data: settings } = useSiteSettings();
+  const { data: editions = [], isLoading } = useEditions();
+  const { hash } = useLocation();
 
-  const { data: siteSettings } = useQuery({
-    queryKey: ['siteSettings'],
-    queryFn: async () => {
-      const { data, error } = await db.from('site_settings').select('*').eq('id', 1).maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: timelineItems = [], isLoading: timelineLoading } = useQuery({
-    queryKey: ['monsieurOursTimeline'],
-    queryFn: async () => {
-      const { data, error } = await db
-        .from('monsieur_ours_timeline')
-        .select('*')
-        .order('year', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const heroImage = siteSettings?.monsieur_ours_hero_image || DEFAULT_HERO_IMAGE;
-
-  const [expandedImage, setExpandedImage] = useState<{ url: string; alt: string } | null>(null);
+  // Arrivée sur /monsieur-ours#palmares (bandeau de l'accueil) ou #mo-<année> :
+  // React Router ne défile pas jusqu'à l'ancre, on le fait une fois le palmarès chargé.
+  useEffect(() => {
+    if (!hash || isLoading) return;
+    const timer = window.setTimeout(() => document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' }), 100);
+    return () => window.clearTimeout(timer);
+  }, [hash, isLoading]);
+  const current = editions[0] ?? null;
+  const firstYear = editions.length ? editions[editions.length - 1].year : null;
+  const steps = parseSteps(settings?.monsieur_ours_steps);
+  const nextYear = (current?.year ?? new Date().getFullYear()) + 1;
+  const photosUrl = settings?.monsieur_ours_photos_url || '/gallery';
+  const photosExternal = /^https?:\/\//i.test(photosUrl);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-loom-bg text-loom-text">
       <Navbar />
-      
-      {/* Hero Section */}
-      <div className="relative h-[70vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src={heroImage}
-            alt="Monsieur Ours Background"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-gray-50" />
-        </div>
 
-        <div className="container mx-auto px-4 relative z-10 text-center text-white">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="max-w-3xl mx-auto"
-          >
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white mb-8">
-              <Crown className="w-5 h-5 mr-2 text-yellow-400" />
-              <span className="font-medium tracking-wide">Élection Annuelle</span>
-            </div>
-            
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              Monsieur <span className="text-orange">Ours</span>
-            </h1>
-            
-            <p className="text-xl md:text-2xl text-gray-200 mb-10 leading-relaxed">
-              Chaque année en juin, la communauté élit son représentant lors de la Monpell' Bears. Découvrez l'histoire et les visages de nos ambassadeurs.
-            </p>
-
-            <Button 
-              size="lg" 
-              className="bg-orange hover:bg-orange-dark text-white rounded-full px-8 h-14 text-lg shadow-lg shadow-orange/20"
-              onClick={() => document.getElementById('timeline')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              Découvrir les lauréats
-            </Button>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Timeline Section */}
-      <section id="timeline" className="py-24 relative overflow-hidden">
-        {/* Decorative background elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute top-[10%] left-[5%] w-[500px] h-[500px] bg-orange/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-[10%] right-[5%] w-[500px] h-[500px] bg-brown/5 rounded-full blur-3xl" />
-        </div>
-
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-6">Le Hall of Fame</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto text-lg">
-              Ils ont porté l'écharpe et représenté notre association avec fierté.
-            </p>
-          </motion.div>
-
-          <div className="relative max-w-5xl mx-auto">
-            {/* Central Line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-orange/20 via-orange/50 to-orange/20 hidden md:block" />
-
-            <div className="space-y-12 md:space-y-24">
-              {timelineLoading ? (
-                <div className="space-y-8">
-                  <Skeleton className="h-64 w-full max-w-lg mx-auto rounded-2xl" />
-                  <Skeleton className="h-64 w-full max-w-lg mx-auto rounded-2xl" />
-                </div>
+      <main className="flex-1">
+        {/* Hero : photo de groupe + lauréat en titre */}
+        <section aria-labelledby="mo-title" className={cn(container, 'pb-10 pt-6 sm:pb-14 sm:pt-10')}>
+          <div className="flex flex-col overflow-hidden rounded-[22px] bg-loom-band-dark-bg text-white lg:flex-row">
+            <img
+              src={settings?.monsieur_ours_hero_image || FALLBACK_GROUP_PHOTO}
+              alt={`Photo de groupe : Monsieur Ours${current ? ` ${current.year}` : ''} et ses oursons, avec leurs écharpes`}
+              className="h-[260px] w-full object-cover sm:h-[360px] lg:h-auto lg:min-h-[400px] lg:w-[55%]"
+              fetchPriority="high"
+            />
+            <div className="flex flex-col justify-center gap-3.5 p-6 sm:p-10">
+              <span className="text-sm font-bold uppercase tracking-[0.06em] text-loom-yellow">
+                Monsieur Ours {current?.year ?? ''}
+              </span>
+              <h1 id="mo-title" className="text-[32px] font-extrabold leading-[1.1] sm:text-[44px]">
+                {current?.title ?? 'Monsieur Ours'}
+              </h1>
+              <p className="text-base text-loom-band-dark-text sm:text-lg">{DEFAULT_INTRO}</p>
+              {settings?.monsieur_ours_intro && <p className="text-base text-loom-band-dark-text">{settings.monsieur_ours_intro}</p>}
+              {photosExternal ? (
+                <a href={photosUrl} target="_blank" rel="noopener noreferrer" className={cn('mt-1 flex h-12 items-center self-start rounded-[14px] bg-white px-5 font-bold text-loom-on-yellow', darkFocus)}>
+                  Les photos de l'élection<span className="sr-only"> (nouvel onglet)</span>
+                </a>
               ) : (
-                timelineItems.map((item, index) => {
-                  const isEven = index % 2 === 0;
-                  return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, y: 50 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: "-100px" }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                      className={`flex flex-col md:flex-row items-center ${isEven ? 'md:flex-row-reverse' : ''} gap-8 md:gap-0`}
-                    >
-                      {/* Content Card */}
-                      <div className="w-full md:w-1/2 px-4 md:px-12">
-                        <div className="group bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 relative overflow-hidden">
-                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <Trophy className="w-24 h-24 text-orange" />
-                          </div>
-
-                          <span className="inline-flex items-center justify-center px-4 py-1 rounded-full bg-orange/10 text-orange font-bold text-lg mb-4">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            {item.year}
-                          </span>
-
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-orange transition-colors">
-                            {item.title}
-                          </h3>
-                          <p className="text-gray-600 mb-4">
-                            {item.description}
-                          </p>
-
-                          {item.image && (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedImage({ url: item.image!, alt: item.title })}
-                              className="group/image relative block w-full overflow-hidden rounded-xl border border-gray-100"
-                            >
-                              <img
-                                src={item.image}
-                                alt={item.title}
-                                className="w-full aspect-video object-cover transition-transform duration-500 group-hover/image:scale-105"
-                                loading="lazy"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/30 transition-colors flex items-center justify-center">
-                                <Expand className="w-6 h-6 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
-                              </div>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Center Dot */}
-                      <div className="relative flex items-center justify-center w-12 h-12 z-20">
-                        <div className="w-4 h-4 bg-orange rounded-full ring-4 ring-white shadow-md" />
-                        <div className="absolute w-12 h-12 bg-orange/20 rounded-full animate-pulse" />
-                      </div>
-
-                      {/* Empty space for the other side */}
-                      <div className="w-full md:w-1/2 hidden md:block" />
-                    </motion.div>
-                  );
-                })
+                <Link to={photosUrl} className={cn('mt-1 flex h-12 items-center self-start rounded-[14px] bg-white px-5 font-bold text-loom-on-yellow', darkFocus)}>
+                  Les photos de l'élection
+                </Link>
               )}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-brown relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-50" />
-        </div>
-        
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="max-w-3xl mx-auto"
-          >
-            <Heart className="w-16 h-16 text-orange mx-auto mb-8" />
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Rejoignez la communauté</h2>
-            <p className="text-white/80 text-xl mb-10 leading-relaxed">
-              Devenez membre de notre communauté et participez à nos événements, ateliers et activités. Ensemble, nous faisons la différence !
-            </p>
-            <Button
-              onClick={() => window.open(MEMBERSHIP_URL, '_blank', 'noopener,noreferrer')}
-              className="bg-orange hover:bg-orange-dark text-white h-14 px-10 rounded-full text-lg font-semibold shadow-xl shadow-black/20 transition-transform hover:scale-105"
-            >
-              Devenir membre
-            </Button>
-          </motion.div>
-        </div>
-      </section>
+        <BearDivider />
 
-      {/* Lightbox */}
-      <Dialog open={!!expandedImage} onOpenChange={(open) => !open && setExpandedImage(null)}>
-        <DialogContent className="max-w-4xl bg-black border-none shadow-2xl p-0 overflow-hidden">
-          <DialogTitle className="sr-only">{expandedImage?.alt}</DialogTitle>
-          {expandedImage && (
-            <img
-              src={expandedImage.url}
-              alt={expandedImage.alt}
-              className="w-full max-h-[80vh] object-contain"
-            />
+        {/* Comment ça marche ? */}
+        <section aria-labelledby="h-how" className={cn(container, 'flex flex-col gap-6 py-10 sm:py-14')}>
+          <SectionHeader id="h-how" title="Comment ça marche ?" subtitle="Chaque année, la communauté élit Monsieur Ours et ses oursons pour la représenter." />
+          <ol className="grid gap-4 md:grid-cols-3">
+            {steps.map((step, i) => (
+              <li key={i} className={cn(card, 'flex flex-col gap-2 rounded-[18px] p-5')}>
+                <span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full bg-loom-primary-bg font-extrabold text-loom-primary-fg">
+                  {i + 1}
+                </span>
+                {step.when && <span className="text-xs font-bold uppercase tracking-[0.06em] text-loom-accent-text">{step.when}</span>}
+                <h3 className="text-lg font-extrabold">{step.title}</h3>
+                {step.text && <p className="text-[15px] text-loom-text-2">{step.text}</p>}
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <BearDivider />
+
+        {/* Palmarès */}
+        <section id="palmares" aria-labelledby="h-wins" className={cn(container, 'flex scroll-mt-24 flex-col gap-6 py-10 sm:py-14')}>
+          <SectionHeader
+            id="h-wins"
+            title="Le palmarès"
+            subtitle={firstYear ? `Tous nos Monsieur Ours depuis la première élection en ${firstYear}.` : undefined}
+          />
+          {editions.length > 1 && (
+            <nav aria-label="Aller à une année" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+              {editions.map((e) => (
+                <a
+                  key={e.id}
+                  href={`#mo-${e.year}`}
+                  className={cn('flex h-10 flex-none items-center rounded-full border border-loom-border-strong bg-loom-surface px-4 text-[15px] font-semibold text-loom-text hover:border-loom-text-muted', pageFocus)}
+                >
+                  {e.year}
+                </a>
+              ))}
+            </nav>
           )}
-        </DialogContent>
-      </Dialog>
+          {isLoading ? (
+            <div aria-hidden="true" className={cn(card, 'h-[420px] animate-pulse bg-loom-surface-2')} />
+          ) : (
+            <ol className="flex flex-col gap-9">
+              {editions.map((e, i) => (
+                <EditionRow key={e.id} edition={e} current={i === 0} />
+              ))}
+            </ol>
+          )}
+        </section>
+
+        {/* Appel à candidatures */}
+        <section aria-labelledby="h-cand" className={cn(container, 'pb-16 sm:pb-[72px]')}>
+          <div className="flex flex-wrap items-center justify-between gap-5 rounded-[22px] bg-loom-join-bg p-6 text-white sm:p-8">
+            <div className="flex flex-col gap-1.5">
+              <h2 id="h-cand" className="text-2xl font-extrabold sm:text-[28px]">
+                Et si c'était toi en {nextYear} ?
+              </h2>
+              <p className="text-loom-join-text">{settings?.monsieur_ours_cta || DEFAULT_CTA}</p>
+            </div>
+            <Link
+              to="/about#contact"
+              className="flex h-12 items-center rounded-[14px] bg-loom-yellow px-6 font-extrabold text-loom-on-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loom-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-loom-join-bg"
+            >
+              Je suis intéressé
+            </Link>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>

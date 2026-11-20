@@ -2,7 +2,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
-	darkMode: ["class"],
+	darkMode: ["selector", '[data-theme="dark"]'],
 	content: [
 		"./pages/**/*.{ts,tsx}",
 		"./components/**/*.{ts,tsx}",
@@ -23,8 +23,33 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Figtree', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+			},
+			backgroundImage: {
+				bear: 'var(--gradient-bear)',
+			},
+			boxShadow: {
+				'loom-card': 'var(--shadow-card)',
+				'loom-header': 'var(--shadow-header)',
+			},
 			colors: {
-				border: 'hsl(var(--border))',
+				// Palette LOOM (src/theme/theme.css), jour / nuit selon data-theme.
+				// Une clé = une variable CSS : bg-loom-surface → var(--surface).
+				// Pas de modificateur d'opacité possible sur ces couleurs (/50…).
+				loom: Object.fromEntries([
+					'bg', 'surface', 'surface-2', 'border', 'border-strong', 'divider-outline',
+					'text', 'text-2', 'text-muted', 'accent-text', 'initial', 'title-accent', 'stat',
+					'link', 'link-hover',
+					'primary-bg', 'primary-fg', 'primary-hover', 'secondary-bg', 'secondary-fg', 'secondary-border',
+					'chip-bg', 'chip-fg', 'chip-hot-bg', 'chip-hot-fg',
+					'highlight-bg', 'highlight-border', 'highlight-label',
+					'header-bg', 'header-border', 'nav-fg', 'nav-active-bg', 'nav-active-fg',
+					'theme-toggle-bg', 'theme-toggle-fg',
+					'band-dark-bg', 'band-dark-text', 'footer-bg', 'footer-bottom-bg', 'join-bg', 'join-text',
+					'danger', 'success', 'success-bg', 'warning-fg', 'yellow', 'on-yellow', 'heart',
+				].map((name) => [name, `var(--${name})`])),
+				border: 'hsl(var(--ui-border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
@@ -54,7 +79,7 @@ export default {
 				'custom-gray': '#545454',
 				
 				primary: {
-					DEFAULT: '#613704',
+					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {

@@ -1,197 +1,215 @@
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Globe, ExternalLink, Handshake, Building2, ArrowRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ArrowUpRight, Store } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
+import { btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
-import { db } from '@/db/client';
-import { Tables } from '@/db/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+import { useExternalLinks } from '@/hooks/useSiteSettings';
+import { cn } from '@/lib/utils';
+import { directionsUrl } from '@/lib/eventPlace';
+import { usePartnerCategories, usePartners, type Partner } from '@/lib/partners';
+
+const PAGE_SIZE = 9;
+
+/**
+ * Logo du partenaire, toujours sur fond blanc (lisible en mode nuit) :
+ * logos larges en « contain » avec marge, logos carrés en « cover ».
+ */
+function PartnerLogo({ partner }: { partner: Partner }) {
+  const [wide, setWide] = useState(true);
+  if (!partner.logo) {
+    return (
+      <span aria-hidden="true" className="flex h-20 w-20 flex-none items-center justify-center rounded-2xl bg-loom-chip-bg text-loom-chip-fg">
+        <Store size={30} strokeWidth={1.6} />
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-2xl border border-loom-border bg-white">
+      <img
+        src={partner.logo}
+        alt={`Logo ${partner.name}`}
+        loading="lazy"
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          setWide(img.naturalWidth / Math.max(1, img.naturalHeight) > 1.25);
+        }}
+        className={cn('h-full w-full', wide ? 'object-contain p-2' : 'object-cover')}
+      />
+    </span>
+  );
+}
+
+function PartnerCard({ partner }: { partner: Partner }) {
+  const meta = [partner.type, partner.city].filter(Boolean).join(' · ');
+  const place = [partner.name, partner.address, partner.address && partner.city && !partner.address.includes(partner.city) ? partner.city : null]
+    .filter(Boolean)
+    .join(', ');
+  return (
+    <li className={cn(card, 'flex flex-col gap-4 rounded-[18px] p-5')}>
+      <div className="flex items-center gap-4">
+        <PartnerLogo partner={partner} />
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <h3 className="text-lg font-extrabold leading-tight">{partner.name}</h3>
+          {meta && <p className="text-[15px] text-loom-text-muted">{meta}</p>}
+        </div>
+      </div>
+      {partner.description && (
+        <div className="flex flex-col gap-1 rounded-xl border border-loom-highlight-border bg-loom-highlight-bg p-3.5">
+          <span className="text-xs font-bold uppercase tracking-[0.06em] text-loom-highlight-label">Avantage adhérent</span>
+          <p className="font-bold">{partner.description}</p>
+        </div>
+      )}
+      {(partner.website || partner.address) && (
+        <div className="mt-auto flex flex-wrap gap-x-5 gap-y-1">
+          {partner.website && (
+            <a href={partner.website} target="_blank" rel="noopener noreferrer" className={cn(strongLink, 'inline-flex items-center gap-1')}>
+              Site web <ArrowUpRight aria-hidden="true" size={15} />
+              <span className="sr-only"> de {partner.name} (nouvel onglet)</span>
+            </a>
+          )}
+          {partner.address && (
+            <a href={directionsUrl(place)} target="_blank" rel="noopener noreferrer" className={strongLink}>
+              Itinéraire<span className="sr-only"> vers {partner.name} (nouvel onglet)</span>
+            </a>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
 
 const Partners = () => {
-  // SEO Configuration
   useSEO({
-    title: 'Nos Partenaires - LOOM | Commerces et établissements partenaires',
-    description: 'Découvrez les partenaires de LOOM - Les Ours Occitanie Montpellier. Bars, restaurants, saunas et commerces qui soutiennent notre communauté Bear avec des avantages exclusifs.',
-    keywords: ['LOOM partenaires', 'commerces gay-friendly', 'bars Bears', 'restaurants Montpellier', 'saunas gay', 'avantages membres'],
-    type: 'website'
+    title: 'Partenaires - LOOM | Les avantages adhérents',
+    description:
+      "Bars, restaurants, saunas, hébergements, boutiques : les partenaires de LOOM offrent des avantages aux adhérents sur présentation de la carte, à Montpellier, Nîmes et ailleurs.",
+    keywords: ['LOOM partenaires', 'avantages adhérents', 'bars Bear Montpellier', 'sauna gay Montpellier', 'Nîmes'],
+    type: 'website',
   });
 
-  const [partners, setPartners] = useState<Tables<'partners'>[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: partners = [], isLoading } = usePartners();
+  const { data: allCategories = [] } = usePartnerCategories();
+  const { membershipUrl } = useExternalLinks();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
-  useEffect(() => {
-    const fetchPartners = async () => {
-      setLoading(true);
-      const { data, error } = await db.from('partners').select('*');
-      if (!error && data) setPartners(data);
-      setLoading(false);
-    };
-    fetchPartners();
-  }, []);
+  // Filtres : seulement les catégories et villes réellement utilisées
+  const categories = useMemo(() => {
+    const used = new Set(partners.map((p) => p.category_id).filter(Boolean));
+    return allCategories.filter((c) => used.has(c.id));
+  }, [partners, allCategories]);
+  const cities = useMemo(
+    () => [...new Set(partners.map((p) => p.city?.trim()).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [partners],
+  );
+  const activeCategory = categories.find((c) => c.name === searchParams.get('categorie')) ?? null;
+  const cityParam = searchParams.get('ville');
+  const activeCity = cityParam && cities.includes(cityParam) ? cityParam : null;
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
+  const filtered = partners.filter(
+    (p) => (!activeCategory || p.category_id === activeCategory.id) && (!activeCity || p.city?.trim() === activeCity),
+  );
+  const visible = filtered.slice(0, limit);
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5
-      }
-    }
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+    setLimit(PAGE_SIZE);
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-loom-bg text-loom-text">
       <Navbar />
-      
-      {/* Hero Section */}
-      <div className="relative h-[50vh] min-h-[400px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src="https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=2069&auto=format&fit=crop" 
-            alt="Partners background" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-gray-50" />
-        </div>
-        
-        <div className="container mx-auto px-4 relative z-10 text-center text-white">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
-              <Handshake className="w-5 h-5 text-orange-400" />
-              <span className="text-sm font-medium text-orange-100">Ensemble, plus forts</span>
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Nos Partenaires
-            </h1>
-            <p className="text-lg md:text-xl text-gray-200 max-w-2xl mx-auto leading-relaxed">
-              Découvrez les établissements et organisations qui soutiennent la communauté LOOM et offrent des avantages exclusifs à nos membres.
+
+      <main className={cn(container, 'flex flex-1 flex-col gap-6 pb-16 pt-6 sm:gap-7 sm:pb-[72px] sm:pt-10')}>
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex min-w-0 flex-[2_1_420px] flex-col gap-2">
+            <h1 className="text-[34px] font-extrabold tracking-[-0.02em] sm:text-[44px]">Partenaires</h1>
+            <p className="max-w-[640px] text-base text-loom-text-2 sm:text-lg">
+              {partners.length || 'Nos'} établissements soutiennent LOOM et offrent des avantages aux adhérents, sur présentation de la carte LOOM.
             </p>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Partners Grid Section */}
-      <section className="py-16 -mt-20 relative z-20">
-        <div className="container mx-auto px-4">
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-[300px] w-full rounded-2xl" />
-              ))}
-            </div>
-          ) : partners.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
-              <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900">Aucun partenaire pour le moment</h3>
-              <p className="text-gray-500 mt-2">Revenez bientôt pour découvrir nos nouveaux partenaires !</p>
-            </div>
-          ) : (
-            <motion.div 
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          </div>
+          <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-3 rounded-[22px] bg-loom-join-bg p-6 text-white">
+            <h2 className="text-lg font-extrabold">Pas encore de carte ?</h2>
+            <p className="text-loom-join-text">L'adhésion se rentabilise vite avec ces réductions.</p>
+            <a
+              href={membershipUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-11 items-center self-start rounded-xl bg-loom-yellow px-5 font-extrabold text-loom-on-yellow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loom-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-loom-join-bg"
             >
-              {partners.map((partner) => (
-                <motion.div 
-                  key={partner.id} 
-                  variants={itemVariants}
-                  className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full"
-                >
-                  <div className="relative h-48 bg-gray-50 p-8 flex items-center justify-center overflow-hidden group-hover:bg-orange-50/30 transition-colors">
-                    {partner.logo ? (
-                      <img 
-                        src={partner.logo} 
-                        alt={`${partner.name} logo`} 
-                        className="max-h-full max-w-full object-contain transform group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <Building2 className="w-16 h-16 text-gray-300" />
-                    )}
-                    <div className="absolute top-4 right-4">
-                      <Badge variant="secondary" className="bg-white/80 backdrop-blur-sm shadow-sm text-orange-600 border-orange-100">
-                        {partner.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-orange-600 transition-colors">
-                      {partner.name}
-                    </h3>
-                    
-                    <p className="text-gray-600 mb-6 flex-1 leading-relaxed">
-                      {partner.description}
-                    </p>
-                    
-                    <div className="pt-6 border-t border-gray-100 mt-auto flex items-center justify-between">
-                      {partner.website ? (
-                        <Button 
-                          variant="ghost" 
-                          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 -ml-4 group/btn"
-                          asChild
-                        >
-                          <a href={partner.website} target="_blank" rel="noopener noreferrer">
-                            <Globe className="w-4 h-4 mr-2" />
-                            Visiter le site
-                            <ExternalLink className="w-3 h-3 ml-1 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                          </a>
-                        </Button>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">Site web non disponible</span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden shadow-2xl">
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-            <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">Devenir Partenaire</h2>
-              <p className="text-lg text-orange-100 mb-8">
-                Vous souhaitez soutenir la communauté LOOM et gagner en visibilité auprès de nos membres ?
-                Rejoignez notre réseau de partenaires !
-              </p>
-              <Button 
-                size="lg" 
-                variant="secondary" 
-                className="bg-white text-orange-600 hover:bg-gray-100 font-bold text-lg px-8 h-14 rounded-full shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1"
-                asChild
-              >
-                <a href="mailto:contact@loom34.fr">
-                  Nous contacter <ArrowRight className="ml-2 w-5 h-5" />
-                </a>
-              </Button>
-            </div>
+              Adhérer<span className="sr-only"> (nouvel onglet)</span>
+            </a>
           </div>
         </div>
-      </section>
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {categories.length > 1 && (
+            <div role="group" aria-label="Filtrer par catégorie" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+              {[null, ...categories].map((c) => {
+                const pressed = (activeCategory?.id ?? null) === (c?.id ?? null);
+                return (
+                  <button
+                    key={c?.id ?? 'all'}
+                    type="button"
+                    aria-pressed={pressed}
+                    onClick={() => setParam('categorie', c?.name ?? null)}
+                    className={cn(
+                      'h-10 flex-none rounded-full border px-4 text-[15px] font-semibold',
+                      pressed ? 'border-loom-primary-bg bg-loom-primary-bg text-loom-primary-fg' : 'border-loom-border-strong bg-loom-surface text-loom-text hover:border-loom-text-muted',
+                      pageFocus,
+                    )}
+                  >
+                    {c?.name ?? 'Tous'}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {cities.length > 1 && (
+            <label className="flex h-11 items-center gap-2 rounded-xl border border-loom-border-strong bg-loom-surface pl-4 pr-2 text-[15px]">
+              <span className="text-loom-text-muted">Ville</span>
+              <select
+                value={activeCity ?? ''}
+                onChange={(e) => setParam('ville', e.target.value || null)}
+                className={cn('h-9 rounded-lg bg-transparent pr-1 font-semibold text-loom-text', pageFocus)}
+              >
+                <option value="">Toutes</option>
+                {cities.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+
+        {isLoading ? (
+          <div aria-hidden="true" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className={cn(card, 'h-[260px] animate-pulse bg-loom-surface-2')} />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className={cn(card, 'p-6 text-loom-text-muted')}>Aucun partenaire ne correspond à ces filtres.</p>
+        ) : (
+          <section aria-label="Liste des partenaires" className="flex flex-col gap-6">
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {visible.map((p) => (
+                <PartnerCard key={p.id} partner={p} />
+              ))}
+            </ul>
+            {filtered.length > visible.length && (
+              <button type="button" onClick={() => setLimit(filtered.length)} className={cn(btnSecondary, 'h-12 self-center rounded-full px-6')}>
+                Voir les {filtered.length - visible.length} autres partenaires
+              </button>
+            )}
+          </section>
+        )}
+      </main>
 
       <Footer />
     </div>

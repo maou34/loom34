@@ -1,311 +1,126 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, User, LogIn, LogOut, Settings, Download } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useInstallPrompt } from '@/hooks/useInstallPrompt';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { db } from '@/db/client';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ExternalLink, Menu } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useExternalLinks } from '@/hooks/useSiteSettings';
+import { ThemeToggle } from '@/theme/ThemeToggle';
+import AdminEntryLink from '@/components/site/AdminEntryLink';
+import MobileMenu from '@/components/site/MobileMenu';
+import { SITE_NAV_LINKS, focusRing, isNavActive } from '@/components/site/navigation';
 
+/**
+ * En-tête du site public (maquettes Header / MobileHeader) : barre « pilule »
+ * flottante et collante. En dessous de xl, version compacte + menu plein écran.
+ * L'onglet « Espace admin » (desktop) est sous la barre et défile avec la page.
+ */
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { user, profile, signOut, isAdmin } = useAuth();
-  const { canInstall, promptInstall } = useInstallPrompt();
+  const { pathname } = useLocation();
+  const { shopUrl, membershipUrl, showShop, showMembership } = useExternalLinks();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  // Fetch site settings (external nav links)
-  const { data: siteSettings } = useQuery({
-    queryKey: ['siteSettings'],
-    queryFn: async () => {
-      const { data, error } = await db.from('site_settings').select('*').eq('id', 1).maybeSingle();
-      if (error) throw error;
-      return data;
-    }
-  });
-
-  // Handle scroll effect
+  // Ferme le menu mobile à chaque changement de page
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-  
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [location]);
-  
-  const navLinks = [
-    { name: 'Accueil', path: '/' },
-    { name: 'À propos', path: '/about' },
-    { name: 'Articles', path: '/articles' },    
-    { name: 'Événements', path: '/events' },
-    { name: 'Monsieur Ours', path: '/monsieur-ours' },
-    { name: 'Photos', path: '/gallery' },
-    { name: 'Nos Partenaires', path: '/partners' },
-    {
-      name: 'Boutique',
-      path: siteSettings?.shop_url || 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu',
-      external: true
-    },
-    {
-      name: 'Adhésion',
-      path: siteSettings?.membership_url || 'https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026',
-      external: true
-    },
-  ];
-  
-  const isActive = (path: string) => {
-    if (path === '/' && location.pathname !== '/') return false;
-    return location.pathname.startsWith(path) && (path !== '/' || location.pathname === '/');
-  };
+    setMenuOpen(false);
+  }, [pathname]);
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success('Déconnexion réussie');
-      navigate('/');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Erreur lors de la déconnexion');
-    }
-  };
-  
   return (
-    <motion.header 
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-white/80 backdrop-blur-md shadow-md py-2 border-b border-white/20' 
-          : 'bg-transparent py-4'
-      }`}
-    >
-      <div className="container mx-auto px-4 flex justify-between items-center">
-        
-        {/* Logo */}
-        <Link to="/" className="flex items-center group relative z-50">
-          <motion.img 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            src="/loom_logo_round.png" 
-            alt="LOOM Logo" 
-            className="h-12 w-auto transition-transform duration-300"
-          />
-        </Link>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden xl:flex items-center space-x-1 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20 shadow-sm">
-          {navLinks.map((link) => (
-            <div key={link.path} className="relative">
-              {link.external ? (
-                <a
-                  href={link.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`relative px-4 py-2 text-sm font-medium rounded-full transition-colors duration-300 hover:text-brown-dark ${
-                    isActive(link.path) ? 'text-brown-dark' : 'text-gray-700'
-                  }`}
-                >
-                  {link.name}
-                </a>
-              ) : (
-                <Link
-                  to={link.path}
-                  className={`relative px-4 py-2 text-sm font-medium rounded-full transition-colors duration-300 hover:text-brown-dark ${
-                    isActive(link.path) ? 'text-brown-dark' : 'text-gray-700'
-                  }`}
-                >
-                  {isActive(link.path) && (
-                    <motion.div
-                      layoutId="navbar-indicator"
-                      className="absolute inset-0 bg-tan/50 rounded-full -z-10"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  {link.name}
-                </Link>
-              )}
-            </div>
-          ))}
-        </nav>
-
-        {/* User Actions & Mobile Toggle */}
-        <div className="flex items-center gap-4">
-          {canInstall && (
-            <Button
-              variant="ghost"
-              onClick={promptInstall}
-              className="hidden md:flex items-center gap-2 text-brown hover:bg-tan/20 rounded-full"
+    <>
+      {/* Fond opaque : le contenu qui défile passe sous la marge au-dessus de la pilule, pas à travers. */}
+      <div className="sticky top-0 z-50 bg-loom-bg px-3 pt-2.5 xl:px-5 xl:pt-[18px]">
+        <header className="mx-auto max-w-[1200px] overflow-hidden rounded-[18px] bg-loom-header-bg shadow-loom-header ring-1 ring-loom-header-border xl:rounded-[22px]">
+          <div className="flex h-[60px] items-center gap-1.5 pl-2 pr-1.5 xl:h-auto xl:gap-6 xl:py-2 xl:pl-2.5 xl:pr-2.5">
+            <Link
+              to="/"
+              aria-label="LOOM, retour à l'accueil"
+              className={cn('flex flex-1 items-center gap-2.5 rounded-xl text-loom-text xl:flex-none', focusRing)}
             >
-              <Download className="h-4 w-4" />
-              Installer l'app
-            </Button>
-          )}
+              <img
+                src="/logo-loom-ours.png"
+                alt=""
+                width={56}
+                height={56}
+                className="h-11 w-11 rounded-xl xl:h-14 xl:w-14 xl:rounded-[14px]"
+              />
+            </Link>
 
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative rounded-full overflow-hidden">
-                  <Avatar className="h-full w-full">
-                    <AvatarImage src={profile?.avatar_url} alt={profile?.username || 'User'} />
-                    <AvatarFallback className="bg-tan text-brown font-bold">
-                      <User className="h-5 w-5" />
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white/90 backdrop-blur-md border-white/20">
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <div className="flex flex-col space-y-1 leading-none">
-                    {profile?.username && (
-                      <p className="font-medium text-sm text-brown">{profile.username}</p>
+            <nav aria-label="Menu principal" className="hidden min-w-0 flex-1 flex-wrap gap-1 xl:flex">
+              {SITE_NAV_LINKS.map((link) => {
+                const active = isNavActive(pathname, link.to);
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'rounded-full px-3.5 py-2.5 text-base transition-colors',
+                      active
+                        ? 'bg-loom-nav-active-bg font-bold text-loom-nav-active-fg'
+                        : 'font-medium text-loom-nav-fg hover:bg-loom-nav-active-bg hover:text-loom-nav-active-fg',
+                      focusRing,
                     )}
-                    <p className="w-[200px] truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                {isAdmin && (
-                  <DropdownMenuItem asChild className="cursor-pointer hover:bg-tan/20 focus:bg-tan/20">
-                    <Link to="/admin" className="flex items-center w-full text-brown">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Administration</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem 
-                  onClick={handleSignOut}
-                  className="cursor-pointer text-red-600 hover:bg-red-50 focus:bg-red-50 focus:text-red-600"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Se déconnecter</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button 
-              asChild 
-              variant="default" 
-              className="hidden md:flex bg-brown hover:bg-brown-light text-white rounded-full px-6 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-            >
-              <Link to="/auth/login">
-                <LogIn className="mr-2 h-4 w-4" />
-                Connexion
-              </Link>
-            </Button>
-          )}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden p-2 text-brown hover:bg-tan/20 rounded-full transition-colors"
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </motion.button>
+            {showShop && (
+              <a
+                href={shopUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'hidden h-11 items-center gap-1.5 rounded-full px-2 text-base font-semibold text-loom-nav-fg transition-colors hover:text-loom-nav-active-fg xl:flex',
+                  focusRing,
+                )}
+              >
+                Boutique
+                <ExternalLink aria-hidden="true" size={14} />
+                <span className="sr-only">(nouvel onglet)</span>
+              </a>
+            )}
+
+            <ThemeToggle />
+
+            {showMembership && (
+              <a
+                href={membershipUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex h-[42px] items-center rounded-full bg-loom-primary-bg px-3.5 text-[15px] font-extrabold text-loom-primary-fg transition-colors hover:bg-loom-primary-hover xl:h-[46px] xl:px-[22px] xl:text-base',
+                  focusRing,
+                )}
+              >
+                Adhérer
+                <span className="sr-only"> (nouvel onglet)</span>
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Ouvrir le menu"
+              aria-expanded={menuOpen}
+              aria-controls="menu-mobile"
+              className={cn('flex h-11 w-11 flex-none items-center justify-center rounded-full text-loom-text xl:hidden', focusRing)}
+            >
+              <Menu aria-hidden="true" size={24} />
+            </button>
+          </div>
+          <div aria-hidden="true" className="h-[3px] bg-bear xl:h-1" />
+        </header>
+      </div>
+
+      <div className="hidden px-5 xl:block">
+        <div className="mx-auto flex max-w-[1200px] justify-end pr-[22px]">
+          <AdminEntryLink className="h-9 rounded-b-xl bg-loom-header-bg px-3.5 text-[13px] text-loom-text-muted shadow-loom-header ring-1 ring-loom-header-border hover:text-loom-text" />
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="xl:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 overflow-hidden shadow-xl"
-          >
-            <div className="container mx-auto px-4 py-6 flex flex-col space-y-2">
-              {navLinks.map((link, index) => (
-                <motion.div
-                  key={link.path}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  {link.external ? (
-                    <a
-                      href={link.path}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`block px-4 py-3 rounded-xl text-base font-medium transition-all ${
-                        isActive(link.path)
-                          ? 'bg-tan/30 text-brown-dark translate-x-2'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-brown hover:translate-x-1'
-                      }`}
-                    >
-                      {link.name}
-                    </a>
-                  ) : (
-                    <Link
-                      to={link.path}
-                      className={`block px-4 py-3 rounded-xl text-base font-medium transition-all ${
-                        isActive(link.path)
-                          ? 'bg-tan/30 text-brown-dark translate-x-2'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-brown hover:translate-x-1'
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                  )}
-                </motion.div>
-              ))}
-
-              {canInstall && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: navLinks.length * 0.05 }}
-                >
-                  <button
-                    onClick={promptInstall}
-                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-brown transition-all"
-                  >
-                    <Download size={20} />
-                    Installer l'application
-                  </button>
-                </motion.div>
-              )}
-
-              {!user && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="pt-4 mt-2 border-t border-gray-100"
-                >
-                  <Button asChild className="w-full bg-brown hover:bg-brown-light text-white rounded-xl py-6 shadow-md">
-                    <Link to="/auth/login" className="flex justify-center items-center gap-2">
-                      <LogIn size={20} />
-                      Se connecter
-                    </Link>
-                  </Button>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.header>
+      <MobileMenu open={menuOpen} onOpenChange={setMenuOpen} />
+    </>
   );
 };
 

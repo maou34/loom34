@@ -1,46 +1,56 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSlugRedirect } from '@/lib/slug';
-import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, MapPin, Clock, ArrowLeft, Ticket, Share2, ExternalLink } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { Tables } from '@/db/types';
-import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { stripMarkdown } from '@/lib/markdown';
+import { ArrowDown, CalendarDays, CalendarPlus, ChevronLeft, ExternalLink, Lock, MapPin, Share2, Ticket } from 'lucide-react';
+import { db } from '@/db/client';
+import type { Tables } from '@/db/types';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import EventDateBlock from '@/components/site/EventDateBlock';
+import TicketInfo from '@/components/event/TicketInfo';
+import OsmMap from '@/components/event/OsmMap';
+import { useEventAlbums } from '@/lib/albums';
+import { Chip } from '@/components/site/EventChips';
+import type { EventChip } from '@/lib/eventChips';
+import { btnDisabled, btnPrimary, btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
+import { useExternalLinks } from '@/hooks/useSiteSettings';
 import { generateEventStructuredData } from '@/lib/seo';
-import { motion } from 'framer-motion';
-import { Skeleton } from '@/components/ui/skeleton';
+import { stripMarkdown } from '@/lib/markdown';
 import { cn } from '@/lib/utils';
 import { HELLOASSO_BASE_URL } from '@/config';
+import { daysUntil, eventDay, formatCountdown, formatShortDateTime, isRecurringApero, todayISO } from '@/lib/eventDates';
+import { directionsUrl } from '@/lib/eventPlace';
+import { downloadEventIcs } from '@/lib/ics';
+import { shareLink } from '@/lib/share';
 import {
   closedLabel,
-  formatEuros,
   formatPriceSummary,
-  formatSaleEnd,
-  formatSeatsLabel,
-  getCapacity,
-  getFillRatio,
   getHelloAssoFormUrl,
   getHelloAssoWidgetUrl,
   getTicketAvailability,
   hasTicketing,
   isBookable,
-  parseTicketPrices,
   type TicketingInfo,
 } from '@/lib/ticketing';
+import { SOCIAL_LINKS } from '@/components/site/navigation';
+import { BLANK_IMAGE } from '@/lib/blankImage';
+import ZoomableImage from '@/components/site/ZoomableImage';
+
+/** Images du texte cliquables pour les voir en entier */
+const MARKDOWN_COMPONENTS = { img: ZoomableImage };
 
 const HELLOASSO_ORIGIN = new URL(HELLOASSO_BASE_URL).origin;
 const IFRAME_DEFAULT_HEIGHT = 750;
 
 /**
- * Widget HelloAsso intégré. HelloAsso envoie la hauteur de son contenu par
- * postMessage ({ height }) ; on l'applique pour éviter une double barre de défilement.
- * À vérifier en sandbox : si aucun message n'arrive, la hauteur par défaut reste.
+ * Widget HelloAsso intégré (desktop uniquement). HelloAsso envoie la hauteur de
+ * son contenu par postMessage ({ height }) ; on l'applique pour éviter une double
+ * barre de défilement. Si aucun message n'arrive, la hauteur par défaut reste.
+ * L'iframe reste claire en mode nuit (on ne contrôle pas son style).
  */
 const HelloAssoWidget = ({ ticketing, title }: { ticketing: TicketingInfo; title: string }) => {
   const [height, setHeight] = useState(IFRAME_DEFAULT_HEIGHT);
@@ -59,7 +69,7 @@ const HelloAssoWidget = ({ ticketing, title }: { ticketing: TicketingInfo; title
     <iframe
       src={getHelloAssoWidgetUrl(ticketing)}
       title={`Billetterie HelloAsso : ${title}`}
-      className="w-full border-0 rounded-xl"
+      className="w-full rounded-xl border-0 bg-white"
       style={{ height }}
       allow="payment"
       loading="lazy"
@@ -67,40 +77,68 @@ const HelloAssoWidget = ({ ticketing, title }: { ticketing: TicketingInfo; title
   );
 };
 
+/** Ligne d'info du bloc mobile (icône + intitulé + détail). */
+const InfoRow = ({ icon, term, children }: { icon: ReactNode; term: string; children: ReactNode }) => (
+  <div className="flex gap-3">
+    <span aria-hidden="true" className="mt-0.5 text-loom-accent-text">
+      {icon}
+    </span>
+    <div className="flex min-w-0 flex-col">
+      <dt className="sr-only">{term}</dt>
+      {children}
+    </div>
+  </div>
+);
+
 const EventDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { membershipUrl } = useExternalLinks();
 
-  // Fetch event details
   const { data: event, isLoading, error } = useQuery({
     queryKey: ['event', slug],
     // Adresse inconnue (PGRST116) : inutile de réessayer, on passe tout de suite à la redirection / 404
     retry: (count, err) => (err as { code?: string })?.code !== 'PGRST116' && count < 3,
     queryFn: async () => {
-      const { data, error } = await db
-        .from('events')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-
+      const { data, error } = await db.from('events').select('*').eq('slug', slug).single();
       if (error) throw error;
       return data as Tables<'events'>;
-    }
+    },
   });
 
-  // SEO Configuration
+  const today = todayISO();
+  const { data: eventAlbums = [] } = useEventAlbums(event?.id);
+
+  const { data: otherEvents = [] } = useQuery({
+    queryKey: ['event', slug, 'others', today],
+    enabled: !!event,
+    queryFn: async () => {
+      const { data, error } = await db
+        .from('events')
+        .select('id, slug, title, date, time, image')
+        .eq('published', true)
+        .gte('date', today)
+        .neq('slug', slug!)
+        .order('date', { ascending: true })
+        .limit(3);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   useSEO({
     title: event ? `${event.title} - Événement LOOM` : 'Événement - LOOM',
-    description: event?.description ? stripMarkdown(event.description).substring(0, 160) : 'Découvrez cet événement de LOOM - Les Ours Occitanie Montpellier',
+    description: event?.description
+      ? stripMarkdown(event.description).substring(0, 160)
+      : 'Découvrez cet événement de LOOM - Les Ours Occitanie Montpellier',
     keywords: ['LOOM', 'Bears', 'événement', 'rencontre', 'communauté'],
     image: event?.image,
     type: 'website',
     publishedTime: event?.created_at,
-    author: 'LOOM'
+    author: 'LOOM',
   });
 
-  // Generate structured data for event
   useEffect(() => {
     if (event) {
       generateEventStructuredData({
@@ -109,7 +147,7 @@ const EventDetail = () => {
         startDate: event.date,
         location: event.location,
         image: event.image,
-        url: window.location.href
+        url: window.location.href,
       });
     }
   }, [event]);
@@ -122,34 +160,38 @@ const EventDetail = () => {
     else navigate('/404');
   }, [error, redirectChecked, movedTo, navigate, location.search, location.hash]);
 
-  // Arrivée depuis le bouton « S'inscrire » d'une carte (/events/<slug>#billetterie) :
-  // React Router ne fait pas défiler jusqu'à l'ancre, on le fait une fois la page rendue.
-  // Sur mobile la section est masquée (barre fixe à la place), scrollIntoView n'y fait rien.
+  // Arrivée depuis un bouton « S'inscrire » (/events/<slug>#billetterie) : React Router
+  // ne fait pas défiler jusqu'à l'ancre. Sur mobile la section n'existe pas (pas
+  // d'iframe) : on vise le bouton d'inscription du bloc infos.
   useEffect(() => {
-    if (event && location.hash === '#billetterie') {
-      document.getElementById('billetterie')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    if (!event || location.hash !== '#billetterie') return;
+    const desktop = window.matchMedia('(min-width: 1024px)').matches;
+    document.getElementById(desktop ? 'billetterie' : 'inscription-mobile')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [event, location.hash]);
+
+  // Mobile : la barre fixe « S'inscrire » n'apparaît que quand le bouton du bloc infos est hors de l'écran.
+  const mobileCtaRef = useRef<HTMLDivElement>(null);
+  const [mobileCtaVisible, setMobileCtaVisible] = useState(true);
+  useEffect(() => {
+    const el = mobileCtaRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setMobileCtaVisible(entry.isIntersecting));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [event]);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-loom-bg">
         <Navbar />
-        <div className="flex-1 container mx-auto px-4 py-32">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-[400px] w-full rounded-2xl" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-4">
-                <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-              <div className="lg:col-span-1">
-                <Skeleton className="h-64 w-full rounded-xl" />
-              </div>
+        <div className={cn(container, 'flex-1 py-10')} aria-hidden="true">
+          <div className="flex flex-wrap gap-8">
+            <div className="flex flex-[999_1_560px] flex-col gap-5">
+              <div className="h-[320px] animate-pulse rounded-[22px] bg-loom-surface-2" />
+              <div className="h-10 w-2/3 animate-pulse rounded bg-loom-surface-2" />
+              <div className="h-24 animate-pulse rounded bg-loom-surface-2" />
             </div>
+            <div className="hidden h-[360px] flex-[1_1_300px] animate-pulse rounded-[22px] bg-loom-surface-2 lg:block" />
           </div>
         </div>
         <Footer />
@@ -157,325 +199,341 @@ const EventDetail = () => {
     );
   }
 
-  if (!event) {
-    return null;
-  }
+  if (!event) return null;
 
-  const formattedDate = new Date(event.date).toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-
+  const isPast = daysUntil(event.date) < 0;
   const isTicketed = hasTicketing(event);
   const availability = isTicketed ? getTicketAvailability(event) : null;
-  // Complet ou ventes terminées : plus de bouton ni de billetterie.
   const isClosed = isTicketed && !isBookable(availability);
-  const saleEndLabel = isTicketed ? formatSaleEnd(event) : null;
-  const prices = isTicketed ? parseTicketPrices(event.ticket_prices) : [];
+  const canBook = isTicketed && !isClosed && !isPast;
+  const free = isRecurringApero(event.title);
   const priceSummary = isTicketed ? formatPriceSummary(event.ticket_prices) : null;
-  const seatsLabel = isTicketed ? formatSeatsLabel(event) : null;
-  const fillRatio = isTicketed ? getFillRatio(event) : null;
+  const countdown = formatCountdown(event.date);
+  const longDate = eventDay(event.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const longDateCap = longDate.charAt(0).toUpperCase() + longDate.slice(1);
+  const timeLabel = event.time?.trim() ? `à partir de ${event.time.trim()}` : null;
 
-  const scrollToBooking = () =>
-    document.getElementById('billetterie')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Badge d'état (un seul)
+  let badge: EventChip | null = null;
+  if (isPast) badge = { label: 'Événement passé', tone: 'muted' };
+  else if (isTicketed) {
+    if (isClosed) badge = { label: closedLabel(availability), tone: 'muted' };
+    else if (availability === 'almost_full') badge = { label: 'Dernières places', tone: 'hot' };
+    else badge = { label: 'Sur réservation', tone: 'default' };
+  } else if (free) badge = { label: 'Entrée libre', tone: 'free' };
+  else if (event.registration_url) badge = { label: 'Sur réservation', tone: 'default' };
 
-  const shareCard = (
-    <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <Share2 className="w-5 h-5 text-orange" />
-        Partager
-      </h3>
-      <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" className="w-full" onClick={() => {
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
-        }}>
-          Facebook
-        </Button>
-        <Button variant="outline" className="w-full" onClick={() => {
-          navigator.clipboard.writeText(window.location.href);
-        }}>
-          Copier
-        </Button>
-      </div>
+  const helloAssoUrl = isTicketed ? getHelloAssoFormUrl(event) : null;
+  const priceSuffix = priceSummary ? ` · ${priceSummary.charAt(0).toLowerCase()}${priceSummary.slice(1)}` : '';
+  const scrollToBooking = () => document.getElementById('billetterie')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const memberNote = event.ticket_member_discount && !isPast && (
+    <p className="text-sm text-loom-text-muted">
+      Pas encore adhérent ?{' '}
+      <a href={membershipUrl} target="_blank" rel="noopener noreferrer" className={cn(strongLink, 'underline')}>
+        Adhérez<span className="sr-only"> (nouvel onglet)</span>
+      </a>{' '}
+      et payez le tarif réduit.
+    </p>
+  );
+
+  const closedMessage = (
+    <div className="flex flex-col gap-2 rounded-xl border border-loom-border bg-loom-surface-2 p-4 text-[15px]">
+      <p className="font-bold">
+        {availability === 'closed' ? 'Les inscriptions à cet événement sont closes.' : 'Cet événement est complet.'}
+      </p>
+      {availability !== 'closed' && (
+        <p className="text-loom-text-2">
+          Suivez-nous sur{' '}
+          <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" className={strongLink}>
+            Instagram
+          </a>{' '}
+          ou{' '}
+          <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" className={strongLink}>
+            Facebook
+          </a>{' '}
+          pour être prévenu en cas de désistement.
+        </p>
+      )}
+      <Link to="/events" className={cn(strongLink, 'self-start')}>
+        Voir l'agenda →
+      </Link>
+    </div>
+  );
+
+  const agendaShareButtons = (labelAgenda: string) => (
+    <div className="flex gap-2.5">
+      {!isPast && (
+        <button type="button" onClick={() => downloadEventIcs(event)} className={cn(btnSecondary, 'h-11 flex-1 px-3 text-[15px]')}>
+          <CalendarPlus aria-hidden="true" size={18} className="hidden lg:block" />
+          <span className="whitespace-nowrap">{labelAgenda}</span>
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => shareLink(event.title)}
+        aria-label="Partager l'événement"
+        className={cn(btnSecondary, 'h-11 px-3 text-[15px]', isPast ? 'flex-1' : 'flex-1 lg:w-11 lg:flex-none')}
+      >
+        <Share2 aria-hidden="true" size={18} />
+        <span className="lg:hidden">Partager</span>
+      </button>
     </div>
   );
 
   return (
-    <div className={cn("flex flex-col min-h-screen bg-gray-50", isTicketed && "pb-32 lg:pb-0")}>
+    <div className={cn('flex min-h-screen flex-col bg-loom-bg text-loom-text', canBook && 'max-lg:pb-24')}>
       <Navbar />
 
-      {/* Hero with Background Image Blur */}
-      <div className="relative h-[45vh] min-h-[340px] md:h-[60vh] md:min-h-[500px] flex items-end pb-28 md:pb-12 overflow-hidden">
-        <div className="absolute inset-0">
-          <img
-            src={event.image}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-        </div>
+      <main className="flex-1">
+        <div className={cn(container, 'flex flex-col gap-5 pb-14 pt-4 sm:pt-8')}>
+          {/* Fil d'Ariane (desktop) / retour (mobile) */}
+          <nav aria-label="Fil d'Ariane" className="hidden text-sm text-loom-text-muted sm:block">
+            <Link to="/events" className={cn(strongLink, 'font-semibold')}>
+              Agenda
+            </Link>{' '}
+            <span aria-hidden="true">›</span> <span aria-current="page">{event.title}</span>
+          </nav>
+          <Link to="/events" className={cn('flex min-h-11 items-center gap-1 self-start rounded-lg font-semibold text-loom-link sm:hidden', pageFocus)}>
+            <ChevronLeft aria-hidden="true" size={18} /> Agenda
+          </Link>
 
-        <div className="container mx-auto px-4 relative z-10 text-white">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Button
-              variant="ghost"
-              className="text-white/90 hover:bg-white/20 hover:text-white mb-3 md:mb-8 -ml-4 h-8 md:h-10 text-sm md:text-base"
-              onClick={() => navigate('/events')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              <span className="md:hidden">Tous les événements</span>
-              <span className="hidden md:inline">Retour aux événements</span>
-            </Button>
-
-            <h1 className="text-3xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight max-w-4xl">
-              {event.title}
-            </h1>
-
-            {/* Mobile : une seule pastille date · heure (le lieu est dans « Détails pratiques ») */}
-            <span className="md:hidden inline-flex items-center bg-white/10 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/20 text-sm font-medium text-white/90">
-              <span className="capitalize">{formattedDate}</span>&nbsp;· {event.time}
-            </span>
-
-            <div className="hidden md:flex flex-wrap gap-6 text-lg md:text-xl font-medium text-white/90">
-              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
-                <CalendarDays className="w-5 h-5" />
-                <span className="capitalize">{formattedDate}</span>
-              </span>
-              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
-                <MapPin className="w-5 h-5" />
-                {event.location}
-              </span>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-12 -mt-20 relative z-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content — après les détails pratiques sur mobile */}
-          <div className="lg:col-span-2 order-2 lg:order-1 space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100"
-            >
-              <h2 className="text-2xl font-bold mb-8 text-gray-900 border-b pb-4">À propos de l'événement</h2>
-              <div className="prose prose-lg prose-orange max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+          <div className="flex flex-wrap items-start gap-8">
+            {/* Colonne principale */}
+            <article aria-labelledby="event-title" className="flex min-w-0 flex-[999_1_560px] flex-col gap-6">
+              {/* Pas d'affiche en en-tête sur mobile : on arrive directement aux infos. La
+                  <source> vide évite aussi que le téléphone télécharge l'image cachée. */}
+              <div className="hidden overflow-hidden rounded-[22px] bg-loom-surface-2 sm:block">
+                <picture>
+                  <source media="(max-width: 639px)" srcSet={BLANK_IMAGE} />
+                  <img
+                    src={event.image}
+                    alt={`Affiche : ${event.title}`}
+                    className="mx-auto block max-h-[420px] w-full object-contain"
+                    fetchPriority="high"
+                  />
+                </picture>
               </div>
-            </motion.div>
 
-            {/* Réservation (ordinateur) : widget HelloAsso intégré */}
-            {isTicketed && (
-              <motion.section
-                id="billetterie"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="hidden lg:block scroll-mt-28 bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100"
-              >
-                <h2 className="text-2xl font-bold mb-6 text-gray-900 border-b pb-4">Réservation</h2>
-                {isClosed ? (
-                  <div className="text-center p-8 bg-gray-50 rounded-xl text-gray-600">
-                    {availability === 'closed'
-                      ? 'Les inscriptions à cet événement sont closes.'
-                      : 'Cet événement est complet.'}
+              <div className="flex flex-col gap-2.5">
+                {badge && <Chip chip={badge} className="self-start px-3 py-1 text-[13px]" />}
+                <h1 id="event-title" className="text-[28px] font-extrabold leading-tight tracking-[-0.01em] sm:text-[40px]">
+                  {event.title}
+                </h1>
+                <p className="hidden text-[17px] text-loom-text-2 lg:block">
+                  {[longDateCap, timeLabel, event.location].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+
+              {event.description && (
+                <div className={cn(card, 'rounded-[18px] p-5 sm:p-6')}>
+                  {/* Images de la description : hauteur limitée, centrées, un clic les affiche en entier */}
+                  <div className="prose prose-loom max-w-none sm:prose-lg prose-img:mx-auto prose-img:max-h-[min(75vh,560px)] prose-img:w-auto prose-img:rounded-xl">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{event.description}</ReactMarkdown>
                   </div>
-                ) : (
-                  <>
-                    <p className="text-gray-600 mb-6">
-                      Le paiement est sécurisé par HelloAsso. Une contribution volontaire à leur
-                      fonctionnement vous sera proposée : elle est facultative. Vos billets arrivent par e-mail.
-                    </p>
-                    <HelloAssoWidget ticketing={event} title={event.title} />
-                  </>
-                )}
-              </motion.section>
-            )}
+                </div>
+              )}
 
-            <div className="lg:hidden">{shareCard}</div>
-          </div>
+              {/* Mobile : infos pratiques, inscription, agenda / partage */}
+              <div className="flex flex-col gap-4 lg:hidden">
+                <dl className={cn(card, 'flex flex-col gap-4 rounded-[18px] p-4')}>
+                  <InfoRow icon={<CalendarDays size={20} />} term="Date">
+                    <dd className="font-bold">{formatShortDateTime(event)}</dd>
+                    {countdown && <dd className="text-sm text-loom-text-muted">{countdown}</dd>}
+                  </InfoRow>
+                  <InfoRow icon={<MapPin size={20} />} term="Lieu">
+                    <dd className="font-bold">{event.location}</dd>
+                    <dd>
+                      <a href={directionsUrl(event.location)} target="_blank" rel="noopener noreferrer" className={cn(strongLink, 'text-sm underline')}>
+                        Itinéraire<span className="sr-only"> (nouvel onglet)</span>
+                      </a>
+                    </dd>
+                  </InfoRow>
+                  {isTicketed && !isPast && (
+                    <InfoRow icon={<Ticket size={20} />} term="Tarifs et places">
+                      <dd>
+                        <TicketInfo ticketing={event} />
+                      </dd>
+                    </InfoRow>
+                  )}
+                </dl>
 
-          {/* Sidebar Info — en premier sur mobile */}
-          <div className="lg:col-span-1 order-1 lg:order-2">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="space-y-6 lg:sticky lg:top-24"
-            >
-              {/* Details Card */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-6 text-lg">Détails pratiques</h3>
-                <ul className="space-y-6">
-                  {/* Mobile : date et heure regroupées */}
-                  <li className="flex items-start gap-4 lg:hidden">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <CalendarDays className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Date et heure</p>
-                      <p className="text-gray-600"><span className="capitalize">{formattedDate}</span>, {event.time}</p>
-                    </div>
-                  </li>
-                  <li className="hidden lg:flex items-start gap-4">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <CalendarDays className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Date</p>
-                      <p className="text-gray-600 capitalize">{formattedDate}</p>
-                    </div>
-                  </li>
-                  <li className="hidden lg:flex items-start gap-4">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <Clock className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Heure</p>
-                      <p className="text-gray-600">{event.time}</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <MapPin className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Lieu</p>
-                      <p className="text-gray-600">{event.location}</p>
-                    </div>
-                  </li>
-                </ul>
-
-                {isTicketed ? (
-                  <div className="mt-6 pt-6 border-t border-gray-100">
-                    {prices.length > 0 && (
-                      <>
-                        <h4 className="font-bold text-gray-900 mb-3 hidden lg:flex items-center gap-2">
-                          <Ticket className="w-5 h-5 text-orange" /> Tarifs
-                        </h4>
-                        <ul className="space-y-2 mb-4">
-                          {prices.map((price, i) => (
-                            <li key={`${price.label}-${i}`} className="flex justify-between gap-4 text-gray-700">
-                              <span>{price.label || 'Tarif'}</span>
-                              <span className="font-bold text-gray-900 whitespace-nowrap">
-                                {price.price_cents === 0 ? 'Gratuit' : formatEuros(price.price_cents)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                        {event.ticket_member_discount && (
-                          <p className="-mt-2 mb-4 text-sm text-gray-500">
-                            Tarif réduit pour les adhérents, avec le code promo LOOM.
-                          </p>
-                        )}
-                      </>
-                    )}
-
-                    {seatsLabel && (
-                      <div className="mb-6">
-                        <div className="flex justify-between items-baseline text-sm mb-2">
-                          <span
-                            className={cn(
-                              "font-bold",
-                              availability === 'almost_full' ? "text-orange-800" : isClosed ? "text-gray-700" : "text-gray-600"
-                            )}
-                          >
-                            {seatsLabel}
-                          </span>
-                          {getCapacity(event) && !isClosed && (
-                            <span className="text-gray-500">sur {getCapacity(event)}</span>
-                          )}
-                        </div>
-                        {fillRatio !== null && availability !== 'closed' && (
-                          <div
-                            className="h-2 rounded-full bg-gray-100 overflow-hidden"
-                            role="progressbar"
-                            aria-label="Places vendues"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={Math.round(fillRatio * 100)}
-                          >
-                            <div
-                              className={cn("h-full rounded-full", isClosed ? "bg-gray-400" : "bg-orange")}
-                              style={{ width: `${fillRatio * 100}%` }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {saleEndLabel && (
-                      <p className="mb-6 flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4 text-orange flex-shrink-0" /> {saleEndLabel}
+                <div id="inscription-mobile" ref={mobileCtaRef} className="flex scroll-mt-28 flex-col gap-2">
+                  {canBook && helloAssoUrl ? (
+                    <>
+                      <a href={helloAssoUrl} target="_blank" rel="noopener noreferrer" className={cn(btnPrimary, 'h-[52px] text-[17px]')}>
+                        S'inscrire{priceSuffix}
+                        <ExternalLink aria-hidden="true" size={16} />
+                        <span className="sr-only"> (HelloAsso, nouvel onglet)</span>
+                      </a>
+                      <p className="text-center text-xs text-loom-text-muted">
+                        Vous continuez sur HelloAsso pour choisir vos billets et payer en toute sécurité.
                       </p>
-                    )}
+                    </>
+                  ) : !isTicketed && !isPast && event.registration_url ? (
+                    <a href={event.registration_url} target="_blank" rel="noopener noreferrer" className={cn(btnPrimary, 'h-[52px] text-[17px]')}>
+                      S'inscrire <ExternalLink aria-hidden="true" size={16} />
+                      <span className="sr-only"> (nouvel onglet)</span>
+                    </a>
+                  ) : null}
+                </div>
 
-                    {/* Ordinateur : renvoie vers le widget intégré ; sur mobile, c'est la barre fixe */}
-                    <Button
-                      className={cn(
-                        "w-full h-12 text-lg hidden lg:flex",
-                        isClosed ? "" : "bg-brown hover:bg-brown-light text-white shadow-lg shadow-brown/20"
-                      )}
-                      variant={isClosed ? 'outline' : 'default'}
-                      disabled={isClosed}
-                      onClick={scrollToBooking}
-                    >
-                      <Ticket className="mr-2 h-5 w-5" /> {isClosed ? closedLabel(availability) : "S'inscrire"}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="mt-8 pt-6 border-t border-gray-100">
-                    {event.registration_url ? (
-                      <Button className="w-full bg-brown hover:bg-brown-light text-white h-12 text-lg shadow-lg shadow-brown/20" asChild>
-                        <a href={event.registration_url} target="_blank" rel="noopener noreferrer">
-                          <Ticket className="mr-2 h-5 w-5" /> S'inscrire
-                        </a>
-                      </Button>
-                    ) : (
-                      <div className="text-center p-4 bg-gray-50 rounded-xl text-gray-500 text-sm">
-                        Aucune inscription requise pour cet événement
-                      </div>
-                    )}
-                  </div>
-                )}
+                {agendaShareButtons("Ajouter à l'agenda")}
+                {isClosed && !isPast && closedMessage}
+                {memberNote}
               </div>
 
-              <div className="hidden lg:block">{shareCard}</div>
-            </motion.div>
+              {/* Albums photo liés à la soirée (admin Galerie → « Soirée liée ») */}
+              {eventAlbums.length > 0 && (
+                <section aria-labelledby="h-photos" className="flex flex-col gap-2 rounded-[18px] border border-loom-highlight-border bg-loom-highlight-bg p-5">
+                  <h2 id="h-photos" className="text-lg font-extrabold">
+                    Les photos de la soirée
+                  </h2>
+                  <ul className="flex flex-wrap gap-x-4 gap-y-1">
+                    {eventAlbums.map((a) => (
+                      <li key={a.album_id}>
+                        <Link to={`/gallery/${encodeURIComponent(a.album_id)}`} className={strongLink}>
+                          {a.title || a.album_id} →
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {/* Accès : adresse, itinéraire, plan (si le lieu a pu être géocodé) */}
+              <section aria-labelledby="h-acces" className={cn(card, 'flex flex-col gap-4 rounded-[18px] p-5 sm:flex-row sm:p-6')}>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-[1_1_0]">
+                  <h2 id="h-acces" className="text-lg font-extrabold">
+                    Accès
+                  </h2>
+                  <p className="text-loom-text-2">{event.location}</p>
+                  <a href={directionsUrl(event.location)} target="_blank" rel="noopener noreferrer" className={cn(strongLink, 'self-start')}>
+                    Ouvrir l'itinéraire →<span className="sr-only"> (nouvel onglet)</span>
+                  </a>
+                </div>
+                {typeof event.latitude === 'number' && typeof event.longitude === 'number' && (
+                  <div className="min-w-0 sm:flex-[1.3_1_0]">
+                    <OsmMap latitude={event.latitude} longitude={event.longitude} label={event.location} />
+                  </div>
+                )}
+              </section>
+
+              {/* Réservation (desktop) : widget HelloAsso intégré */}
+              {isTicketed && !isPast && (
+                <section id="billetterie" aria-labelledby="h-resa" className={cn(card, 'hidden scroll-mt-32 flex-col gap-4 p-6 lg:flex lg:p-8')}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 id="h-resa" className="text-2xl font-extrabold">
+                      Réservation
+                    </h2>
+                    <span className="flex items-center gap-1.5 text-sm text-loom-text-muted">
+                      <Lock aria-hidden="true" size={15} /> Paiement sécurisé par HelloAsso
+                    </span>
+                  </div>
+                  {isClosed ? (
+                    closedMessage
+                  ) : (
+                    <>
+                      <p className="text-[15px] text-loom-text-2">
+                        Choisissez vos billets et payez directement ici, sans quitter le site. HelloAsso vous proposera une
+                        contribution volontaire à son fonctionnement : elle est facultative. Vos billets arrivent par e-mail.
+                      </p>
+                      <HelloAssoWidget ticketing={event} title={event.title} />
+                    </>
+                  )}
+                </section>
+              )}
+            </article>
+
+            {/* Colonne de droite (desktop), collante */}
+            <aside aria-labelledby="h-side" className="hidden min-w-0 flex-[1_1_300px] flex-col gap-3 lg:sticky lg:top-32 lg:flex">
+              <div className={cn(card, 'flex flex-col gap-4 p-5 shadow-loom-card')}>
+                <div className="flex items-center gap-3.5">
+                  <EventDateBlock date={event.date} />
+                  <div className="flex min-w-0 flex-col">
+                    <h2 id="h-side" className="text-lg font-extrabold">
+                      {isPast ? 'Événement passé' : isTicketed || event.registration_url ? "S'inscrire" : 'En pratique'}
+                    </h2>
+                    <span className="text-sm text-loom-text-muted">
+                      {[timeLabel && timeLabel.charAt(0).toUpperCase() + timeLabel.slice(1), countdown].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                </div>
+
+                {isTicketed && !isPast && <TicketInfo ticketing={event} />}
+
+                {!isPast &&
+                  (canBook ? (
+                    <button type="button" onClick={scrollToBooking} className={cn(btnPrimary, 'h-12 text-base')}>
+                      S'inscrire <ArrowDown aria-hidden="true" size={16} />
+                    </button>
+                  ) : isClosed ? (
+                    <span className={cn(btnDisabled, 'h-12')}>{closedLabel(availability)}</span>
+                  ) : event.registration_url ? (
+                    <a href={event.registration_url} target="_blank" rel="noopener noreferrer" className={cn(btnPrimary, 'h-12 text-base')}>
+                      S'inscrire <ExternalLink aria-hidden="true" size={16} />
+                      <span className="sr-only"> (nouvel onglet)</span>
+                    </a>
+                  ) : (
+                    <p className="rounded-xl bg-loom-surface-2 p-3 text-center text-sm text-loom-text-2">
+                      {free ? 'Entrée libre, pas besoin de réserver.' : 'Aucune inscription requise pour cet événement.'}
+                    </p>
+                  ))}
+
+                {agendaShareButtons('Ajouter à mon agenda')}
+              </div>
+              <div className="px-1">{memberNote}</div>
+            </aside>
           </div>
+
+          {/* Les autres rendez-vous */}
+          {otherEvents.length > 0 && (
+            <section aria-labelledby="h-more" className="mt-6 flex flex-col gap-4">
+              <h2 id="h-more" className="text-2xl font-extrabold">
+                Les autres rendez-vous
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {otherEvents.map((other) => (
+                  <Link
+                    key={other.id}
+                    to={`/events/${other.slug}`}
+                    className={cn(card, 'group flex overflow-hidden rounded-[18px] text-loom-text no-underline sm:flex-col', pageFocus)}
+                  >
+                    <img src={other.image} alt="" loading="lazy" className="h-[88px] w-[88px] flex-none bg-loom-surface-2 object-cover sm:h-[120px] sm:w-full" />
+                    <span className="flex min-w-0 flex-col justify-center gap-1 px-4 py-3">
+                      <span className="text-[13px] font-bold uppercase tracking-[0.04em] text-loom-accent-text">{formatShortDateTime(other)}</span>
+                      <span className="font-extrabold leading-tight group-hover:underline underline-offset-4">{other.title}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
-      </div>
+      </main>
 
       <Footer />
 
-      {/* Mobile : barre fixe qui ouvre HelloAsso en plein écran */}
-      {isTicketed && (
-        <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden bg-white border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          {isClosed ? (
-            <Button className="w-full h-12 text-base" variant="outline" disabled>
-              {closedLabel(availability)}
-            </Button>
-          ) : (
-            <>
-              <Button className="w-full h-12 text-base bg-brown hover:bg-brown-light text-white" asChild>
-                <a href={getHelloAssoFormUrl(event)} target="_blank" rel="noopener noreferrer">
-                  S'inscrire{priceSummary ? ` · ${priceSummary.charAt(0).toLowerCase()}${priceSummary.slice(1)}` : ''}
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-              <p className="mt-2 text-center text-xs text-gray-500">
-                Vous continuez sur HelloAsso pour choisir vos billets et payer en toute sécurité.
-              </p>
-            </>
+      {/* Mobile : barre fixe vers HelloAsso (nouvel onglet), quand le bouton du bloc infos n'est plus visible */}
+      {canBook && helloAssoUrl && (
+        <div
+          className={cn(
+            'fixed inset-x-0 bottom-0 z-40 border-t border-loom-border bg-loom-surface px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-loom-header transition-transform duration-200 lg:hidden',
+            mobileCtaVisible ? 'pointer-events-none translate-y-full' : 'translate-y-0',
           )}
+          aria-hidden={mobileCtaVisible}
+        >
+          <a
+            href={helloAssoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            tabIndex={mobileCtaVisible ? -1 : 0}
+            className={cn(btnPrimary, 'h-12 w-full text-base')}
+          >
+            S'inscrire{priceSuffix}
+            <ExternalLink aria-hidden="true" size={16} />
+            <span className="sr-only"> (HelloAsso, nouvel onglet)</span>
+          </a>
         </div>
       )}
     </div>

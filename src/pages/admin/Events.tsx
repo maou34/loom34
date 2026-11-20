@@ -3,10 +3,12 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket } from "lucide-react";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Link } from "react-router-dom";
+import { Plus, Edit, Trash2, Eye, CalendarDays, Search, MapPin, Clock, CheckCircle2, XCircle, MoreHorizontal, Copy, Ticket, Repeat } from "lucide-react";
+import RegularMeetupsDialog from "@/components/admin/RegularMeetupsDialog";
+import PublishToggle from "@/components/admin/PublishToggle";
+import { ClearFiltersButton, FilterSelect } from "@/components/admin/ListFilters";
+import { ALL, useUrlFilters } from "@/lib/urlFilters";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { slugify } from "@/lib/slug";
 import { 
@@ -28,6 +30,10 @@ import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
 import { Badge } from "@/components/ui/badge";
 import { getCapacity, isSaleEnded, normalizeHelloAssoSlug } from "@/lib/ticketing";
+import { eventCity, sortCities } from "@/lib/eventPlace";
+import { geocodeAddress } from "@/lib/geocode";
+import { dateBlockParts, eventDay, formatCountdown, isRecurringApero, todayISO } from "@/lib/eventDates";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +42,39 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const LOCATION_EXAMPLE = "« Le Marvelous, 3 rue Saint-Ravy, 34000 Montpellier »";
+
+type ListTab = "upcoming" | "past" | "drafts";
+const LIST_TABS: { id: ListTab; label: string }[] = [
+  { id: "upcoming", label: "À venir" },
+  { id: "past", label: "Passés" },
+  { id: "drafts", label: "Brouillons" },
+];
+
+const FILTER_KEYS = ["ville", "type", "annee"] as const;
+const NO_CITY = "aucune";
+const TYPE_OPTIONS = [
+  { value: "billetterie", label: "Billetterie HelloAsso" },
+  { value: "sans-billetterie", label: "Sans billetterie" },
+  { value: "aperos", label: "Apéros" },
+];
+
+/** Regroupe des événements déjà triés par mois (« Novembre 2026 »). */
+function groupEventsByMonth<T extends { date: string }>(events: T[]) {
+  const groups: { key: string; label: string; items: T[] }[] = [];
+  for (const event of events) {
+    const key = event.date.slice(0, 7);
+    let group = groups[groups.length - 1];
+    if (!group || group.key !== key) {
+      const label = eventDay(event.date).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+      group = { key, label: label.charAt(0).toUpperCase() + label.slice(1), items: [] };
+      groups.push(group);
+    }
+    group.items.push(event);
+  }
+  return groups;
+}
 
 const formatDate = (dateStr: string) => {
   return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -80,7 +119,23 @@ interface Event {
   tickets_sold_discounted: number | null;
   helloasso_sale_start_date: string | null;
   helloasso_sale_end_date: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
+
+/**
+ * Coordonnées du lieu pour le plan OpenStreetMap de la fiche, recalculées
+ * seulement si le lieu a changé (ou n'a pas encore de coordonnées).
+ * Adresse introuvable : on enregistre quand même, sans plan.
+ */
+const coordinatesFor = async (location: string, previous?: Event | null) => {
+  if (previous && previous.location === location && previous.latitude !== null && previous.longitude !== null) return {};
+  const found = await geocodeAddress(location);
+  if (!found) {
+    toast.warning("Adresse introuvable sur OpenStreetMap : la fiche affichera le lien d'itinéraire, sans plan.");
+  }
+  return found ?? { latitude: null, longitude: null };
+};
 
 const formatShortDateTime = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -105,8 +160,7 @@ export default function AdminEvents() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const eventsPerPage = 10;
+  const [meetupsOpen, setMeetupsOpen] = useState(false);
   const { user } = useAuth();
   
   // Form state for new/edit event
@@ -141,24 +195,83 @@ export default function AdminEvents() {
     }
   }, [searchQuery, events]);
 
-  // Revenir à la première page seulement quand la recherche change (pas quand
-  // un événement est publié/dépublié depuis la liste).
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+  // Onglets de la liste : À venir (publiés), Passés, Brouillons (à venir non publiés)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listTab = (searchParams.get("onglet") as ListTab) || "upcoming";
+  const setListTab = (tab: ListTab) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === "upcoming") next.delete("onglet");
+        else next.set("onglet", tab);
+        return next;
+      },
+      { replace: true },
+    );
+  const today = todayISO();
+  const inTab = (e: Event, tab: ListTab) =>
+    tab === "past" ? e.date.slice(0, 10) < today : e.date.slice(0, 10) >= today && (tab === "upcoming" ? e.published : !e.published);
+  const tabCounts = {
+    upcoming: events.filter((e) => inTab(e, "upcoming")).length,
+    past: events.filter((e) => inTab(e, "past")).length,
+    drafts: events.filter((e) => inTab(e, "drafts")).length,
+  };
 
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
-  const paginatedEvents = filteredEvents.slice(
-    (currentPage - 1) * eventsPerPage,
-    currentPage * eventsPerPage
+  // Filtres Ville / Type / Année (options tirées des événements de l'onglet)
+  const { values: filters, setFilter, clearFilters, activeCount } = useUrlFilters(FILTER_KEYS);
+  const tabEvents = events.filter((e) => inTab(e, listTab));
+  const cityOptions = [
+    ...sortCities([...new Set(tabEvents.map((e) => eventCity(e.location)).filter((c): c is string => !!c))]).map((c) => ({ value: c, label: c })),
+    ...(tabEvents.some((e) => !eventCity(e.location)) ? [{ value: NO_CITY, label: "Ville non reconnue" }] : []),
+  ];
+  const yearOptions = [...new Set(tabEvents.map((e) => e.date.slice(0, 4)))]
+    .sort((a, b) => b.localeCompare(a))
+    .map((y) => ({ value: y, label: y }));
+  const matchesFilters = (e: Event) => {
+    if (filters.ville !== ALL && (eventCity(e.location) ?? NO_CITY) !== filters.ville) return false;
+    if (filters.annee !== ALL && e.date.slice(0, 4) !== filters.annee) return false;
+    if (filters.type === "billetterie" && !e.helloasso_form_slug) return false;
+    if (filters.type === "sans-billetterie" && e.helloasso_form_slug) return false;
+    if (filters.type === "aperos" && !isRecurringApero(e.title)) return false;
+    return true;
+  };
+
+  const monthGroups = groupEventsByMonth(
+    filteredEvents.filter((e) => inTab(e, listTab) && matchesFilters(e)).sort((x, y) => (listTab === "past" ? y.date.localeCompare(x.date) : x.date.localeCompare(y.date))),
   );
+
+  // Événements à venir sans coordonnées (créés avant le plan OpenStreetMap, ou
+  // adresse introuvable) : un clic les géocode un par un (1 requête / s, Nominatim).
+  const [geocodingProgress, setGeocodingProgress] = useState<number | null>(null);
+  const missingMaps = events.filter((e) => e.date >= todayISO() && e.latitude === null && e.location.trim());
+  const fillMissingMaps = async () => {
+    let found = 0;
+    setGeocodingProgress(0);
+    for (const [i, event] of missingMaps.entries()) {
+      const coords = await geocodeAddress(event.location);
+      if (coords) {
+        const { error } = await db.from('events').update(coords).eq('id', event.id);
+        if (!error) found++;
+      }
+      setGeocodingProgress(i + 1);
+      await new Promise((r) => setTimeout(r, 1100));
+    }
+    setGeocodingProgress(null);
+    const missed = missingMaps.length - found;
+    if (missed > 0) {
+      toast.warning(`${found} plan(s) ajouté(s), ${missed} adresse(s) introuvable(s) : complétez le lieu (n° et rue) puis réessayez.`);
+    } else {
+      toast.success(`${found} plan(s) ajouté(s)`);
+    }
+    fetchEvents();
+  };
 
   async function fetchEvents() {
     try {
       setLoading(true);
       const { data, error } = await db
         .from('events')
-        .select('id, title, location, date, time, published, slug, description, image, registration_url, helloasso_form_slug, ticket_capacity, helloasso_capacity, ticket_member_discount, tickets_sold, tickets_sold_discounted, helloasso_sale_start_date, helloasso_sale_end_date')
+        .select('id, title, location, date, time, published, slug, description, image, registration_url, helloasso_form_slug, ticket_capacity, helloasso_capacity, ticket_member_discount, tickets_sold, tickets_sold_discounted, helloasso_sale_start_date, helloasso_sale_end_date, latitude, longitude')
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -211,12 +324,33 @@ export default function AdminEvents() {
     setDialogOpen(true);
   };
 
+  // « Créer » depuis le tableau de bord : /admin/…?nouveau=1 ouvre directement le formulaire
+  useEffect(() => {
+    if (!searchParams.has("nouveau")) return;
+    resetForm();
+    setSearchParams(
+      (params) => {
+        params.delete("nouveau");
+        return params;
+      },
+      { replace: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleCreateEvent = async () => {
     try {
       const { title, location, date, time, description, image, published, slug, registration_url, helloasso_form_slug, ticket_capacity, ticket_member_discount } = eventForm;
       
       if (!title || !location || !date || !time || !description || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+
+      // Filtre par ville de l'agenda : la ville doit être lisible dans le lieu.
+      // Pas exigé pour les événements passés (anciens lieux saisis sans ville).
+      if (date >= todayISO() && !eventCity(location)) {
+        toast.error(`Indiquez l'adresse complète du lieu, avec le code postal et la ville (ex. ${LOCATION_EXAMPLE})`);
         return;
       }
 
@@ -239,7 +373,8 @@ export default function AdminEvents() {
         helloasso_form_slug: normalizeHelloAssoSlug(helloasso_form_slug),
         ticket_capacity: capacity,
         ticket_member_discount,
-        author_id: user?.id
+        author_id: user?.id,
+        ...(await coordinatesFor(location)),
       };
       
       const { data, error } = await db
@@ -270,6 +405,13 @@ export default function AdminEvents() {
         return;
       }
 
+      // Filtre par ville de l'agenda : la ville doit être lisible dans le lieu.
+      // Pas exigé pour les événements passés (anciens lieux saisis sans ville).
+      if (date >= todayISO() && !eventCity(location)) {
+        toast.error(`Indiquez l'adresse complète du lieu, avec le code postal et la ville (ex. ${LOCATION_EXAMPLE})`);
+        return;
+      }
+
       const capacity = parseCapacity(ticket_capacity);
       if (capacity === undefined) {
         toast.error("La jauge doit être un nombre entier de places supérieur à 0");
@@ -291,6 +433,7 @@ export default function AdminEvents() {
         ticket_capacity: capacity,
         ticket_member_discount,
         updated_at: new Date().toISOString(),
+        ...(await coordinatesFor(location, selectedEvent)),
         // Formulaire HelloAsso changé ou retiré : les données synchronisées
         // concernent l'ancien formulaire, on les vide jusqu'à la prochaine
         // synchro (sync-events). La jauge, saisie ici, est conservée.
@@ -338,7 +481,9 @@ export default function AdminEvents() {
         .update({ published, updated_at: new Date().toISOString() })
         .eq('id', event.id);
       if (error) throw error;
-      toast.success(published ? `« ${event.title} » est publié` : `« ${event.title} » est repassé en brouillon`);
+      toast.success(published ? `« ${event.title} » est publié` : `« ${event.title} » est repassé en brouillon`, {
+        action: { label: "Annuler", onClick: () => togglePublished({ ...event, published }) },
+      });
     } catch (error: unknown) {
       setPublished(event.published);
       console.error("Error toggling event publication:", error);
@@ -416,148 +561,135 @@ export default function AdminEvents() {
   };
 
   return (
-    <AdminLayout title="Événements">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="Rechercher un événement..." 
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
-            onClick={resetForm}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel événement
+    <AdminLayout
+      title="Événements"
+      actions={
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setMeetupsOpen(true)}>
+            <Repeat className="h-4 w-4 sm:mr-2" />
+            <span className="sr-only sm:not-sr-only">Rendez-vous réguliers</span>
+          </Button>
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={resetForm}>
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="sr-only sm:not-sr-only">Nouvel événement</span>
           </Button>
         </div>
+      }
+    >
+      <RegularMeetupsDialog open={meetupsOpen} onOpenChange={setMeetupsOpen} />
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div role="tablist" aria-label="Filtrer les événements" className="flex gap-1 rounded-xl bg-loom-surface-2 p-1 ring-1 ring-loom-border">
+            {LIST_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={listTab === t.id}
+                onClick={() => setListTab(t.id)}
+                className={`h-9 rounded-[9px] px-3.5 text-sm ${listTab === t.id ? "bg-loom-surface font-bold shadow-sm" : "text-loom-text-2 hover:text-loom-text"}`}
+              >
+                {t.label} <span className="text-loom-text-muted">({tabCounts[t.id]})</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <label className="relative w-full sm:w-72">
+              <span className="sr-only">Rechercher un événement</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
+              <Input type="search" placeholder="Rechercher un événement…" className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </label>
+            {missingMaps.length > 0 && (
+              <Button variant="outline" onClick={fillMissingMaps} disabled={geocodingProgress !== null}>
+                <MapPin className="h-4 w-4 mr-2" />
+                {geocodingProgress !== null
+                  ? `Plans : ${geocodingProgress}/${missingMaps.length}…`
+                  : `Calculer les plans manquants (${missingMaps.length})`}
+              </Button>
+            )}
+          </div>
+        </div>
 
-        {/* Events List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CalendarDays className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun événement trouvé</h3>
-              <p className="text-gray-500 mb-6">Commencez par créer votre premier événement.</p>
-              <Button onClick={resetForm} variant="outline">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <FilterSelect label="Filtrer par ville" allLabel="Toutes les villes" value={filters.ville} options={cityOptions} onChange={(v) => setFilter("ville", v)} />
+          <FilterSelect label="Filtrer par type" allLabel="Tous les types" value={filters.type} options={TYPE_OPTIONS} onChange={(v) => setFilter("type", v)} />
+          <FilterSelect label="Filtrer par année" allLabel="Toutes les années" value={filters.annee} options={yearOptions} onChange={(v) => setFilter("annee", v)} />
+          <ClearFiltersButton count={activeCount} onClick={clearFilters} />
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : monthGroups.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong px-4 py-12 text-center">
+            <CalendarDays aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
+            <p className="font-bold">{searchQuery || activeCount > 0 ? "Aucun événement ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun événement"}</p>
+            {listTab === "upcoming" && !searchQuery && activeCount === 0 && (
+              <Button onClick={resetForm} variant="outline" className="mt-2">
                 Créer un événement
               </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead className="w-[400px]">Événement</TableHead>
-                    <TableHead>Lieu</TableHead>
-                    <TableHead>Date & Heure</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedEvents.map((event) => (
-                    <TableRow key={event.id} className="hover:bg-gray-50/50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="h-10 w-10 rounded-lg bg-cover bg-center flex-shrink-0 border border-gray-200"
-                            style={{ backgroundImage: `url(${event.image})` }}
-                          />
-                          <div>
-                            <div className="font-medium text-gray-900 line-clamp-1">{event.title}</div>
-                            <div className="text-xs text-gray-500 line-clamp-1 flex items-center gap-1">
-                              {event.helloasso_form_slug && (
-                                <Ticket className="h-3 w-3 text-orange-600 flex-shrink-0" aria-label="Billetterie HelloAsso" />
-                              )}
-                              {event.slug}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <MapPin className="mr-2 h-3 w-3 text-gray-400" />
-                          {event.location}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col text-sm">
-                          <span className="flex items-center text-gray-900">
-                            <CalendarDays className="mr-2 h-3 w-3 text-gray-400" />
-                            {formatDate(event.date)}
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {monthGroups.map((group) => (
+              <section key={group.key} aria-label={group.label} className="flex flex-col gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-[0.06em] text-loom-text-muted">{group.label}</h2>
+                <ul className="flex flex-col gap-2">
+                  {group.items.map((event) => {
+                    const day = dateBlockParts(event.date);
+                    const countdown = formatCountdown(event.date);
+                    const saleNote = event.helloasso_form_slug ? describeSalePeriod(event) : null;
+                    return (
+                      <li key={event.id} className="flex items-center gap-3 rounded-xl border border-loom-border bg-loom-surface p-2.5 pr-1.5 sm:gap-4 sm:p-3">
+                        <span aria-hidden="true" className="flex w-12 flex-none flex-col items-center rounded-lg bg-loom-surface-2 py-1.5">
+                          <span className="text-lg font-extrabold leading-tight">{day.day}</span>
+                          <span className="text-[11px] font-bold text-loom-accent-text">{day.weekday}</span>
+                        </span>
+                        <button type="button" onClick={() => editEvent(event)} className="flex min-w-0 flex-1 flex-col text-left">
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <span className="sr-only">{day.full} : </span>
+                            <span className="truncate">{event.title}</span>
+                            {event.helloasso_form_slug && <Ticket className="h-3.5 w-3.5 flex-none text-loom-accent-text" aria-label="Billetterie HelloAsso" />}
                           </span>
-                          <span className="flex items-center text-gray-500 mt-1">
-                            <Clock className="mr-2 h-3 w-3 text-gray-400" />
-                            {event.time}
+                          <span className="truncate text-sm text-loom-text-muted">
+                            {[event.time, event.location].filter(Boolean).join(" · ")}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <label className="inline-flex items-center gap-2 cursor-pointer whitespace-nowrap">
-                          <Switch
-                            checked={event.published}
-                            onCheckedChange={() => togglePublished(event)}
-                            disabled={togglingId === event.id}
-                            aria-label={event.published ? `Mettre « ${event.title} » en brouillon` : `Publier « ${event.title} »`}
-                            className="data-[state=checked]:bg-green-600"
-                          />
-                          <span className={event.published ? "text-sm font-medium text-green-700" : "text-sm text-gray-500"}>
-                            {event.published ? "Publié" : "Brouillon"}
-                          </span>
-                        </label>
-                        {event.helloasso_form_slug && event.tickets_sold !== null && (
-                          <div className="mt-1 text-xs text-gray-500 whitespace-nowrap">
-                            {event.tickets_sold}
-                            {getCapacity(event) ? `/${getCapacity(event)}` : ""} inscrit{event.tickets_sold > 1 ? "s" : ""}
-                            {(event.tickets_sold_discounted ?? 0) > 0 && ` · dont ${event.tickets_sold_discounted} au tarif réduit`}
-                          </div>
+                          {event.helloasso_form_slug && (event.tickets_sold !== null || saleNote) && (
+                            <span className="truncate text-xs text-loom-text-muted">
+                              {event.tickets_sold !== null &&
+                                `${event.tickets_sold}${getCapacity(event) ? `/${getCapacity(event)}` : ""} inscrit${event.tickets_sold > 1 ? "s" : ""}${
+                                  (event.tickets_sold_discounted ?? 0) > 0 ? ` · dont ${event.tickets_sold_discounted} au tarif réduit` : ""
+                                }`}
+                              {event.tickets_sold !== null && saleNote && " · "}
+                              {saleNote}
+                            </span>
+                          )}
+                        </button>
+                        {countdown && listTab !== "past" && (
+                          <span className="hidden w-16 flex-none text-right text-xs text-loom-text-muted md:block">{countdown.replace(" jours", " j")}</span>
                         )}
-                        {event.helloasso_form_slug && (() => {
-                          const saleNote = describeSalePeriod(event);
-                          return saleNote && <div className="mt-1 text-xs text-gray-500 whitespace-nowrap">{saleNote}</div>;
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-right">
+                        <PublishToggle id={event.id} title={event.title} published={event.published} disabled={togglingId === event.id} onToggle={() => togglePublished(event)} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour « ${event.title} » : modifier, dupliquer, voir sur le site, supprimer`}>
+                              <MoreHorizontal className="h-5 w-5" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/events/${event.slug}`} target="_blank">
-                                <Eye className="mr-2 h-4 w-4" /> Voir l'événement
-                              </Link>
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => editEvent(event)}>
                               <Edit className="mr-2 h-4 w-4" /> Modifier
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => duplicateEvent(event)}>
                               <Copy className="mr-2 h-4 w-4" /> Dupliquer
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/events/${event.slug}`} target="_blank">
+                                <Eye className="mr-2 h-4 w-4" /> Voir sur le site
+                              </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => togglePublished(event)} disabled={togglingId === event.id}>
                               {event.published ? (
@@ -567,54 +699,21 @@ export default function AdminEvents() {
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(event)}
-                            >
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirmDelete(event)}>
                               <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <PaginationItem key={i}>
-                  <PaginationLink
-                    isActive={currentPage === i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className="cursor-pointer"
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+            <p className="text-xs text-loom-text-muted">
+              Cliquer sur un événement ouvre l'édition. L'interrupteur publie ou repasse en brouillon d'un clic. Le menu ⋯ propose Dupliquer (pratique pour les apéros), Voir sur le site et Supprimer.
+            </p>
+          </div>
         )}
       </div>
 
@@ -648,11 +747,13 @@ export default function AdminEvents() {
                   name="slug"
                   value={eventForm.slug}
                   onChange={handleInputChange}
+                  onBlur={() => setEventForm(prev => ({ ...prev, slug: slugify(prev.slug) }))}
                   placeholder="url-de-l-evenement"
                 />
                 <p className="text-xs text-gray-500">
-                  lgbt-loom.fr/events/<span className="font-medium">{eventForm.slug || "…"}</span> — rempli
-                  automatiquement depuis le titre. À ne pas confondre avec la billetterie HelloAsso plus bas.
+                  lgbt-loom.fr/events/<span className="font-medium">{eventForm.slug || "…"}</span> — remplie
+                  depuis le titre tant que l'événement n'est pas publié ; la changer ensuite garde l'ancienne adresse en redirection.
+                  À ne pas confondre avec la billetterie HelloAsso plus bas.
                 </p>
               </div>
             </div>
@@ -681,14 +782,18 @@ export default function AdminEvents() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Lieu</Label>
+                <Label htmlFor="location">Lieu (adresse complète)</Label>
                 <Input
                   id="location"
                   name="location"
                   value={eventForm.location}
                   onChange={handleInputChange}
-                  placeholder="Ex: Montpellier, Le Coxx..."
+                  placeholder="Le Marvelous, 3 rue Saint-Ravy, 34000 Montpellier"
+                  aria-describedby="location-help"
                 />
+                <p id="location-help" className="text-xs text-muted-foreground">
+                  Nom du lieu, adresse, code postal et ville : la ville sert au filtre de l'agenda, l'adresse à l'itinéraire.
+                </p>
               </div>
             </div>
 
@@ -793,11 +898,15 @@ export default function AdminEvents() {
 
             <div className="space-y-2">
               <Label>Image de couverture</Label>
+              <p className="text-sm text-muted-foreground">
+                Format paysage recommandé : <strong>1200 × 628 px</strong> (comme une couverture d'événement Facebook). Sur le site, elle est affichée
+                sur 420 px de haut au maximum ; une image plus haute est réduite avec des bandes sur les côtés.
+              </p>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50">
                 <ImageUpload onUploadComplete={(url) => setEventForm(prev => ({ ...prev, image: url }))} />
                 {eventForm.image && (
-                  <div className="mt-4 relative aspect-video w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-                    <img src={eventForm.image} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="mt-4 relative aspect-[1200/628] w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
+                    <img src={eventForm.image} alt="Aperçu de l'image de couverture" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
@@ -822,7 +931,7 @@ export default function AdminEvents() {
               Annuler
             </Button>
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={isCreating ? handleCreateEvent : handleUpdateEvent}
             >
               {isCreating ? "Créer l'événement" : "Enregistrer les modifications"}

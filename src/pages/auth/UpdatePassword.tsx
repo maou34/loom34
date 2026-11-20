@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Card,
   CardHeader,
@@ -20,11 +21,11 @@ import { Label } from "@/components/ui/label";
 
 const schema = z
   .object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
+    password: z.string().min(6, "Au moins 6 caractères"),
+    confirmPassword: z.string().min(6, "Au moins 6 caractères"),
   })
   .refine((v) => v.password === v.confirmPassword, {
-    message: "Passwords do not match",
+    message: "Les deux mots de passe ne correspondent pas",
     path: ["confirmPassword"],
   });
 
@@ -112,10 +113,9 @@ export default function UpdatePassword() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Nouveau mot de passe</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
-                placeholder="••••••••"
+                                placeholder="••••••••"
                 autoComplete="new-password"
                 disabled={!isReady || isLoading}
                 {...form.register("password")}
@@ -129,10 +129,9 @@ export default function UpdatePassword() {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
+                                placeholder="••••••••"
                 autoComplete="new-password"
                 disabled={!isReady || isLoading}
                 {...form.register("confirmPassword")}

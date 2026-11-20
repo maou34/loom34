@@ -1,445 +1,326 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Crown, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import AdminLayout from "@/components/admin/AdminLayout";
+import ImageUpload from "@/components/admin/ImageUpload";
 import { db } from "@/db/client";
-import { Tables } from "@/db/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import ImageUpload from "@/components/admin/ImageUpload";
-import { toast } from "sonner";
-import { ImageIcon, Trash2, Edit, Plus, Search, MoreHorizontal, Crown } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { DEFAULT_CTA, editionStatus, parseSteps, useEditions, type Edition, type Step } from "@/lib/monsieurOurs";
 
-type TimelineEntry = Tables<'monsieur_ours_timeline'>;
+const STATUS_LABEL = {
+  complete: { text: "Complet", className: "bg-green-100 text-green-800" },
+  photos: { text: "Photos manquantes", className: "bg-amber-100 text-amber-900" },
+  todo: { text: "À compléter", className: "bg-gray-100 text-gray-700" },
+} as const;
 
+type EditionForm = {
+  year: string;
+  title: string;
+  description: string;
+  image: string;
+  cub1_name: string;
+  cub1_photo: string;
+  cub2_name: string;
+  cub2_photo: string;
+};
+
+const toForm = (e: Edition): EditionForm => ({
+  year: String(e.year),
+  title: e.title ?? "",
+  description: e.description ?? "",
+  image: e.image ?? "",
+  cub1_name: e.cub1_name ?? "",
+  cub1_photo: e.cub1_photo ?? "",
+  cub2_name: e.cub2_name ?? "",
+  cub2_photo: e.cub2_photo ?? "",
+});
+
+/** Champ photo : envoi + aperçu + retrait. */
+function PhotoField({ label, value, onChange }: { label: string; value: string; onChange: (url: string) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex items-start gap-3">
+        {value ? (
+          <img src={value} alt="" className="h-20 w-20 flex-none rounded-lg object-cover" />
+        ) : (
+          <span className="flex h-20 w-20 flex-none items-center justify-center rounded-lg bg-amber-50 text-xs text-gray-500">Aucune</span>
+        )}
+        <div className="flex-1 space-y-2">
+          <ImageUpload folder="images" onUploadComplete={(url) => onChange(url)} />
+          {value && (
+            <Button type="button" variant="outline" size="sm" onClick={() => onChange("")}>
+              Retirer la photo
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Admin Monsieur Ours (maquette admin/MonsieurOurs) : photo de groupe de la page,
+ * textes de la page, palmarès année par année (lauréat + 2 oursons).
+ */
 export default function AdminMonsieurOurs() {
   const queryClient = useQueryClient();
+  const { data: settings } = useSiteSettings();
+  const { data: editions = [], isLoading } = useEditions();
 
-  // --- Hero image (site_settings.monsieur_ours_hero_image) ---
-  const [heroLoading, setHeroLoading] = useState(true);
-  const [heroSaving, setHeroSaving] = useState(false);
-  const [heroImage, setHeroImage] = useState<string>('');
+  // --- Photo de groupe + textes (site_settings) ---
+  const [groupPhoto, setGroupPhoto] = useState("");
+  const [intro, setIntro] = useState("");
+  const [photosUrl, setPhotosUrl] = useState("");
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [cta, setCta] = useState("");
+  const [savingPage, setSavingPage] = useState(false);
 
   useEffect(() => {
-    fetchHeroImage();
-  }, []);
+    if (!settings) return;
+    setGroupPhoto(settings.monsieur_ours_hero_image ?? "");
+    setIntro(settings.monsieur_ours_intro ?? "");
+    setPhotosUrl(settings.monsieur_ours_photos_url ?? "");
+    setSteps(parseSteps(settings.monsieur_ours_steps));
+    setCta(settings.monsieur_ours_cta ?? DEFAULT_CTA);
+  }, [settings]);
 
-  async function fetchHeroImage() {
-    setHeroLoading(true);
-    const { data, error } = await db.from('site_settings').select('*').eq('id', 1).maybeSingle();
-    if (error) {
-      console.error("Error fetching site settings:", error);
-      toast.error("Erreur lors du chargement des réglages");
-    }
-    setHeroImage(data?.monsieur_ours_hero_image || '');
-    setHeroLoading(false);
-  }
-
-  const handleSaveHeroImage = async () => {
-    setHeroSaving(true);
-    try {
-      const { error } = await db.from('site_settings').upsert({ id: 1, monsieur_ours_hero_image: heroImage });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ['siteSettings'] });
-      toast.success("Image d'en-tête enregistrée");
-    } catch (error: any) {
-      console.error("Error saving hero image:", error);
-      toast.error("Erreur lors de l'enregistrement: " + error.message);
-    } finally {
-      setHeroSaving(false);
-    }
+  const savePage = async () => {
+    setSavingPage(true);
+    const { error } = await db
+      .from("site_settings")
+      .update({
+        monsieur_ours_hero_image: groupPhoto || null,
+        monsieur_ours_intro: intro.trim() || null,
+        monsieur_ours_photos_url: photosUrl.trim() || null,
+        monsieur_ours_steps: steps,
+        monsieur_ours_cta: cta.trim() || null,
+      })
+      .eq("id", 1);
+    setSavingPage(false);
+    if (error) return toast.error(`Erreur : ${error.message}`);
+    toast.success("Page Monsieur Ours enregistrée");
+    queryClient.invalidateQueries({ queryKey: ["siteSettings"] });
   };
 
-  // --- Timeline entries (monsieur_ours_timeline) ---
-  const [entries, setEntries] = useState<TimelineEntry[]>([]);
-  const [filteredEntries, setFilteredEntries] = useState<TimelineEntry[]>([]);
-  const [entriesLoading, setEntriesLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(true);
-  const [selectedEntry, setSelectedEntry] = useState<TimelineEntry | null>(null);
-  const [form, setForm] = useState<Partial<TimelineEntry>>({});
+  // --- Palmarès ---
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = editions.find((e) => e.id === selectedId) ?? editions[0] ?? null;
+  const [form, setForm] = useState<EditionForm | null>(null);
+  const [savingYear, setSavingYear] = useState(false);
+  const [toDelete, setToDelete] = useState<Edition | null>(null);
 
   useEffect(() => {
-    fetchEntries();
-  }, []);
+    setForm(selected ? toForm(selected) : null);
+  }, [selected?.id, selected?.updated_at]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
-      setFilteredEntries(
-        entries.filter(
-          (e) =>
-            e.title.toLowerCase().includes(lowerQuery) ||
-            String(e.year).includes(lowerQuery)
-        )
-      );
-    } else {
-      setFilteredEntries(entries);
-    }
-  }, [searchQuery, entries]);
+  const refreshEditions = () => queryClient.invalidateQueries({ queryKey: ["monsieurOursEditions"] });
 
-  async function fetchEntries() {
-    setEntriesLoading(true);
+  const saveYear = async () => {
+    if (!selected || !form) return;
+    const year = Number(form.year);
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) return toast.error("Année invalide");
+    if (!form.title.trim()) return toast.error("Le nom du lauréat est obligatoire");
+    setSavingYear(true);
+    const clean = (v: string) => v.trim() || null;
+    const { error } = await db
+      .from("monsieur_ours_timeline")
+      .update({
+        year,
+        title: form.title.trim(),
+        description: clean(form.description),
+        image: clean(form.image),
+        cub1_name: clean(form.cub1_name),
+        cub1_photo: clean(form.cub1_photo),
+        cub2_name: clean(form.cub2_name),
+        cub2_photo: clean(form.cub2_photo),
+      })
+      .eq("id", selected.id);
+    setSavingYear(false);
+    if (error) return toast.error(error.code === "23505" ? `L'année ${year} existe déjà` : `Erreur : ${error.message}`);
+    toast.success(`Année ${year} enregistrée`);
+    refreshEditions();
+  };
+
+  const addYear = async () => {
+    const year = editions.length ? editions[0].year + 1 : new Date().getFullYear();
     const { data, error } = await db
-      .from('monsieur_ours_timeline')
-      .select('*')
-      .order('year', { ascending: false });
-    if (error) {
-      console.error("Error fetching timeline entries:", error);
-      toast.error("Erreur lors du chargement");
-    }
-    setEntries(data || []);
-    setFilteredEntries(data || []);
-    setEntriesLoading(false);
-  }
-
-  const openCreateDialog = () => {
-    setForm({});
-    setSelectedEntry(null);
-    setIsCreating(true);
-    setDialogOpen(true);
+      .from("monsieur_ours_timeline")
+      .insert({ year, title: "À désigner", description: `Élu lors de la Montpell'Bears ${year}` })
+      .select("id")
+      .single();
+    if (error) return toast.error(error.code === "23505" ? `L'année ${year} existe déjà` : `Erreur : ${error.message}`);
+    toast.success(`Année ${year} ajoutée : complète le nom et les photos`);
+    await refreshEditions();
+    setSelectedId(data.id);
   };
 
-  const openEditDialog = (entry: TimelineEntry) => {
-    setForm(entry);
-    setSelectedEntry(entry);
-    setIsCreating(false);
-    setDialogOpen(true);
+  const deleteYear = async () => {
+    if (!toDelete) return;
+    const { error } = await db.from("monsieur_ours_timeline").delete().eq("id", toDelete.id);
+    if (error) return toast.error(`Erreur : ${error.message}`);
+    toast.success(`Année ${toDelete.year} supprimée`);
+    setToDelete(null);
+    setSelectedId(null);
+    refreshEditions();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: name === 'year' ? Number(value) : value }));
-  };
-
-  const handleSubmit = async () => {
-    if (!form.year) return toast.error("L'année est requise");
-    if (!form.title) return toast.error("Le nom est requis");
-
-    try {
-      if (isCreating) {
-        const { error } = await db.from('monsieur_ours_timeline').insert([
-          { year: form.year, title: form.title, description: form.description || null, image: form.image || null },
-        ]);
-        if (error) throw error;
-        toast.success("Card ajoutée avec succès");
-      } else if (selectedEntry) {
-        const { error } = await db.from('monsieur_ours_timeline').update(form).eq('id', selectedEntry.id);
-        if (error) throw error;
-        toast.success("Card modifiée avec succès");
-      }
-      setDialogOpen(false);
-      setForm({});
-      setSelectedEntry(null);
-      fetchEntries();
-    } catch (error: any) {
-      console.error("Error saving timeline entry:", error);
-      toast.error("Erreur lors de l'enregistrement: " + error.message);
-    }
-  };
-
-  const confirmDelete = (entry: TimelineEntry) => {
-    setSelectedEntry(entry);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!selectedEntry) return;
-    try {
-      const { error } = await db.from('monsieur_ours_timeline').delete().eq('id', selectedEntry.id);
-      if (error) throw error;
-      toast.success("Card supprimée avec succès");
-      setDeleteDialogOpen(false);
-      setSelectedEntry(null);
-      fetchEntries();
-    } catch (error: any) {
-      console.error("Error deleting timeline entry:", error);
-      toast.error("Erreur lors de la suppression: " + error.message);
-    }
-  };
+  const updateStep = (i: number, key: keyof Step, value: string) =>
+    setSteps((prev) => prev.map((s, j) => (j === i ? { ...s, [key]: value } : s)));
 
   return (
-    <AdminLayout title="Timeline Mr Ours">
-      <div className="space-y-6">
-        {/* Hero Image */}
-        <Card className="border-none shadow-md">
-          <CardHeader>
-            <CardTitle>Image d'en-tête</CardTitle>
-            <CardDescription>
-              Image de fond affichée en haut de la page publique "Monsieur Ours".
-            </CardDescription>
+    <AdminLayout title="Monsieur Ours">
+      <div className="space-y-8">
+        {/* Palmarès */}
+        <Card>
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Palmarès</CardTitle>
+              <CardDescription>Une année = le lauréat et ses deux oursons. L'année la plus récente est « En titre ».</CardDescription>
+            </div>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={addYear}>
+              <Plus className="mr-2 h-4 w-4" /> Ajouter une année
+            </Button>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {heroLoading ? (
-              <Skeleton className="h-40 w-full" />
+          <CardContent>
+            {isLoading ? (
+              <p className="text-gray-500">Chargement…</p>
             ) : (
-              <>
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50 flex flex-col items-center justify-center gap-4">
-                  {heroImage ? (
-                    <div className="relative w-full max-w-md aspect-video bg-white rounded-lg border border-gray-200 overflow-hidden">
-                      <img src={heroImage} alt="Aperçu" className="h-full w-full object-cover" />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-7 w-7 rounded-full"
-                        onClick={() => setHeroImage('')}
-                      >
-                        <Trash2 className="h-3 w-3" />
+              <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+                <ul className="flex flex-col gap-1" aria-label="Années du palmarès">
+                  {editions.map((e, i) => {
+                    const status = STATUS_LABEL[editionStatus(e)];
+                    const active = selected?.id === e.id;
+                    return (
+                      <li key={e.id}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(e.id)}
+                          aria-current={active ? "true" : undefined}
+                          className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${active ? "bg-amber-100" : "hover:bg-gray-50"}`}
+                        >
+                          <span className="w-12 font-extrabold">{e.year}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium">{e.title}</span>
+                            <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>{status.text}</span>
+                          </span>
+                          {i === 0 && <Crown aria-label="En titre" className="h-4 w-4 flex-none text-amber-600" />}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {selected && form && (
+                  <div className="space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-[120px_1fr]">
+                      <div className="space-y-2">
+                        <Label htmlFor="mo-year">Année</Label>
+                        <Input id="mo-year" type="number" value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mo-name">Monsieur Ours (prénom nom)</Label>
+                        <Input id="mo-name" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="mo-caption">Légende</Label>
+                        <Input id="mo-caption" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Élu lors de la Montpell'Bears 2026" />
+                      </div>
+                    </div>
+                    <PhotoField label="Portrait du lauréat (différent de la photo de groupe)" value={form.image} onChange={(url) => setForm({ ...form, image: url })} />
+
+                    <div className="grid gap-6 border-t pt-6 md:grid-cols-2">
+                      {([1, 2] as const).map((n) => (
+                        <div key={n} className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`cub${n}-name`}>Ourson {n}</Label>
+                            <Input
+                              id={`cub${n}-name`}
+                              value={form[`cub${n}_name`]}
+                              onChange={(e) => setForm({ ...form, [`cub${n}_name`]: e.target.value })}
+                              placeholder="Prénom nom"
+                            />
+                          </div>
+                          <PhotoField label={`Photo de l'ourson ${n}`} value={form[`cub${n}_photo`]} onChange={(url) => setForm({ ...form, [`cub${n}_photo`]: url })} />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap justify-between gap-2 border-t pt-4">
+                      <Button variant="outline" className="text-red-600" onClick={() => setToDelete(selected)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer l'année
+                      </Button>
+                      <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={savingYear} onClick={saveYear}>
+                        Enregistrer l'année
                       </Button>
                     </div>
-                  ) : (
-                    <div className="text-center">
-                      <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 mb-4">Aucune image sélectionnée</p>
-                    </div>
-                  )}
-                  <ImageUpload onUploadComplete={(url) => setHeroImage(url)} />
-                </div>
-
-                <div className="flex justify-end">
-                  <Button
-                    className="bg-orange-600 hover:bg-orange-700 text-white"
-                    onClick={handleSaveHeroImage}
-                    disabled={heroSaving}
-                  >
-                    {heroSaving ? "Enregistrement..." : "Enregistrer l'image d'en-tête"}
-                  </Button>
-                </div>
-              </>
+                  </div>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Timeline entries */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Rechercher une card..."
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto"
-            onClick={openCreateDialog}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle card
-          </Button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {entriesLoading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
+        {/* Photo de groupe + textes */}
+        <Card>
+          <CardHeader>
+            <CardTitle>La page Monsieur Ours</CardTitle>
+            <CardDescription>Photo de groupe de l'en-tête et textes de la page (la page tutoie).</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <PhotoField label="Photo de groupe (Monsieur Ours + oursons)" value={groupPhoto} onChange={setGroupPhoto} />
+            <div className="space-y-2">
+              <Label htmlFor="mo-intro">Présentation du lauréat (facultatif)</Label>
+              <Textarea id="mo-intro" rows={3} value={intro} onChange={(e) => setIntro(e.target.value)} placeholder="Son parcours, ce qu'il veut porter pendant son année…" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mo-photos">Lien « Les photos de l'élection »</Label>
+              <Input id="mo-photos" value={photosUrl} onChange={(e) => setPhotosUrl(e.target.value)} placeholder="/gallery/MONTPELL'BEAR 2026 … (par défaut : page Photos)" />
+            </div>
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium">« Comment ça marche ? »</legend>
+              {steps.map((step, i) => (
+                <div key={i} className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[160px_1fr]">
+                  <Input aria-label={`Étape ${i + 1} : quand`} value={step.when} onChange={(e) => updateStep(i, "when", e.target.value)} placeholder="En juin" />
+                  <Input aria-label={`Étape ${i + 1} : titre`} value={step.title} onChange={(e) => updateStep(i, "title", e.target.value)} placeholder="Titre" />
+                  <Textarea aria-label={`Étape ${i + 1} : texte`} className="sm:col-span-2" rows={2} value={step.text} onChange={(e) => updateStep(i, "text", e.target.value)} />
                 </div>
               ))}
+            </fieldset>
+            <div className="space-y-2">
+              <Label htmlFor="mo-cta">Texte de « Et si c'était toi ? »</Label>
+              <Input id="mo-cta" value={cta} onChange={(e) => setCta(e.target.value)} />
             </div>
-          ) : filteredEntries.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Crown className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucune card</h3>
-              <p className="text-gray-500 mb-6">Commencez par ajouter le premier lauréat.</p>
-              <Button onClick={openCreateDialog} variant="outline">
-                Ajouter une card
+            <div className="flex justify-end">
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={savingPage} onClick={savePage}>
+                Enregistrer la page
               </Button>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead>Année</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredEntries.map((entry) => (
-                    <TableRow key={entry.id} className="hover:bg-gray-50/50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {entry.image ? (
-                              <img src={entry.image} alt={entry.title} className="h-full w-full object-cover" />
-                            ) : (
-                              <ImageIcon className="h-6 w-6 text-gray-300" />
-                            )}
-                          </div>
-                          <span className="font-semibold text-gray-900">{entry.year}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium text-gray-900">{entry.title}</TableCell>
-                      <TableCell>
-                        <div className="max-w-xs truncate text-sm text-gray-500" title={entry.description || undefined}>
-                          {entry.description || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => openEditDialog(entry)}>
-                              <Edit className="mr-2 h-4 w-4" /> Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(entry)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">
-              {isCreating ? "Ajouter une card" : "Modifier la card"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="year">Année</Label>
-                <Input
-                  id="year"
-                  name="year"
-                  type="number"
-                  value={form.year ?? ''}
-                  onChange={handleInputChange}
-                  placeholder="Ex: 2027"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="title">Nom</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={form.title || ''}
-                  onChange={handleInputChange}
-                  placeholder="Ex: Jean Dupont"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={form.description || ''}
-                onChange={handleInputChange}
-                className="min-h-[100px]"
-                placeholder="Ex: Monsieur Ours élu en 2027"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Photo</Label>
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50 flex flex-col items-center justify-center gap-4">
-                {form.image ? (
-                  <div className="relative h-32 w-32 bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <img src={form.image} alt="Aperçu" className="h-full w-full object-cover" />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                      onClick={() => setForm((f) => ({ ...f, image: '' }))}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <ImageIcon className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500 mb-4">Aucune photo sélectionnée</p>
-                  </div>
-                )}
-                <ImageUpload onUploadComplete={(url) => setForm((f) => ({ ...f, image: url }))} />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={handleSubmit}>
-              {isCreating ? "Ajouter" : "Enregistrer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogTitle>Supprimer l'année {toDelete?.year} ?</DialogTitle>
+            <DialogDescription>
+              {toDelete?.title} et ses oursons disparaîtront du palmarès. Les photos restent sur le serveur. Cette action est irréversible.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-gray-600">
-            Êtes-vous sûr de vouloir supprimer la card{' '}
-            <span className="font-semibold">"{selectedEntry?.title} ({selectedEntry?.year})"</span> ?
-            Cette action est irréversible.
-          </p>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setToDelete(null)}>
               Annuler
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Supprimer définitivement
+            <Button variant="destructive" onClick={deleteYear}>
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>

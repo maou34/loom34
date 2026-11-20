@@ -22,7 +22,7 @@ const apiUrl = () => requireEnv("HELLOASSO_API_URL").replace(/\/+$/, "");
  * Edge Functions) — constaté le 2026-11-17, la sandbox ne le fait pas. On envoie
  * donc notre propre User-Agent à chaque appel.
  */
-const USER_AGENT = "LOOM-site/1.0 (+https://lgbt-loom.fr)";
+export const USER_AGENT = "LOOM-site/1.0 (+https://lgbt-loom.fr)";
 export const orgSlug = () => requireEnv("HELLOASSO_ORG_SLUG");
 
 // Marge avant expiration : on renouvelle le token une minute avant la fin.
@@ -142,7 +142,14 @@ export interface PublicForm {
   /** Période de vente, absente si la billetterie n'en définit pas (saleEndDate vérifié en sandbox le 2026-11-17) */
   saleStartDate?: string | null;
   saleEndDate?: string | null;
-  place?: { name?: string | null; address?: string | null; zipCode?: string | null; city?: string | null } | null;
+  place?: {
+    name?: string | null;
+    address?: string | null;
+    zipCode?: string | null;
+    city?: string | null;
+    /** Pas encore observé en sandbox : utilisé s'il est présent, sinon géocodage Nominatim */
+    geoLocation?: { latitude?: number | null; longitude?: number | null } | null;
+  } | null;
   logo?: { publicUrl?: string | null } | null;
   tiers?: Array<{ id: number; label: string; price: number; tierType: string }>;
 }

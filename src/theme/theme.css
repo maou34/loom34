@@ -1,0 +1,200 @@
+/* ==========================================================================
+   LOOM – Thème jour / nuit
+   --------------------------------------------------------------------------
+   Utilisation : importer ce fichier une seule fois (ex. dans src/main.tsx),
+   puis n'utiliser que les variables dans les composants :
+     background: var(--bg);  color: var(--text);
+   Le thème est piloté par l'attribut data-theme sur <html> :
+     - posé avant le premier rendu par index.html / theme.ts : "dark" par défaut
+       (absent seulement sans JavaScript → réglage de l'appareil)
+     - "light"/"dark" → choix explicite du visiteur (bouton soleil / lune)
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Fonds et surfaces */
+  --bg: #FBF8F2;                 /* fond de page (crème) */
+  --surface: #FFFFFF;            /* cartes, en-tête */
+  --surface-2: #FBF8F2;          /* bloc date, champs, éléments en retrait */
+  --border: #E9E4DD;             /* bordure des cartes */
+  --border-strong: #D9C9B6;      /* boutons secondaires, champs */
+  --divider-outline: #E8D5BB;    /* contour fin des liserés bear */
+
+  /* Textes */
+  --text: #1F1A16;               /* titres et texte principal */
+  --text-2: #3D3530;             /* paragraphes */
+  --text-muted: #6B625A;         /* dates, légendes, sous-titres */
+  --accent-text: #A84D00;        /* dates d'événements, sur-titres (orange accessible) */
+  --initial: #D56300;            /* initiales L · O · O · M du titre */
+  --title-accent: #623804;       /* « ontpellier » du titre */
+  --stat: #623804;               /* chiffres clés (150+, 50+, 23) */
+
+  /* Liens */
+  --link: #623804;
+  --link-hover: #4A2709;
+
+  /* Boutons */
+  --primary-bg: #623804;         /* Adhérer, Réserver */
+  --primary-fg: #FFFFFF;
+  --primary-hover: #4A2709;
+  --secondary-bg: #FFFFFF;
+  --secondary-fg: #1F1A16;
+  --secondary-border: #D9C9B6;
+
+  /* Pastilles (catégories, badges) */
+  --chip-bg: #FEE6B8;
+  --chip-fg: #623804;
+  --chip-hot-bg: #A84D00;        /* « À la une » */
+  --chip-hot-fg: #FFFFFF;
+
+  /* Encadrés mis en avant (rendez-vous réguliers, badge du hero) */
+  --highlight-bg: #FFF6D6;
+  --highlight-border: #FEDD63;
+  --highlight-label: #A84D00;
+
+  /* En-tête et navigation */
+  --header-bg: #FFFFFF;
+  --header-border: #ECE4D8;
+  --nav-fg: #3D3530;
+  --nav-active-bg: #FEF3E2;
+  --nav-active-fg: #623804;
+  --theme-toggle-bg: #FBF8F2;
+  --theme-toggle-fg: #623804;
+
+  /* Bandeaux sombres (Monsieur Ours, footer) et bloc « Pourquoi adhérer » */
+  --band-dark-bg: #2A1A0C;
+  --band-dark-text: #E8D9C5;
+  --footer-bg: #2A1A0C;
+  --footer-bottom-bg: #1B1108;   /* bandeau du bas du footer (opaque : coupe le grand « LOOM ») */
+  --join-bg: #623804;
+
+  /* États */
+  --danger: #B42318;
+  --success: #2F6B2F;
+  --success-bg: #DCFCE7;          /* pastille « Entrée libre » */
+  --warning-fg: #8A3B00;
+
+  /* Ombres */
+  --shadow-card: 0 18px 40px rgba(74, 39, 9, 0.10);
+  --shadow-header: 0 10px 28px rgba(42, 26, 12, 0.10);
+
+  /* Constantes communes aux deux thèmes */
+  --yellow: #FEDD63;
+  --on-yellow: #2A1A0C;
+  --join-text: #F3E3CC;          /* texte courant sur le bloc marron « Pourquoi adhérer » */
+  --heart: #E5484D;              /* cœur « Fait avec ❤ » du footer */
+  --gradient-bear: linear-gradient(90deg, #623804 0%, #D56300 18%, #FEDD63 34%, #FEE6B8 50%, #FFFFFF 64%, #555555 82%, #000000 100%);
+  --radius-card: 22px;
+  --radius-button: 14px;
+  --font: "Figtree", system-ui, sans-serif;
+}
+
+/* --- Valeurs du mode nuit, déclarées une seule fois -------------------- */
+/* Appliquées soit par choix explicite, soit par le réglage de l'appareil.   */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #17110B;
+  --surface: #231A12;
+  --surface-2: #2E2219;
+  --border: #3A2C20;
+  --border-strong: #4A3A2C;
+  --divider-outline: #3A2C20;
+
+  --text: #F3EADF;
+  --text-2: #CDBBA6;
+  --text-muted: #A8988A;
+  --accent-text: #F08A3C;
+  --initial: #F08A3C;
+  --title-accent: #E8B98A;
+  --stat: #FEDD63;
+
+  --link: #FEDD63;
+  --link-hover: #FFE891;
+
+  --primary-bg: #FEDD63;
+  --primary-fg: #2A1A0C;
+  --primary-hover: #FFE891;
+  --secondary-bg: transparent;
+  --secondary-fg: #F3EADF;
+  --secondary-border: #4A3A2C;
+
+  --chip-bg: #3A2A1A;
+  --chip-fg: #FEE6B8;
+  --chip-hot-bg: #F08A3C;
+  --chip-hot-fg: #1A0F06;
+
+  --highlight-bg: #2A2112;
+  --highlight-border: #5A4A1E;
+  --highlight-label: #FEDD63;
+
+  --header-bg: #231A12;
+  --header-border: #3A2C20;
+  --nav-fg: #CDBBA6;
+  --nav-active-bg: #3A2A1A;
+  --nav-active-fg: #FEDD63;
+  --theme-toggle-bg: #2E2219;
+  --theme-toggle-fg: #FEDD63;
+
+  --band-dark-bg: #0E0905;
+  --band-dark-text: #CDBBA6;
+  --footer-bg: #2A1A0C;
+  --footer-bottom-bg: #1B1108;   /* bandeau du bas du footer (opaque : coupe le grand « LOOM ») */
+  --join-bg: #623804;
+
+  --danger: #F97066;
+  --success: #7CC47C;
+  --success-bg: #1C3320;
+  --warning-fg: #FEDD63;
+
+  --shadow-card: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-header: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Réglage de l'appareil quand le visiteur n'a rien choisi :
+   theme.ts pose data-theme="dark" au chargement, donc ce bloc ne sert que
+   si le JavaScript est désactivé. Il recopie les mêmes valeurs. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #17110B; --surface: #231A12; --surface-2: #2E2219;
+    --border: #3A2C20; --border-strong: #4A3A2C; --divider-outline: #3A2C20;
+    --text: #F3EADF; --text-2: #CDBBA6; --text-muted: #A8988A;
+    --accent-text: #F08A3C; --initial: #F08A3C; --title-accent: #E8B98A; --stat: #FEDD63;
+    --link: #FEDD63; --link-hover: #FFE891;
+    --primary-bg: #FEDD63; --primary-fg: #2A1A0C; --primary-hover: #FFE891;
+    --secondary-bg: transparent; --secondary-fg: #F3EADF; --secondary-border: #4A3A2C;
+    --chip-bg: #3A2A1A; --chip-fg: #FEE6B8; --chip-hot-bg: #F08A3C; --chip-hot-fg: #1A0F06;
+    --highlight-bg: #2A2112; --highlight-border: #5A4A1E; --highlight-label: #FEDD63;
+    --header-bg: #231A12; --header-border: #3A2C20; --nav-fg: #CDBBA6;
+    --nav-active-bg: #3A2A1A; --nav-active-fg: #FEDD63;
+    --theme-toggle-bg: #2E2219; --theme-toggle-fg: #FEDD63;
+    --band-dark-bg: #0E0905; --band-dark-text: #CDBBA6;
+    --danger: #F97066; --success: #7CC47C; --success-bg: #1C3320; --warning-fg: #FEDD63;
+    --shadow-card: 0 18px 40px rgba(0, 0, 0, 0.45);
+    --shadow-header: 0 10px 28px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* --- Base ---------------------------------------------------------------- */
+html { background: var(--bg); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+/* Pas de couleur globale sur <a> (contrairement à la version d'origine) :
+   « a:hover » l'emporterait sur les classes Tailwind (text-white…) des
+   boutons-liens existants. Les composants colorent leurs liens eux-mêmes
+   (text-loom-link hover:text-loom-link-hover). */
+
+/* Transition douce lors du changement de thème (désactivée si l'utilisateur
+   préfère réduire les animations). */
+@media (prefers-reduced-motion: no-preference) {
+  :root.theme-transition,
+  :root.theme-transition * {
+    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  }
+}

@@ -1,54 +1,73 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSlugRedirect } from '@/lib/slug';
-import { db } from '@/db/client';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarDays, ArrowLeft, Tag, Share2, Clock } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { Tables } from '@/db/types';
-import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ChevronLeft, Share2 } from 'lucide-react';
+import { db } from '@/db/client';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { btnSecondary, card, chip, container, pageFocus, strongLink } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
 import { generateArticleStructuredData } from '@/lib/seo';
-import { motion } from 'framer-motion';
-import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { formatLongDate } from '@/lib/eventDates';
+import { shareLink } from '@/lib/share';
+import { ARTICLE_LIST_SELECT, categoryName, readingTime, type ArticleListItem } from '@/lib/articles';
+import { BLANK_IMAGE } from '@/lib/blankImage';
+import ZoomableImage from '@/components/site/ZoomableImage';
 
+/** Images du texte cliquables pour les voir en entier */
+const MARKDOWN_COMPONENTS = { img: ZoomableImage };
+
+type ArticleRow = ArticleListItem & { updated_at: string };
+
+/** Page d'un article (non maquettée : même charte que la fiche événement, colonne de lecture unique). */
 const ArticleDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Fetch article details
   const { data: article, isLoading, error } = useQuery({
     queryKey: ['article', slug],
     // Adresse inconnue (PGRST116) : inutile de réessayer, on passe tout de suite à la redirection / 404
     retry: (count, err) => (err as { code?: string })?.code !== 'PGRST116' && count < 3,
     queryFn: async () => {
-      const { data, error } = await db
-        .from('articles')
-        .select('*')
-        .eq('slug', slug)
-        .single();
-        
+      const { data, error } = await db.from('articles').select(`${ARTICLE_LIST_SELECT}, updated_at`).eq('slug', slug).single();
       if (error) throw error;
-      return data as Tables<'articles'>;
-    }
+      return data as unknown as ArticleRow;
+    },
   });
 
-  // SEO Configuration
+  const { data: others = [] } = useQuery({
+    queryKey: ['article', slug, 'others'],
+    enabled: !!article,
+    queryFn: async () => {
+      const { data, error } = await db
+        .from('articles')
+        .select('id, title, slug, image, date')
+        .eq('published', true)
+        .neq('slug', slug!)
+        .order('date', { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const category = article ? categoryName(article) : null;
+
   useSEO({
     title: article ? `${article.title} - LOOM` : 'Article - LOOM',
     description: article?.excerpt || 'Découvrez cet article de LOOM - Les Ours Occitanie Montpellier',
-    keywords: article?.category ? ['LOOM', 'Bears', article.category, 'article', 'communauté'] : ['LOOM', 'Bears', 'article'],
+    keywords: category ? ['LOOM', 'Bears', category, 'article', 'communauté'] : ['LOOM', 'Bears', 'article'],
     image: article?.image,
     type: 'article',
     publishedTime: article?.date,
-    author: 'LOOM'
+    author: 'LOOM',
   });
 
-  // Generate structured data for article
   useEffect(() => {
     if (article) {
       generateArticleStructuredData({
@@ -58,7 +77,7 @@ const ArticleDetail = () => {
         publishedTime: article.date,
         modifiedTime: article.updated_at,
         author: 'LOOM',
-        url: window.location.href
+        url: window.location.href,
       });
     }
   }, [article]);
@@ -73,186 +92,99 @@ const ArticleDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col min-h-screen bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-loom-bg">
         <Navbar />
-        <div className="flex-1 container mx-auto px-4 py-32">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-[400px] w-full rounded-2xl" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-4">
-                <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-              <div className="lg:col-span-1">
-                <Skeleton className="h-64 w-full rounded-xl" />
-              </div>
-            </div>
-          </div>
+        <div className={cn(container, 'flex max-w-[800px] flex-1 flex-col gap-5 py-10')} aria-hidden="true">
+          <div className="h-10 w-3/4 animate-pulse rounded bg-loom-surface-2" />
+          <div className="h-[360px] animate-pulse rounded-[22px] bg-loom-surface-2" />
+          <div className="h-32 animate-pulse rounded bg-loom-surface-2" />
         </div>
         <Footer />
       </div>
     );
   }
 
-  if (!article) {
-    return null;
-  }
-
-  const formattedDate = new Date(article.date).toLocaleDateString('fr-FR', { 
-    day: 'numeric', 
-    month: 'long', 
-    year: 'numeric' 
-  });
+  if (!article) return null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex min-h-screen flex-col bg-loom-bg text-loom-text">
       <Navbar />
-      
-      {/* Hero with Background Image Blur */}
-      <div className="relative h-[60vh] min-h-[500px] flex items-end pb-12 overflow-hidden">
-        <div className="absolute inset-0">
-          <img 
-            src={article.image} 
-            alt={article.title} 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-        </div>
-        
-        <div className="container mx-auto px-4 relative z-10 text-white">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Button 
-              variant="ghost" 
-              className="text-white hover:bg-white/20 hover:text-white mb-8 -ml-4" 
-              onClick={() => navigate('/articles')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Retour aux articles
-            </Button>
-            
-            <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold mb-6 leading-tight max-w-4xl">
+
+      <main className="flex-1">
+        <article aria-labelledby="article-title" className={cn(container, 'flex max-w-[800px] flex-col gap-6 pb-14 pt-4 sm:pt-8')}>
+          <nav aria-label="Fil d'Ariane" className="hidden text-sm text-loom-text-muted sm:block">
+            <Link to="/articles" className={cn(strongLink, 'font-semibold')}>
+              Actualités
+            </Link>{' '}
+            <span aria-hidden="true">›</span> <span aria-current="page">{article.title}</span>
+          </nav>
+          <Link to="/articles" className={cn('flex min-h-11 items-center gap-1 self-start rounded-lg font-semibold text-loom-link sm:hidden', pageFocus)}>
+            <ChevronLeft aria-hidden="true" size={18} /> Actualités
+          </Link>
+
+          <header className="flex flex-col gap-3">
+            {category && (
+              <Link to={`/articles?categorie=${encodeURIComponent(category)}`} className={cn(chip, 'self-start no-underline hover:underline', pageFocus)}>
+                {category}
+              </Link>
+            )}
+            <h1 id="article-title" className="text-[30px] font-extrabold leading-tight tracking-[-0.01em] sm:text-[44px]">
               {article.title}
             </h1>
-            
-            <div className="flex flex-wrap gap-6 text-lg md:text-xl font-medium text-white/90">
-              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
-                <CalendarDays className="w-5 h-5" /> 
-                <span className="capitalize">{formattedDate}</span>
+            {article.excerpt && <p className="text-lg text-loom-text-2 sm:text-xl">{article.excerpt}</p>}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-loom-text-muted">
+              <span>
+                {formatLongDate(article.date)} · {readingTime(article.content)}
               </span>
-              <span className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
-                <Tag className="w-5 h-5" /> 
-                {article.category}
-              </span>
+              <button type="button" onClick={() => shareLink(article.title)} className={cn(btnSecondary, 'h-10 px-3.5 text-sm')}>
+                <Share2 aria-hidden="true" size={16} /> Partager
+              </button>
             </div>
-          </motion.div>
-        </div>
-      </div>
+          </header>
 
-      <div className="container mx-auto px-4 py-12 -mt-20 relative z-20">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-xl p-8 md:p-12 border border-gray-100"
-            >
-              <div className="prose prose-lg prose-orange max-w-none">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    img: ({node, ...props}) => (
-                      <img {...props} className="rounded-xl shadow-md my-8 w-full" />
-                    ),
-                    blockquote: ({node, ...props}) => (
-                      <blockquote {...props} className="border-l-4 border-orange bg-orange/5 p-4 rounded-r-lg not-italic" />
-                    )
-                  }}
+          {article.image && (
+            // Pas d'image d'en-tête sur mobile : on arrive directement au texte. La
+            // <source> vide évite aussi que le téléphone télécharge l'image cachée.
+            <div className="hidden overflow-hidden rounded-[22px] bg-loom-surface-2 sm:block">
+              <picture>
+                <source media="(max-width: 639px)" srcSet={BLANK_IMAGE} />
+                <img src={article.image} alt="" className="mx-auto block max-h-[420px] w-full object-contain" fetchPriority="high" />
+              </picture>
+            </div>
+          )}
+
+          <div className={cn(card, 'rounded-[18px] p-5 sm:p-6')}>
+            {/* Images de l'article : hauteur limitée, centrées, un clic les affiche en entier */}
+            <div className="prose prose-loom max-w-none sm:prose-lg prose-blockquote:not-italic prose-img:mx-auto prose-img:max-h-[min(75vh,560px)] prose-img:w-auto prose-img:rounded-xl">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{article.content}</ReactMarkdown>
+            </div>
+          </div>
+        </article>
+
+        {others.length > 0 && (
+          <section aria-labelledby="h-more" className={cn(container, 'flex flex-col gap-4 pb-16')}>
+            <h2 id="h-more" className="text-2xl font-extrabold">
+              À lire aussi
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {others.map((other) => (
+                <Link
+                  key={other.id}
+                  to={`/articles/${other.slug}`}
+                  className={cn(card, 'group flex overflow-hidden rounded-[18px] text-loom-text no-underline sm:flex-col', pageFocus)}
                 >
-                  {article.content}
-                </ReactMarkdown>
-              </div>
-            </motion.div>
-          </div>
+                  <img src={other.image} alt="" loading="lazy" className="h-[88px] w-[88px] flex-none bg-loom-surface-2 object-cover sm:h-[140px] sm:w-full" />
+                  <span className="flex min-w-0 flex-col justify-center gap-1 px-4 py-3">
+                    <span className="font-extrabold leading-tight group-hover:underline underline-offset-4">{other.title}</span>
+                    <span className="text-sm text-loom-text-muted">{formatLongDate(other.date)}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
 
-          {/* Sidebar Info */}
-          <div className="lg:col-span-1">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="space-y-6 sticky top-24"
-            >
-              {/* Details Card */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-6 text-lg">Infos article</h3>
-                <ul className="space-y-6">
-                  <li className="flex items-start gap-4">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <CalendarDays className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Publié le</p>
-                      <p className="text-gray-600 capitalize">{formattedDate}</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <Tag className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Catégorie</p>
-                      <p className="text-gray-600">{article.category}</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="bg-orange/10 p-3 rounded-xl text-orange">
-                      <Clock className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">Temps de lecture</p>
-                      <p className="text-gray-600">~5 min</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Share Card */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Share2 className="w-5 h-5 text-orange" />
-                  Partager
-                </h3>
-                <div className="flex flex-col gap-3">
-                  <Button variant="outline" className="w-full justify-start" onClick={() => {
-                    navigator.clipboard.writeText(window.location.href);
-                  }}>
-                    Copier le lien
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" onClick={() => {
-                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
-                  }}>
-                    Facebook
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" onClick={() => {
-                    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(article.title)}`, '_blank');
-                  }}>
-                    Twitter / X
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-      
       <Footer />
     </div>
   );

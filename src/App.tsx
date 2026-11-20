@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import { useEffect, Suspense, lazy } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import React from "react";
@@ -19,7 +19,6 @@ const MonsieurOurs = lazy(() => import("./pages/MonsieurOurs"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Login = lazy(() => import("./pages/auth/Login"));
-const Register = lazy(() => import("./pages/auth/Register"));
 const ResetPasswordRequest = lazy(() => import("./pages/auth/ResetPasswordRequest"));
 const UpdatePassword = lazy(() => import("./pages/auth/UpdatePassword"));
 const Profile = lazy(() => import("./pages/auth/Profile"));
@@ -29,10 +28,12 @@ const AdminEvents = lazy(() => import("./pages/admin/Events"));
 const AdminGallery = lazy(() => import("./pages/admin/Gallery"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminTickets = lazy(() => import("./pages/admin/Tickets"));
-const AdminSEO = lazy(() => import("./pages/admin/SEO"));
 const AdminPartners = lazy(() => import("./pages/admin/Partners"));
 const AdminHomeSettings = lazy(() => import("./pages/admin/HomeSettings"));
+const AdminNavigation = lazy(() => import("./pages/admin/Navigation"));
 const AdminMonsieurOurs = lazy(() => import("./pages/admin/MonsieurOurs"));
+const AdminHistory = lazy(() => import("./pages/admin/History"));
+const AdminTeam = lazy(() => import("./pages/admin/Team"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
 const Articles = lazy(() => import("./pages/Articles"));
@@ -48,13 +49,10 @@ import PageLoader from "./components/PageLoader";
 import { LOOMOrganizationSchema } from "./components/SEOStructuredData";
 import { AutoBreadcrumbs } from "./components/InternalLinks";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { DEFAULT_SHOP_URL, DEFAULT_MEMBERSHIP_URL } from "./hooks/useSiteSettings";
 
 const queryClient = new QueryClient();
 
-// HelloAsso URLs - Direct links without host prefixing
-const SHOP_URL = "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/boutiques/t-shirt-bleu";
-const MEMBERSHIP_URL =
-  "https://www.helloasso.com/associations/les-ours-occitanie-montpellier/adhesions/adhesion-2025-2026";
 
 // Mapping des routes vers leurs titres
 const PAGE_TITLES: { [key: string]: string } = {
@@ -66,7 +64,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/gallery": "LOOM - Galerie Photos",
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
-  "/auth/register": "LOOM - Inscription",
+  "/admin/login": "LOOM - Espace admin",
   "/auth/reset-password": "LOOM - Réinitialisation du mot de passe",
   "/auth/update-password": "LOOM - Nouveau mot de passe",
   "/auth/profile": "LOOM - Mon Profil",
@@ -75,11 +73,13 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/admin/events": "LOOM Admin - Événements",
   "/admin/gallery": "LOOM Admin - Galerie",
   "/admin/users": "LOOM Admin - Utilisateurs",
-  "/admin/tickets": "LOOM Admin - Tickets",
-  "/admin/seo": "LOOM Admin - SEO & Référencement",
+  "/admin/tickets": "LOOM Admin - Messages",
   "/admin/partners": "LOOM Admin - Partenaires",
-  "/admin/home-settings": "LOOM Admin - Page d'accueil et menu",
-  "/admin/monsieur-ours": "LOOM Admin - Timeline Mr Ours",
+  "/admin/home-settings": "LOOM Admin - Page d'accueil",
+  "/admin/navigation": "LOOM Admin - Navigation",
+  "/admin/monsieur-ours": "LOOM Admin - Monsieur Ours",
+  "/admin/history": "LOOM Admin - Historique",
+  "/admin/team": "LOOM Admin - La Tanière",
   "/terms": "LOOM - Conditions d'utilisation",
   "/legal-notice": "LOOM - Mentions légales",
   "/unauthorized": "LOOM - Accès non autorisé",
@@ -106,10 +106,51 @@ function RouteReload() {
   return null;
 }
 
+/**
+ * Remonte en haut de la page à chaque changement de page (clic sur un lien).
+ * Sans lui, une application React garde la position de défilement de la page
+ * précédente : on arrivait souvent en bas de la nouvelle page. Exceptions : le
+ * bouton « Retour » du navigateur (il restaure lui-même la position), les liens
+ * vers une ancre (#contact…, gérés par la page) et les changements de filtres
+ * (?ville=… : même page, on garde sa place).
+ */
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+  useEffect(() => {
+    if (navigationType === "POP" || hash) return;
+    window.scrollTo(0, 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+  return null;
+}
+
+/**
+ * Précharge le code des pages publiques une fois l'accueil affiché (quand le
+ * navigateur n'a rien d'autre à faire) : un clic ensuite ouvre la page sans
+ * attendre son téléchargement.
+ */
+function preloadPublicPages() {
+  const load = () => {
+    void import("./pages/Events");
+    void import("./pages/EventDetail");
+    void import("./pages/Articles");
+    void import("./pages/ArticleDetail");
+    void import("./pages/About");
+    void import("./pages/MonsieurOurs");
+    void import("./pages/Gallery");
+    void import("./pages/AlbumDetail");
+    void import("./pages/Partners");
+  };
+  if ("requestIdleCallback" in window) window.requestIdleCallback(load, { timeout: 4000 });
+  else setTimeout(load, 2500);
+}
+
 const App = () => {
   // Scroll to top on initial mount
   useEffect(() => {
     window.scrollTo(0, 0);
+    preloadPublicPages();
   }, []);
 
   return (
@@ -121,8 +162,9 @@ const App = () => {
 
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <RouteReload />
+            <ScrollToTop />
             <ErrorBoundary>
             <Suspense fallback={<PageLoader />}>
               <Routes>
@@ -140,16 +182,18 @@ const App = () => {
                 <Route path="/partners" element={<Partners />} />
 
                 {/* External Redirects - URLs configurable depuis /admin/home-settings */}
-                <Route path="/shop" element={<SettingsRedirect settingKey="shop_url" fallbackUrl={SHOP_URL} />} />
-                <Route path="/membership" element={<SettingsRedirect settingKey="membership_url" fallbackUrl={MEMBERSHIP_URL} />} />
+                <Route path="/shop" element={<SettingsRedirect settingKey="shop_url" fallbackUrl={DEFAULT_SHOP_URL} />} />
+                <Route path="/membership" element={<SettingsRedirect settingKey="membership_url" fallbackUrl={DEFAULT_MEMBERSHIP_URL} />} />
 
                 {/* Auth Routes */}
                 <Route path="/auth/login" element={<Login />} />
-                <Route path="/auth/register" element={<Register />} />
+                <Route path="/admin/login" element={<Login />} />
+                {/* Inscriptions publiques fermées (incident du 14/11/2026) : comptes créés par un admin */}
+                <Route path="/auth/register" element={<Navigate to="/auth/login" replace />} />
                 <Route path="/auth/reset-password" element={<ResetPasswordRequest />} />
                 <Route path="/auth/update-password" element={<UpdatePassword />} />
                 <Route path="/login" element={<Navigate to="/auth/login" replace />} />
-                <Route path="/register" element={<Navigate to="/auth/register" replace />} />
+                <Route path="/register" element={<Navigate to="/auth/login" replace />} />
                 <Route path="/reset-password" element={<Navigate to="/auth/reset-password" replace />} />
                 <Route path="/update-password" element={<Navigate to="/auth/update-password" replace />} />
 
@@ -169,10 +213,12 @@ const App = () => {
                     <Route path="/admin/gallery" element={<AdminGallery />} />
                     <Route path="/admin/users" element={<AdminUsers />} />
                     <Route path="/admin/tickets" element={<AdminTickets />} />
-                    <Route path="/admin/seo" element={<AdminSEO />} />
                     <Route path="/admin/partners" element={<AdminPartners />} />
                     <Route path="/admin/home-settings" element={<AdminHomeSettings />} />
+                    <Route path="/admin/navigation" element={<AdminNavigation />} />
                     <Route path="/admin/monsieur-ours" element={<AdminMonsieurOurs />} />
+                    <Route path="/admin/history" element={<AdminHistory />} />
+                    <Route path="/admin/team" element={<AdminTeam />} />
                   </Route>
                 </Route>
 

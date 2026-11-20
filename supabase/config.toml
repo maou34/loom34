@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.helloasso-webhook]
 verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false
+
+[functions.notify-new-message]
+verify_jwt = false
+
+[functions.site-stats]
+verify_jwt = false

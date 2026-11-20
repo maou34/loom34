@@ -32,6 +32,7 @@ import {
   type PublicForm,
   requireEnv,
 } from "./helloasso.ts";
+import { coordinatesForPlace } from "./geocode.ts";
 
 export function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -90,10 +91,13 @@ export interface TicketedEvent {
   helloasso_form_type: string;
   helloasso_sale_start_date: string | null;
   helloasso_auto_published_at: string | null;
+  location: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export const TICKETED_EVENT_COLUMNS =
-  "id, slug, helloasso_form_slug, helloasso_form_type, helloasso_sale_start_date, helloasso_auto_published_at";
+  "id, slug, helloasso_form_slug, helloasso_form_type, helloasso_sale_start_date, helloasso_auto_published_at, location, latitude, longitude";
 
 // --- Conversion du contenu HelloAsso vers les colonnes de events ----------------
 
@@ -203,11 +207,14 @@ export async function syncEvent(supabase: SupabaseClient, event: TicketedEvent):
     const sold = await countSoldTickets(supabase, event.helloasso_form_type, event.helloasso_form_slug);
     const stats = await getFormStats(supabase, event.helloasso_form_type, event.helloasso_form_slug);
     const publish = autoPublishFields(form, event);
+    const content = contentFromForm(form);
+    const coordinates = await coordinatesForPlace(form, content.location as string | undefined, event);
 
     const { error } = await supabase
       .from("events")
       .update({
-        ...contentFromForm(form),
+        ...content,
+        ...coordinates,
         ...publish,
         helloasso_sale_start_date: toTimestamp(form.saleStartDate),
         helloasso_sale_end_date: toTimestamp(form.saleEndDate),
@@ -282,12 +289,14 @@ export async function importNewForms(supabase: SupabaseClient): Promise<ImportRe
       if (!start) throw new Error("date de début absente");
 
       const slug = await freeSiteSlug(supabase, summary.formSlug);
+      const coordinates = await coordinatesForPlace(form, content.location as string | undefined);
       const row = {
         description: form.title,
         location: "Lieu à préciser",
         image: FALLBACK_IMAGE,
         published: false,
         ...content,
+        ...coordinates,
         slug,
         helloasso_form_slug: summary.formSlug,
         helloasso_form_type: summary.formType,

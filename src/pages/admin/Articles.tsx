@@ -1,12 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Eye, FileText, Search, Filter, MoreHorizontal, Calendar, CheckCircle2, XCircle } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Plus, Edit, Trash2, Eye, FileText, Search, MoreHorizontal, CheckCircle2, XCircle, Copy, Image as ImageIcon } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { getImageUrl } from "@/config";
 import { toast } from "sonner";
+import PublishToggle from "@/components/admin/PublishToggle";
+import { ClearFiltersButton, FilterSelect } from "@/components/admin/ListFilters";
+import { ALL, useUrlFilters } from "@/lib/urlFilters";
 import { slugify } from "@/lib/slug";
 import { 
   Dialog, 
@@ -24,16 +27,17 @@ import ImageUpload from "@/components/admin/ImageUpload";
 import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import '@uiw/react-markdown-preview/markdown.css';
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { motion } from "framer-motion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CategoriesDialog from "@/components/admin/CategoriesDialog";
+import { useArticleCategories } from "@/lib/articles";
+import { Star, Tags } from "lucide-react";
 
 interface Article {
   id: string;
@@ -45,11 +49,29 @@ interface Article {
   content: string;
   excerpt: string;
   image: string;
+  category_id: string | null;
+  is_featured: boolean;
+  article_categories: { name: string } | null;
 }
+
+type ListTab = "all" | "published" | "drafts";
+const LIST_TABS: { id: ListTab; label: string }[] = [
+  { id: "all", label: "Tous" },
+  { id: "published", label: "Publiés" },
+  { id: "drafts", label: "Brouillons" },
+];
+const PAGE_SIZE = 20;
+const FILTER_KEYS = ["categorie", "annee", "une"] as const;
+const FEATURED_OPTIONS = [
+  { value: "oui", label: "À la une" },
+  { value: "non", label: "Pas à la une" },
+];
+
+/** Longueur conseillée du chapô (≈ deux lignes dans les cartes) */
+const EXCERPT_MAX = 160;
 
 export default function AdminArticles() {
   const [articles, setArticles] = useState<Article[]>([]);
-  const [filteredArticles, setFilteredArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -57,11 +79,18 @@ export default function AdminArticles() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
+  const { data: categories = [] } = useArticleCategories();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const categoryCounts = articles.reduce<Record<string, number>>((acc, a) => {
+    if (a.category_id) acc[a.category_id] = (acc[a.category_id] ?? 0) + 1;
+    return acc;
+  }, {});
   
   // Form state for new/edit article
   const [articleForm, setArticleForm] = useState({
     title: "",
-    category: "",
+    category_id: "",
+    is_featured: false,
     excerpt: "",
     content: "",
     image: "https://placehold.co/600x400?text=Article+Image",
@@ -74,29 +103,62 @@ export default function AdminArticles() {
     fetchArticles();
   }, []);
 
-  useEffect(() => {
-    if (searchQuery) {
-      const filtered = articles.filter(article => 
-        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        article.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredArticles(filtered);
-    } else {
-      setFilteredArticles(articles);
-    }
-  }, [searchQuery, articles]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listTab: ListTab = LIST_TABS.some((t) => t.id === searchParams.get("onglet")) ? (searchParams.get("onglet") as ListTab) : "all";
+  const setListTab = (tab: ListTab) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (tab === "all") next.delete("onglet");
+        else next.set("onglet", tab);
+        return next;
+      },
+      { replace: true },
+    );
+  // Filtres Catégorie / Année / À la une, gardés dans l'adresse
+  const { values: filters, setFilter, clearFilters, activeCount } = useUrlFilters(FILTER_KEYS);
+  const categoryFilter = filters.categorie;
+  const [page, setPage] = useState(0);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const tabCounts: Record<ListTab, number> = {
+    all: articles.length,
+    published: articles.filter((a) => a.published).length,
+    drafts: articles.filter((a) => !a.published).length,
+  };
+
+  const visibleArticles = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return articles.filter((a) => {
+      if (listTab === "published" && !a.published) return false;
+      if (listTab === "drafts" && a.published) return false;
+      if (categoryFilter === "none" && a.category_id) return false;
+      if (categoryFilter !== ALL && categoryFilter !== "none" && a.category_id !== categoryFilter) return false;
+      if (filters.annee !== ALL && a.date.slice(0, 4) !== filters.annee) return false;
+      if (filters.une === "oui" && !a.is_featured) return false;
+      if (filters.une === "non" && a.is_featured) return false;
+      return !q || a.title.toLowerCase().includes(q) || a.slug.toLowerCase().includes(q);
+    });
+  }, [articles, listTab, categoryFilter, filters.annee, filters.une, searchQuery]);
+  const pageCount = Math.ceil(visibleArticles.length / PAGE_SIZE);
+  const pageArticles = visibleArticles.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  // Retour à la première page quand le filtre change
+  useEffect(() => setPage(0), [listTab, categoryFilter, filters.annee, filters.une, searchQuery]);
+  const yearOptions = [...new Set(articles.map((a) => a.date.slice(0, 4)))]
+    .sort((a, b) => b.localeCompare(a))
+    .map((y) => ({ value: y, label: y }));
 
   async function fetchArticles() {
     try {
       setLoading(true);
       const { data, error } = await db
         .from('articles')
-        .select('id, title, category, date, published, slug, content, excerpt, image')
+        .select('id, title, category, date, published, slug, content, excerpt, image, category_id, is_featured, article_categories(name)')
         .order('date', { ascending: false });
 
       if (error) throw error;
       setArticles(data || []);
-      setFilteredArticles(data || []);
     } catch (error: any) {
       console.error("Error fetching articles:", error);
       toast.error("Erreur lors du chargement des articles: " + error.message);
@@ -108,7 +170,7 @@ export default function AdminArticles() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric'
     });
   };
@@ -135,7 +197,8 @@ export default function AdminArticles() {
   const resetForm = () => {
     setArticleForm({
       title: "",
-      category: "",
+      category_id: "",
+      is_featured: false,
       excerpt: "",
       content: "",
       image: "https://placehold.co/600x400?text=Article+Image",
@@ -148,18 +211,36 @@ export default function AdminArticles() {
     setDialogOpen(true);
   };
 
+  // « Créer » depuis le tableau de bord : /admin/…?nouveau=1 ouvre directement le formulaire
+  useEffect(() => {
+    if (!searchParams.has("nouveau")) return;
+    resetForm();
+    setSearchParams(
+      (params) => {
+        params.delete("nouveau");
+        return params;
+      },
+      { replace: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleCreateArticle = async () => {
     try {
-      const { title, category, excerpt, content, image, published, slug, date } = articleForm;
+      const { title, category_id, is_featured, excerpt, content, image, published, slug, date } = articleForm;
+      const category = categories.find((c) => c.id === category_id);
       
       if (!title || !category || !excerpt || !content || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
+      if (is_featured) await clearFeatured();
       
       const newArticle = {
         title,
-        category,
+        category: category.name,
+        category_id: category.id,
+        is_featured,
         excerpt,
         content,
         image,
@@ -190,16 +271,20 @@ export default function AdminArticles() {
     if (!selectedArticle) return;
     
     try {
-      const { title, category, excerpt, content, image, published, slug } = articleForm;
+      const { title, category_id, is_featured, excerpt, content, image, published, slug } = articleForm;
+      const category = categories.find((c) => c.id === category_id);
       
       if (!title || !category || !excerpt || !content || !slug) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
       }
+      if (is_featured && !selectedArticle.is_featured) await clearFeatured(selectedArticle.id);
       
       const updatedArticle = {
         title,
-        category,
+        category: category.name,
+        category_id: category.id,
+        is_featured,
         excerpt,
         content,
         image,
@@ -222,6 +307,14 @@ export default function AdminArticles() {
       console.error("Error updating article:", error);
       toast.error("Erreur lors de la mise à jour de l'article: " + error.message);
     }
+  };
+
+  /** Un seul article « À la une » (index unique en base) : on retire l'ancien avant d'en marquer un nouveau. */
+  const clearFeatured = async (exceptId?: string) => {
+    let query = db.from('articles').update({ is_featured: false }).eq('is_featured', true);
+    if (exceptId) query = query.neq('id', exceptId);
+    const { error } = await query;
+    if (error) throw error;
   };
 
   const handleDeleteArticle = async () => {
@@ -248,7 +341,8 @@ export default function AdminArticles() {
     setSelectedArticle(article);
     setArticleForm({
       title: article.title,
-      category: article.category,
+      category_id: article.category_id ?? "",
+      is_featured: article.is_featured,
       excerpt: article.excerpt,
       content: article.content,
       image: article.image,
@@ -260,143 +354,200 @@ export default function AdminArticles() {
     setDialogOpen(true);
   };
 
+  const duplicateArticle = (article: Article) => {
+    setSelectedArticle(null);
+    setArticleForm({
+      title: `${article.title} (copie)`,
+      category_id: article.category_id ?? "",
+      is_featured: false,
+      excerpt: article.excerpt,
+      content: article.content,
+      image: article.image,
+      published: false,
+      slug: `${article.slug}-copie-${Date.now().toString(36)}`,
+      date: ""
+    });
+    setIsCreating(true);
+    setDialogOpen(true);
+    toast.info("Article dupliqué en brouillon : pensez à changer le titre et l'adresse");
+  };
+
+  /** Publier / mettre en brouillon directement depuis la liste. */
+  const togglePublished = async (article: Article) => {
+    const published = !article.published;
+    const setPublished = (value: boolean) =>
+      setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, published: value } : a)));
+    setTogglingId(article.id);
+    setPublished(published);
+    try {
+      const { error } = await db.from('articles').update({ published, updated_at: new Date().toISOString() }).eq('id', article.id);
+      if (error) throw error;
+      toast.success(published ? `« ${article.title} » est publié` : `« ${article.title} » est repassé en brouillon`, {
+        action: { label: "Annuler", onClick: () => togglePublished({ ...article, published }) },
+      });
+    } catch (error: unknown) {
+      setPublished(article.published);
+      toast.error("Erreur lors du changement de statut : " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const confirmDelete = (article: Article) => {
     setSelectedArticle(article);
     setDeleteDialogOpen(true);
   };
 
   return (
-    <AdminLayout title="Articles">
-      <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              placeholder="Rechercher un article..." 
-              className="pl-10 bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <AdminLayout
+      title="Articles"
+      actions={
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={resetForm}>
+          <Plus className="h-4 w-4 sm:mr-2" />
+          <span className="sr-only sm:not-sr-only">Nouvel article</span>
+        </Button>
+      }
+    >
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div role="tablist" aria-label="Filtrer par statut" className="flex gap-1 rounded-xl bg-loom-surface-2 p-1 ring-1 ring-loom-border">
+            {LIST_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={listTab === t.id}
+                onClick={() => setListTab(t.id)}
+                className={`h-9 rounded-[9px] px-3.5 text-sm ${listTab === t.id ? "bg-loom-surface font-bold shadow-sm" : "text-loom-text-2 hover:text-loom-text"}`}
+              >
+                {t.label} <span className="text-loom-text-muted">({tabCounts[t.id]})</span>
+              </button>
+            ))}
           </div>
-          <Button 
-            className="bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto" 
-            onClick={resetForm}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvel article
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <label className="relative w-full sm:w-72">
+              <span className="sr-only">Rechercher un article</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-loom-text-muted" />
+              <Input type="search" placeholder="Rechercher un article…" className="pl-9" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </label>
+          </div>
         </div>
 
-        {/* Articles List */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          {loading ? (
-            <div className="p-6 space-y-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filteredArticles.length === 0 ? (
-            <div className="text-center py-16 px-4">
-              <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="h-8 w-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun article trouvé</h3>
-              <p className="text-gray-500 mb-6">Commencez par créer votre premier article de blog.</p>
-              <Button onClick={resetForm} variant="outline">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <FilterSelect
+            label="Filtrer par catégorie"
+            allLabel="Toutes les catégories"
+            value={categoryFilter}
+            options={[{ value: "none", label: "Sans catégorie" }, ...categories.map((c) => ({ value: c.id, label: c.name }))]}
+            onChange={(v) => setFilter("categorie", v)}
+          />
+          <FilterSelect label="Filtrer par année" allLabel="Toutes les années" value={filters.annee} options={yearOptions} onChange={(v) => setFilter("annee", v)} />
+          <FilterSelect label="Filtrer « À la une »" allLabel="À la une ou non" value={filters.une} options={FEATURED_OPTIONS} onChange={(v) => setFilter("une", v)} />
+          <ClearFiltersButton count={activeCount} onClick={clearFilters} />
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : visibleArticles.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-loom-border-strong px-4 py-12 text-center">
+            <FileText aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
+            <p className="font-bold">{searchQuery || activeCount > 0 ? "Aucun article ne correspond" : listTab === "drafts" ? "Aucun brouillon" : "Aucun article"}</p>
+            {listTab === "all" && !searchQuery && activeCount === 0 && (
+              <Button onClick={resetForm} variant="outline" className="mt-2">
                 Créer un article
               </Button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow>
-                    <TableHead className="w-[400px]">Article</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredArticles.map((article) => (
-                    <TableRow key={article.id} className="hover:bg-gray-50/50 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="h-10 w-10 rounded-lg bg-cover bg-center flex-shrink-0 border border-gray-200"
-                            style={{ backgroundImage: `url(${article.image})` }}
-                          />
-                          <div>
-                            <div className="font-medium text-gray-900 line-clamp-1">{article.title}</div>
-                            <div className="text-xs text-gray-500 line-clamp-1">{article.slug}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="font-normal">
-                          {article.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="mr-2 h-3 w-3" />
-                          {formatDate(article.date)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2">
+              {pageArticles.map((article) => (
+                <li key={article.id} className="flex items-center gap-3 rounded-xl border border-loom-border bg-loom-surface p-2.5 pr-1.5 sm:gap-4 sm:p-3">
+                  <span aria-hidden="true" className="flex h-12 w-12 flex-none items-center justify-center overflow-hidden rounded-lg bg-loom-surface-2 text-loom-text-muted">
+                    {article.image && !article.image.includes("placehold.co") ? (
+                      <img src={getImageUrl(article.image)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-5 w-5" />
+                    )}
+                  </span>
+                  <button type="button" onClick={() => editArticle(article)} className="flex min-w-0 flex-1 flex-col text-left">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <span className="truncate">{article.title}</span>
+                      {article.is_featured && <Star className="h-3.5 w-3.5 flex-none fill-current text-loom-accent-text" aria-label="À la une" />}
+                    </span>
+                    <span className="hidden truncate text-xs text-loom-text-muted sm:block">/articles/{article.slug}</span>
+                    <span className="truncate text-sm text-loom-text-muted sm:hidden">
+                      {article.article_categories?.name ?? "Sans catégorie"} · {formatDate(article.date)}
+                    </span>
+                  </button>
+                  <span className="hidden w-40 flex-none truncate text-sm md:block">
+                    {article.article_categories ? (
+                      <span className="rounded-full bg-loom-surface-2 px-2 py-0.5 text-xs font-semibold text-loom-text-2">{article.article_categories.name}</span>
+                    ) : (
+                      <span className="text-xs text-loom-text-muted">Sans catégorie</span>
+                    )}
+                  </span>
+                  <span className="hidden w-24 flex-none text-sm text-loom-text-muted sm:block">{formatDate(article.date)}</span>
+                  <PublishToggle id={article.id} title={article.title} published={article.published} disabled={togglingId === article.id} onToggle={() => togglePublished(article)} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-11 w-11 flex-none p-0" aria-label={`Actions pour « ${article.title} » : modifier, dupliquer, voir sur le site, supprimer`}>
+                        <MoreHorizontal className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => editArticle(article)}>
+                        <Edit className="mr-2 h-4 w-4" /> Modifier
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => duplicateArticle(article)}>
+                        <Copy className="mr-2 h-4 w-4" /> Dupliquer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to={`/articles/${article.slug}`} target="_blank">
+                          <Eye className="mr-2 h-4 w-4" /> Voir sur le site
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => togglePublished(article)} disabled={togglingId === article.id}>
                         {article.published ? (
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200">
-                            <CheckCircle2 className="w-3 h-3 mr-1" /> Publié
-                          </Badge>
+                          <><XCircle className="mr-2 h-4 w-4" /> Mettre en brouillon</>
                         ) : (
-                          <Badge variant="outline" className="text-gray-500 border-gray-200">
-                            <XCircle className="w-3 h-3 mr-1" /> Brouillon
-                          </Badge>
+                          <><CheckCircle2 className="mr-2 h-4 w-4" /> Publier</>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Ouvrir menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                              <Link to={`/articles/${article.slug}`} target="_blank">
-                                <Eye className="mr-2 h-4 w-4" /> Voir l'article
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => editArticle(article)}>
-                              <Edit className="mr-2 h-4 w-4" /> Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => confirmDelete(article)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => confirmDelete(article)}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </li>
+              ))}
+            </ul>
+            {pageCount > 1 && (
+              <nav aria-label="Pagination des articles" className="flex items-center justify-between gap-3 text-sm text-loom-text-muted">
+                <span aria-live="polite">
+                  {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, visibleArticles.length)} sur {visibleArticles.length} articles
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)}>
+                    Précédent
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={page >= pageCount - 1} onClick={() => setPage(page + 1)}>
+                    Suivant
+                  </Button>
+                </div>
+              </nav>
+            )}
+          </div>
+        )}
+
+        <button type="button" onClick={() => setCategoriesOpen(true)} className="flex items-center gap-1.5 text-sm font-semibold text-loom-accent-text hover:underline">
+          <Tags aria-hidden="true" className="h-4 w-4" /> Gérer les catégories →
+        </button>
       </div>
 
       {/* Article Form Dialog */}
@@ -423,27 +574,45 @@ export default function AdminArticles() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="slug">Slug (URL)</Label>
+                <Label htmlFor="slug">Adresse de la page sur le site</Label>
                 <Input
                   id="slug"
                   name="slug"
                   value={articleForm.slug}
                   onChange={handleInputChange}
+                  onBlur={() => setArticleForm(prev => ({ ...prev, slug: slugify(prev.slug) }))}
                   placeholder="url-de-l-article"
                 />
+                <p className="text-xs text-loom-text-muted">
+                  lgbt-loom.fr/articles/<span className="font-medium">{articleForm.slug || "…"}</span>
+                  {!isCreating && selectedArticle?.published && " — la changer garde l'ancienne adresse en redirection"}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
-                <Input
-                  id="category"
-                  name="category"
-                  value={articleForm.category}
-                  onChange={handleInputChange}
-                  placeholder="Ex: Événement, Actualité..."
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="category">Catégorie</Label>
+                  <button type="button" className="text-xs font-medium text-orange-700 hover:underline" onClick={() => setCategoriesOpen(true)}>
+                    Gérer les catégories →
+                  </button>
+                </div>
+                <Select
+                  value={articleForm.category_id}
+                  onValueChange={(value) => setArticleForm((prev) => ({ ...prev, category_id: value }))}
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Choisir une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
@@ -465,25 +634,53 @@ export default function AdminArticles() {
               </div>
             </div>
 
+            <div className="flex items-start gap-4 rounded-lg border p-3 bg-orange-50/50">
+              <Switch
+                id="is_featured"
+                checked={articleForm.is_featured}
+                onCheckedChange={(checked) => setArticleForm((prev) => ({ ...prev, is_featured: checked }))}
+              />
+              <div>
+                <Label htmlFor="is_featured" className="cursor-pointer font-medium">À la une</Label>
+                <p className="text-xs text-gray-500">
+                  Mis en avant en grand sur l'accueil et la page Actualités. Un seul article à la fois : cocher celui-ci retire l'ancien.
+                  Sans article à la une, c'est le plus récent qui s'affiche.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="excerpt">Extrait (Résumé)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="excerpt">Chapô</Label>
+                <span className={`text-xs ${articleForm.excerpt.length > EXCERPT_MAX ? "text-orange-700 font-medium" : "text-gray-500"}`} aria-live="polite">
+                  {articleForm.excerpt.length}/{EXCERPT_MAX}
+                </span>
+              </div>
               <Textarea
                 id="excerpt"
                 name="excerpt"
                 value={articleForm.excerpt}
                 onChange={handleInputChange}
-                placeholder="Un court résumé qui apparaîtra dans les listes..."
+                placeholder="Une ou deux phrases qui donnent envie de lire, affichées sous le titre dans les listes."
                 rows={3}
+                aria-describedby="excerpt-help"
               />
+              <p id="excerpt-help" className="text-xs text-gray-500">
+                Deux lignes maximum dans les cartes ; au-delà de {EXCERPT_MAX} caractères, le texte est coupé.
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label>Image de couverture</Label>
+              <p className="text-sm text-muted-foreground">
+                Format paysage recommandé : <strong>1200 × 628 px</strong> (comme une couverture d'événement Facebook). Sur le site, elle est affichée
+                sur 420 px de haut au maximum ; une image plus haute est réduite avec des bandes sur les côtés.
+              </p>
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50">
                 <ImageUpload onUploadComplete={(url) => setArticleForm(prev => ({ ...prev, image: url }))} />
                 {articleForm.image && (
-                  <div className="mt-4 relative aspect-video w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-                    <img src={articleForm.image} alt="Preview" className="w-full h-full object-cover" />
+                  <div className="mt-4 relative aspect-[1200/628] w-full max-w-md mx-auto overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
+                    <img src={articleForm.image} alt="Aperçu de l'image de couverture" className="w-full h-full object-contain" />
                   </div>
                 )}
               </div>
@@ -508,7 +705,7 @@ export default function AdminArticles() {
               Annuler
             </Button>
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={isCreating ? handleCreateArticle : handleUpdateArticle}
             >
               {isCreating ? "Créer l'article" : "Enregistrer les modifications"}
@@ -516,6 +713,15 @@ export default function AdminArticles() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CategoriesDialog
+        kind="articles"
+        open={categoriesOpen}
+        onOpenChange={setCategoriesOpen}
+        categories={categories}
+        counts={categoryCounts}
+        onChanged={fetchArticles}
+      />
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

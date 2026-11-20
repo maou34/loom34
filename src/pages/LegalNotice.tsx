@@ -1,141 +1,114 @@
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import SectionHeading from '@/components/SectionHeading';
+import { Link } from 'react-router-dom';
+import LegalPage from '@/components/site/LegalPage';
+import { ASSOCIATION as A } from '@/lib/association';
 import useSEO from '@/hooks/useSEO';
 
 const LegalNotice = () => {
-  // SEO Configuration
   useSEO({
-    title: 'Mentions Légales - LOOM | Les Ours Occitanie Montpellier',
-    description: 'Mentions légales du site LOOM - Les Ours Occitanie Montpellier. Informations légales sur l\'association, l\'hébergement et les responsabilités.',
-    keywords: ['LOOM', 'mentions légales', 'association', 'Montpellier', 'ours', 'bears', 'LGBT'],
-    type: 'website'
+    title: 'Mentions légales - LOOM | Les Ours Occitanie Montpellier',
+    description: "Mentions légales du site de LOOM : éditeur, hébergement, directeur de la publication et protection des données personnelles.",
+    keywords: ['LOOM', 'mentions légales', 'association', 'Montpellier', 'données personnelles'],
+    type: 'website',
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
-      <main className="container mx-auto px-4 py-8 mt-20">
-        <div className="max-w-4xl mx-auto">
-          <SectionHeading 
-            title="Mentions Légales"
-            subtitle="Informations légales concernant le site LOOM"
-          />
-          
-          <div className="bg-white rounded-lg shadow-md p-8 space-y-8">
-            
-            {/* Introduction */}
-            <div className="prose prose-lg max-w-none">
-              <p className="text-gray-700 leading-relaxed">
-                Conformément aux dispositions de la loi n° 2004-575 du 21 juin 2004 pour la confiance en l'économie numérique, 
-                il est précisé aux utilisateurs du site LOOM - Les Ours Occitanie Montpellier l'identité des différents 
-                intervenants dans le cadre de sa réalisation et de son suivi.
-              </p>
-            </div>
+    <LegalPage
+      title="Mentions légales"
+      updated="20 novembre 2026"
+      intro="Qui édite et héberge ce site, et ce que nous faisons des données que vous nous confiez."
+    >
+      <h2>Éditeur du site</h2>
+      <p>
+        Le site <a href="https://lgbt-loom.fr">lgbt-loom.fr</a> est édité par :
+      </p>
+      <ul>
+        <li>
+          <strong>{A.name}</strong>, {A.status.toLowerCase()}
+        </li>
+        <li>Numéro RNA : {A.rna}</li>
+        <li>SIRET : {A.siret}</li>
+        <li>Siège : {A.address}</li>
+        <li>
+          Téléphone : <a href={A.phoneHref}>{A.phone}</a>
+        </li>
+        <li>
+          E-mail : <a href={`mailto:${A.email}`}>{A.email}</a>
+        </li>
+      </ul>
 
-            {/* Edition du site */}
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-2">
-                Édition du site
-              </h2>
-              <div className="space-y-4 text-gray-700">
-                <p>
-                  Le présent site, accessible à l'URL{' '}
-                  <a href="https://lgbt-loom.fr" className="text-orange-600 hover:text-orange-800 underline">
-                    https://lgbt-loom.fr
-                  </a>{' '}
-                  (le « Site »), est édité par :
-                </p>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="font-semibold mb-2">
-                    L'association Les Ours Occitanie Montpellier LOOM
-                  </p>
-                  <ul className="space-y-1">
-                    <li>• Enregistrée auprès de la préfecture/sous-préfecture de 34 - Préfecture Montpellier</li>
-                    <li>• Numéro d'enregistrement : W343201918</li>
-                    <li>• Siège social : 49 Rue du faubourg St. Jaumes, Bat E, 34000 Montpellier</li>
-                    <li>• Représentée par Stéphane Lossilla dûment habilité</li>
-                  </ul>
-                </div>
-                <p>
-                  <strong>Numéro individuel TVA de l'éditeur :</strong> FR05834084212
-                </p>
-              </div>
-            </section>
+      <h2>Directeur de la publication</h2>
+      <p>{A.president}, président de l'association.</p>
 
-            {/* Hébergement */}
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-2">
-                Hébergement
-              </h2>
-              <div className="text-gray-700">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="mb-2">
-                    <strong>Le Site est hébergé par :</strong>
-                  </p>
-                  <ul className="space-y-1">
-                    <li>• Société : Inferi</li>
-                    <li>• Localisation : Montpellier</li>
-                    <li>• Contact : +33642245188</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
+      <h2>Hébergement</h2>
+      <p>Le site et ses images sont hébergés par :</p>
+      <ul>
+        <li>
+          <strong>OVH SAS</strong>, 2 rue Kellermann, 59100 Roubaix, France – <a href="https://www.ovhcloud.com">ovhcloud.com</a>
+        </li>
+      </ul>
+      <p>
+        La base de données du site (agenda, actualités, messages du formulaire de contact) est hébergée par <strong>Supabase</strong> (
+        <a href="https://supabase.com">supabase.com</a>).
+      </p>
 
-            {/* Directeur de publication */}
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-2">
-                Directeur de publication
-              </h2>
-              <div className="text-gray-700">
-                <p>
-                  Le Directeur de la publication du Site est <strong>Stéphane Lossila</strong>.
-                </p>
-              </div>
-            </section>
+      <h2>Données personnelles</h2>
+      <p>
+        L'association LOOM est responsable des données collectées sur ce site. Nous n'en collectons que le minimum, ne les vendons pas et ne les
+        utilisons pas à des fins publicitaires.
+      </p>
 
-            {/* Contact */}
-            <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-2">
-                Nous contacter
-              </h2>
-              <div className="text-gray-700">
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <p>
-                    <strong>Par téléphone :</strong>{' '}
-                    <a href="tel:+33767179100" className="text-orange-600 hover:text-orange-800">
-                      +33 7 67 17 91 00
-                    </a>
-                  </p>
-                  <p>
-                    <strong>Par email :</strong>{' '}
-                    <a href="mailto:contactloom34@gmail.com" className="text-orange-600 hover:text-orange-800">
-                      contactloom34@gmail.com
-                    </a>
-                  </p>
-                  <p>
-                    <strong>Par courrier :</strong><br />
-                    49 Rue du faubourg St. Jaumes, Bat E<br />
-                    34000 Montpellier
-                  </p>
-                </div>
-              </div>
-            </section>
+      <h3>Formulaire « Nous écrire »</h3>
+      <p>
+        Quand vous nous écrivez depuis la page <Link to="/about#contact">L'asso</Link>, nous enregistrons votre nom, votre adresse e-mail, le sujet et
+        votre message, uniquement pour vous répondre. Seuls les membres du bureau chargés du site y ont accès. Les messages sont conservés{' '}
+        <strong>un an au maximum</strong>, puis supprimés.
+      </p>
 
-            {/* Note légale */}
-            <div className="border-t pt-6 mt-8">
-              <p className="text-sm text-gray-600 italic">
-                Ces mentions légales sont conformes aux dispositions légales en vigueur et sont mises à jour 
-                régulièrement pour refléter toute modification de la situation juridique de l'association.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
-    </div>
+      <h3>Inscriptions et paiements</h3>
+      <p>
+        Les inscriptions aux événements payants et les paiements se font sur <a href="https://www.helloasso.com">HelloAsso</a>, y compris dans le
+        module intégré aux pages d'événements. HelloAsso est responsable des données que vous lui transmettez (voir sa politique de
+        confidentialité). Notre site ne récupère que le nombre de places vendues, jamais l'identité des participants.
+      </p>
+
+      <h3>Mesure d'audience</h3>
+      <p>
+        Nous comptons les visites avec Cloudflare Web Analytics, un outil sans cookie qui ne suit pas les visiteurs d'un site à l'autre et ne nous
+        donne que des chiffres globaux (pages vues, pays, type d'appareil).
+      </p>
+
+      <h3>Cartes</h3>
+      <p>
+        Le plan affiché sur les pages d'événements vient d'<a href="https://www.openstreetmap.org">OpenStreetMap</a> : votre navigateur le
+        télécharge directement depuis leurs serveurs, qui reçoivent donc votre adresse IP. Le lien « Ouvrir l'itinéraire » mène à Google Maps.
+      </p>
+
+      <h3>Cookies et préférences</h3>
+      <p>
+        Ce site ne dépose aucun cookie publicitaire ni de mesure d'audience. Vos choix d'affichage (mode nuit, options d'accessibilité) sont
+        seulement enregistrés dans votre navigateur, sur votre appareil, et ne nous sont pas transmis. Le module de paiement HelloAsso peut déposer
+        les cookies nécessaires à son fonctionnement.
+      </p>
+
+      <h3>Photos</h3>
+      <p>
+        Les albums photos montrent des moments de la vie de l'association. Vous apparaissez sur une photo et préférez qu'elle soit retirée ou
+        floutée ? Écrivez-nous à <a href={`mailto:${A.email}`}>{A.email}</a> : nous la retirons sans avoir à nous justifier, au plus vite.
+      </p>
+
+      <h3>Vos droits</h3>
+      <p>
+        Vous pouvez demander à accéder à vos données, les faire corriger ou supprimer, ou vous opposer à leur utilisation, en écrivant à{' '}
+        <a href={`mailto:${A.email}`}>{A.email}</a> ou à l'adresse du siège. Si vous estimez que vos droits ne sont pas respectés, vous pouvez
+        adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes">CNIL</a>.
+      </p>
+
+      <h2>Propriété intellectuelle</h2>
+      <p>
+        Les textes, photos, logos et visuels de ce site appartiennent à l'association LOOM ou à leurs auteurs. Merci de nous demander avant de les
+        réutiliser. Les conditions d'utilisation du site sont détaillées sur la page <Link to="/terms">Conditions d'utilisation</Link>.
+      </p>
+    </LegalPage>
   );
 };
 
