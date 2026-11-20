@@ -68,7 +68,7 @@
       "name": "Photos",
       "short_name": "Photos",
       "description": "Albums photos",
-      "url": "/gallery",
+      "url": "/photos",
       "icons": [
         {
           "src": "/icon-192.png",

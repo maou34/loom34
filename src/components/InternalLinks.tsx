@@ -44,7 +44,7 @@ const INTERNAL_LINKS: InternalLink[] = [
     category: 'primary'
   },
   {
-    href: '/gallery',
+    href: '/photos',
     label: 'Galerie Photos',
     description: 'Nos plus beaux moments en images',
     category: 'primary'

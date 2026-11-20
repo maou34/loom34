@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType, useParams } from "react-router-dom";
 import { useEffect, Suspense, lazy } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import React from "react";
@@ -61,7 +61,7 @@ const PAGE_TITLES: { [key: string]: string } = {
   "/events": "LOOM - Événements",
   "/articles": "LOOM - Articles",
   "/monsieur-ours": "LOOM - Monsieur Ours",
-  "/gallery": "LOOM - Galerie Photos",
+  "/photos": "LOOM - Photos",
   "/partners": "LOOM - Nos Partenaires",
   "/auth/login": "LOOM - Connexion",
   "/admin/login": "LOOM - Espace admin",
@@ -104,6 +104,12 @@ function RouteReload() {
   }, [location.pathname]);
 
   return null;
+}
+
+/** /gallery/<album> (ancienne adresse) → /photos/<album>. */
+function LegacyAlbumRedirect() {
+  const { albumId = "" } = useParams();
+  return <Navigate to={`/photos/${encodeURIComponent(albumId)}`} replace />;
 }
 
 /**
@@ -177,8 +183,13 @@ const App = () => {
                 <Route path="/articles/:slug" element={<ArticleDetail />} />
                 <Route path="/events/:slug" element={<EventDetail />} />
                 <Route path="/monsieur-ours" element={<MonsieurOurs />} />
-                <Route path="/gallery" element={<Gallery />} />
-                <Route path="/gallery/:albumId" element={<AlbumDetail />} />
+                <Route path="/photos" element={<Gallery />} />
+                <Route path="/photos/:albumId" element={<AlbumDetail />} />
+                {/* Anciennes adresses : sur le serveur, /gallery/… est réservé aux fichiers
+                    photo (nginx → serveur d'images), une page d'album y était introuvable
+                    en accès direct. Restent valables pour les liens internes. */}
+                <Route path="/gallery" element={<Navigate to="/photos" replace />} />
+                <Route path="/gallery/:albumId" element={<LegacyAlbumRedirect />} />
                 <Route path="/partners" element={<Partners />} />
 
                 {/* External Redirects - URLs configurable depuis /admin/home-settings */}

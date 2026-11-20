@@ -98,7 +98,7 @@ const Gallery = () => {
           <>
             {lead && (
               <Link
-                to={`/gallery/${encodeURIComponent(lead.id)}`}
+                to={`/photos/${encodeURIComponent(lead.id)}`}
                 className={cn('group relative flex h-[300px] overflow-hidden rounded-[22px] text-white no-underline sm:h-[400px]', pageFocus)}
               >
                 <AlbumCover album={lead} className="absolute inset-0 h-full w-full transition-transform duration-500 group-hover:scale-[1.02]" />
@@ -126,7 +126,7 @@ const Gallery = () => {
                 <ul className="grid gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
                   {visible.map((album) => (
                     <li key={album.id}>
-                      <Link to={`/gallery/${encodeURIComponent(album.id)}`} className={cn('group flex flex-col gap-2.5 rounded-[18px] text-loom-text no-underline', pageFocus)}>
+                      <Link to={`/photos/${encodeURIComponent(album.id)}`} className={cn('group flex flex-col gap-2.5 rounded-[18px] text-loom-text no-underline', pageFocus)}>
                         <span className="relative block overflow-hidden rounded-[18px]">
                           <AlbumCover album={album} className="aspect-[4/3] w-full transition-transform duration-500 group-hover:scale-[1.03]" />
                           <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-bold text-white">

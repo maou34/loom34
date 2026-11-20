@@ -392,7 +392,7 @@ const EventDetail = () => {
                   <ul className="flex flex-wrap gap-x-4 gap-y-1">
                     {eventAlbums.map((a) => (
                       <li key={a.album_id}>
-                        <Link to={`/gallery/${encodeURIComponent(a.album_id)}`} className={strongLink}>
+                        <Link to={`/photos/${encodeURIComponent(a.album_id)}`} className={strongLink}>
                           {a.title || a.album_id} →
                         </Link>
                       </li>

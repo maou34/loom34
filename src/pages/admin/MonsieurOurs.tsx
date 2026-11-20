@@ -282,7 +282,7 @@ export default function AdminMonsieurOurs() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="mo-photos">Lien « Les photos de l'élection »</Label>
-              <Input id="mo-photos" value={photosUrl} onChange={(e) => setPhotosUrl(e.target.value)} placeholder="/gallery/MONTPELL'BEAR 2026 … (par défaut : page Photos)" />
+              <Input id="mo-photos" value={photosUrl} onChange={(e) => setPhotosUrl(e.target.value)} placeholder="/photos/MONTPELL'BEAR 2026 … (par défaut : page Photos)" />
             </div>
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium">« Comment ça marche ? »</legend>

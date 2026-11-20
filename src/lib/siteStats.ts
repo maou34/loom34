@@ -98,6 +98,7 @@ export const STATIC_PAGE_LABELS: Record<string, string> = {
   "/events": "Agenda",
   "/articles": "Actualités",
   "/about": "L'asso",
+  "/photos": "Photos",
   "/gallery": "Photos",
   "/partners": "Partenaires",
   "/monsieur-ours": "Monsieur Ours",

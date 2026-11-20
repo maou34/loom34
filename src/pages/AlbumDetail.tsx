@@ -45,12 +45,12 @@ const AlbumDetail = () => {
 
       <main className={cn(container, 'flex flex-1 flex-col gap-6 pb-16 pt-4 sm:pb-[72px] sm:pt-8')}>
         <nav aria-label="Fil d'Ariane" className="hidden text-sm text-loom-text-muted sm:block">
-          <Link to="/gallery" className={cn(strongLink, 'font-semibold')}>
+          <Link to="/photos" className={cn(strongLink, 'font-semibold')}>
             Photos
           </Link>{' '}
           <span aria-hidden="true">›</span> <span aria-current="page">{album?.title ?? albumId}</span>
         </nav>
-        <Link to="/gallery" className={cn('flex min-h-11 items-center gap-1 self-start rounded-lg font-semibold text-loom-link sm:hidden', pageFocus)}>
+        <Link to="/photos" className={cn('flex min-h-11 items-center gap-1 self-start rounded-lg font-semibold text-loom-link sm:hidden', pageFocus)}>
           <ChevronLeft aria-hidden="true" size={18} /> Photos
         </Link>
 
@@ -64,7 +64,7 @@ const AlbumDetail = () => {
           <div className={cn(card, 'flex flex-col items-start gap-3 p-6')}>
             <h1 className="text-2xl font-extrabold">Album introuvable</h1>
             <p className="text-loom-text-2">Il a peut-être été renommé ou retiré.</p>
-            <Link to="/gallery" className={cn(btnSecondary, 'h-11 px-4')}>
+            <Link to="/photos" className={cn(btnSecondary, 'h-11 px-4')}>
               Voir tous les albums
             </Link>
           </div>

@@ -80,14 +80,19 @@ export default function PhotoLightbox({ photos, index, onIndexChange, albumTitle
             </div>
           </div>
 
-          <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4 sm:px-20">
+          <div className="relative min-h-0 flex-1">
+            {/* Photo en position absolue dans une zone de taille fixe : Safari (iPhone)
+                calcule mal max-h-full dans un élément flex-1 et laissait la photo
+                déborder (on n'en voyait que la moitié). */}
             {current && (
-              <img
-                key={current.id}
-                src={current.src}
-                alt={`Photo ${index! + 1} sur ${photos.length} de l'album ${albumTitle}`}
-                className="max-h-full max-w-full object-contain"
-              />
+              <div className="absolute inset-x-2 bottom-4 top-0 sm:inset-x-20">
+                <img
+                  key={current.id}
+                  src={current.src}
+                  alt={`Photo ${index! + 1} sur ${photos.length} de l'album ${albumTitle}`}
+                  className="h-full w-full object-contain"
+                />
+              </div>
             )}
             {photos.length > 1 && (
               <>

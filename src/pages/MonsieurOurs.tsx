@@ -110,7 +110,8 @@ const MonsieurOurs = () => {
   const firstYear = editions.length ? editions[editions.length - 1].year : null;
   const steps = parseSteps(settings?.monsieur_ours_steps);
   const nextYear = (current?.year ?? new Date().getFullYear()) + 1;
-  const photosUrl = settings?.monsieur_ours_photos_url || '/gallery';
+  // Les anciennes adresses /gallery/… enregistrées dans l'admin pointent vers /photos/…
+  const photosUrl = (settings?.monsieur_ours_photos_url || '/photos').replace(/^\/gallery(?=\/|$)/, '/photos');
   const photosExternal = /^https?:\/\//i.test(photosUrl);
 
   return (

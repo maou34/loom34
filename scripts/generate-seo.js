@@ -23,7 +23,7 @@ const STATIC_PAGES = [
   { path: '/events', changefreq: 'daily', priority: '0.9' },
   { path: '/articles', changefreq: 'weekly', priority: '0.9' },
   { path: '/about', changefreq: 'monthly', priority: '0.8' },
-  { path: '/gallery', changefreq: 'weekly', priority: '0.7' },
+  { path: '/photos', changefreq: 'weekly', priority: '0.7' },
   { path: '/partners', changefreq: 'monthly', priority: '0.7' },
   { path: '/monsieur-ours', changefreq: 'monthly', priority: '0.7' },
   { path: '/terms', changefreq: 'yearly', priority: '0.2' },
@@ -86,7 +86,7 @@ async function dynamicPages(warnings) {
     const albums = await getJson(`${process.env.VITE_UPLOAD_URL || UPLOAD_URL}/upload/albums`);
     for (const a of albums) {
       if (!a.id || isHiddenAlbum(a.id) || !a.image_count) continue;
-      pages.push({ path: `/gallery/${encodeURIComponent(a.id)}`, changefreq: 'yearly', priority: '0.4' });
+      pages.push({ path: `/photos/${encodeURIComponent(a.id)}`, changefreq: 'yearly', priority: '0.4' });
     }
   } catch (e) {
     warnings.push(`albums : ${e.message}`);

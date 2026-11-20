@@ -39,7 +39,9 @@ export default function ZoomableImage({ src, alt, title, className }: ComponentP
           }}
         >
           <DialogPrimitive.Title className="sr-only">{alt || 'Image en grand'}</DialogPrimitive.Title>
-          <img src={src} alt={alt ?? ''} className="max-h-full max-w-full rounded-lg object-contain" />
+          {/* Hauteur calculée sur l'écran (et non max-h-full) : Safari sur iPhone résout mal
+              les pourcentages ici et laissait l'image déborder. 8rem = marges haut + bas. */}
+          <img src={src} alt={alt ?? ''} className="max-h-[calc(100svh-8rem)] max-w-full rounded-lg object-contain" />
           <a
             href={src}
             target="_blank"

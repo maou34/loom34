@@ -14,7 +14,7 @@ export const SITE_NAV_LINKS: SiteNavLink[] = [
   { to: '/events', label: 'Agenda' },
   { to: '/about', label: 'L’asso', longLabel: 'L’asso et le bureau' },
   { to: '/monsieur-ours', label: 'Monsieur Ours' },
-  { to: '/gallery', label: 'Photos' },
+  { to: '/photos', label: 'Photos' },
   { to: '/partners', label: 'Partenaires' },
 ];
 
