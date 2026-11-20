@@ -1,0 +1,37 @@
+# Surcouche LOOM du docker-compose officiel de Supabase auto-hébergé
+# (release self-hosted/v0.8.4). Copiée dans /opt/supabase à côté de
+# docker-compose.yml et activée par COMPOSE_FILE dans /opt/supabase/.env :
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.loom.yml
+# Voir deploy/supabase/README.md.
+
+services:
+  # Seule porte d'entrée : la passerelle d'API, publiée sur 127.0.0.1 uniquement.
+  # nginx (sur l'hôte) la relaie en HTTPS sur api.lgbt-loom.fr. Ne jamais publier
+  # de port sur 0.0.0.0 : Docker contourne le pare-feu UFW.
+  api-gw:
+    ports: !override
+      - "127.0.0.1:8000:8000/tcp"
+
+  # Postgres joignable uniquement depuis le serveur lui-même (127.0.0.1:5433),
+  # pour `supabase db push --db-url …` à travers un tunnel SSH. Jamais exposé.
+  db:
+    ports:
+      - "127.0.0.1:5433:5432/tcp"
+
+  # Services non utilisés par le site : jamais démarrés (profil jamais activé).
+  # Les photos sont sur le serveur d'images, pas dans Supabase Storage ; aucun
+  # abonnement temps réel ; la base n'est pas exposée, donc pas de pooler.
+  realtime:
+    profiles: ["disabled"]
+  storage:
+    profiles: ["disabled"]
+  imgproxy:
+    profiles: ["disabled"]
+  supavisor:
+    profiles: ["disabled"]
+
+  # Secrets propres aux fonctions LOOM (HelloAsso, Gmail, Cloudflare,
+  # UptimeRobot, secrets partagés) : fichier non suivi par git, droits 600.
+  functions:
+    env_file:
+      - ./functions.env
