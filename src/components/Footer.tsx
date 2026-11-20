@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Instagram } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useExternalLinks } from '@/hooks/useSiteSettings';
 import AccessibilityMenu from './AccessibilityMenu';
 import { SITE_NAV_LINKS, SOCIAL_LINKS } from './site/navigation';
 
@@ -13,7 +12,6 @@ const footerFocus =
 
 const Footer = () => {
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
-  const { membershipUrl } = useExternalLinks();
 
   return (
     <>
@@ -21,7 +19,7 @@ const Footer = () => {
         <div aria-hidden="true" className="h-1 bg-bear" />
         <div className="mx-auto flex max-w-[1200px] flex-col gap-9 px-5 pb-6 pt-12 sm:px-8">
           <div className="flex flex-wrap gap-x-12 gap-y-8">
-            <div className="flex min-w-0 flex-[2_1_260px] flex-col gap-4">
+            <div className="flex min-w-0 flex-[1_1_160px] flex-col">
               {/* Logo en grand : il porte déjà « LOOM – Les Ours Occitanie Montpellier » */}
               <Link to="/" aria-label="LOOM – Les Ours Occitanie Montpellier, retour à l'accueil" className={cn('self-start rounded-[22px]', footerFocus)}>
                 <img
@@ -33,22 +31,6 @@ const Footer = () => {
                   className="h-32 w-32 rounded-[22px] shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:h-36 sm:w-36"
                 />
               </Link>
-              <p className="m-0 max-w-[320px]">
-                Association Bear fondée en 2017. Un espace inclusif pour les Bears et tous ceux qui aiment les ours, du XS
-                au XXXXXL.
-              </p>
-              <a
-                href={membershipUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  'flex h-11 items-center self-start rounded-xl bg-loom-yellow px-[18px] font-extrabold text-loom-on-yellow',
-                  footerFocus,
-                )}
-              >
-                Adhérer
-                <span className="sr-only"> (nouvel onglet)</span>
-              </a>
             </div>
 
             <nav aria-labelledby="footer-site" className="flex flex-[1_1_160px] flex-col gap-2">
