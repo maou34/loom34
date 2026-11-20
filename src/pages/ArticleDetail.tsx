@@ -149,8 +149,11 @@ const ArticleDetail = () => {
             </div>
           )}
 
-          <div className="prose prose-loom max-w-none sm:prose-lg prose-img:rounded-xl prose-blockquote:not-italic">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content}</ReactMarkdown>
+          <div className={cn(card, 'rounded-[18px] p-5 sm:p-6')}>
+            {/* Images de l'article : hauteur limitée, centrées */}
+            <div className="prose prose-loom max-w-none sm:prose-lg prose-blockquote:not-italic prose-img:mx-auto prose-img:max-h-[min(70vh,440px)] prose-img:w-auto prose-img:rounded-xl">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{article.content}</ReactMarkdown>
+            </div>
           </div>
         </article>
 
