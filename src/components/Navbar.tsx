@@ -41,9 +41,6 @@ const Navbar = () => {
                 height={56}
                 className="h-11 w-11 rounded-xl xl:h-14 xl:w-14 xl:rounded-[14px]"
               />
-              <span aria-hidden="true" className="text-[19px] font-extrabold tracking-[0.03em] xl:hidden">
-                LOOM
-              </span>
             </Link>
 
             <nav aria-label="Menu principal" className="hidden min-w-0 flex-1 flex-wrap gap-1 xl:flex">
