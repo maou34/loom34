@@ -1,7 +1,93 @@
+# Supabase local (`supabase start`, Docker) — voir documents/docker/PLAN.md.
+# Ces réglages ne concernent que la copie locale ; ceux de la prod restent dans
+# le tableau de bord Supabase (Auth → URL Configuration, SMTP, modèles d'e-mails).
+project_id = "loom34"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+# Même version majeure que la prod (supabase/.temp/postgres-version)
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+# Pas utilisés par le site (les photos sont sur le serveur d'images, aucun
+# abonnement temps réel) : coupés pour alléger la copie locale.
+[realtime]
+enabled = false
+
+[storage]
+enabled = false
+
+[analytics]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+# Boîte mail de test : tous les e-mails envoyés en local (mot de passe oublié,
+# invitations) arrivent sur http://127.0.0.1:54324, jamais chez un vrai destinataire.
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["http://localhost:8080/auth/update-password", "http://127.0.0.1:8080/auth/update-password"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+# Inscriptions publiques fermées, comme en prod (comptes créés par invitation)
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 8
+
+[auth.email]
+# ⚠ Pour la CLI, ce réglage active la connexion par e-mail tout entière : à false,
+# plus personne ne peut se connecter. Les inscriptions restent fermées par
+# [auth] enable_signup = false ci-dessus.
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+max_frequency = "1s"
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8083
+deno_version = 2
+
+# Toutes les fonctions vérifient elles-mêmes l'appelant (session admin, secret
+# partagé ou paramètre ?secret= pour le webhook HelloAsso).
 [functions.admin-create-user]
 verify_jwt = false
+
 [functions.sync-events]
 verify_jwt = false
 
 [functions.helloasso-webhook]
+verify_jwt = false
+
+[functions.admin-users]
+verify_jwt = false
+
+[functions.notify-new-message]
+verify_jwt = false
+
+[functions.site-stats]
 verify_jwt = false
