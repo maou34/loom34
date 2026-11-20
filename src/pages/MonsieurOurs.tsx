@@ -13,6 +13,13 @@ import { DEFAULT_CTA, DEFAULT_INTRO, cubsOf, parseSteps, useEditions, type Editi
 
 const FALLBACK_GROUP_PHOTO = '/gallery/images/Mr-ours-2026_gagnants.jpg';
 
+/**
+ * Portraits du palmarès : le cadre (souvent plus large que haut) recadre des
+ * photos verticales où le visage est dans le tiers supérieur. Centrer l'image
+ * montrait l'écharpe et coupait le visage : on cadre à 10 % du haut.
+ */
+const portraitImg = 'absolute inset-0 h-full w-full object-cover object-[50%_10%]';
+
 // Fond toujours sombre : anneau de focus jaune
 const darkFocus =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-loom-yellow focus-visible:ring-offset-2 focus-visible:ring-offset-loom-band-dark-bg';
@@ -46,7 +53,7 @@ function EditionRow({ edition, current }: { edition: Edition; current: boolean }
         <figure className="col-span-2 m-0 flex flex-col overflow-hidden rounded-[18px] bg-loom-band-dark-bg text-white">
           <div className="relative h-[300px] lg:h-auto lg:min-h-[320px] lg:flex-1">
             {edition.image ? (
-              <img src={edition.image} alt={`${edition.title}, Monsieur Ours ${edition.year}`} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+              <img src={edition.image} alt={`${edition.title}, Monsieur Ours ${edition.year}`} loading="lazy" className={portraitImg} />
             ) : (
               <PhotoPlaceholder dark />
             )}
@@ -61,7 +68,7 @@ function EditionRow({ edition, current }: { edition: Edition; current: boolean }
           <figure key={i} className={cn(card, 'm-0 flex flex-col overflow-hidden rounded-[18px]')}>
             <div className="relative aspect-[4/5] lg:aspect-auto lg:min-h-[320px] lg:flex-1">
               {cub.photo ? (
-                <img src={cub.photo} alt={`${cub.name}, ourson ${edition.year}`} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                <img src={cub.photo} alt={`${cub.name}, ourson ${edition.year}`} loading="lazy" className={portraitImg} />
               ) : (
                 <PhotoPlaceholder />
               )}
