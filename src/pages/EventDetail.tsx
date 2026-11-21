@@ -77,16 +77,19 @@ const HelloAssoWidget = ({ ticketing, title }: { ticketing: TicketingInfo; title
   );
 };
 
-/** Ligne d'info du bloc mobile (icône + intitulé + détail). */
+/**
+ * Ligne d'info du bloc mobile (icône + intitulé + détail). Dans un <dl>, un <div>
+ * ne peut contenir que des <dt>/<dd> : l'icône est donc dans le <dt> (avec
+ * l'intitulé, lu seulement par les lecteurs d'écran) et la grille place les <dd>
+ * dans la seconde colonne.
+ */
 const InfoRow = ({ icon, term, children }: { icon: ReactNode; term: string; children: ReactNode }) => (
-  <div className="flex gap-3">
-    <span aria-hidden="true" className="mt-0.5 text-loom-accent-text">
-      {icon}
-    </span>
-    <div className="flex min-w-0 flex-col">
-      <dt className="sr-only">{term}</dt>
-      {children}
-    </div>
+  <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 [&>dd]:col-start-2">
+    <dt className="row-span-4 mt-0.5 text-loom-accent-text">
+      <span aria-hidden="true">{icon}</span>
+      <span className="sr-only">{term}</span>
+    </dt>
+    {children}
   </div>
 );
 
