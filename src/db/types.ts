@@ -497,6 +497,31 @@ export type Database = {
           }
         ]
       }
+      security_audit_runs: {
+        // Écrite seulement par public.security_audit_run() (Edge Function security-audit)
+        Row: {
+          id: number
+          ran_at: string
+          source: "cron" | "manuel"
+          status: "ok" | "warning" | "critical"
+          findings: Json
+        }
+        Insert: {
+          id?: never
+          ran_at?: string
+          source?: "cron" | "manuel"
+          status: "ok" | "warning" | "critical"
+          findings?: Json
+        }
+        Update: {
+          id?: never
+          ran_at?: string
+          source?: "cron" | "manuel"
+          status?: "ok" | "warning" | "critical"
+          findings?: Json
+        }
+        Relationships: []
+      }
       contact_tickets: {
         Row: {
           id: number

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarDays, ChevronRight, FileText, Plus, Ticket } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import HealthCard from "@/components/admin/dashboard/HealthCard";
+import SecurityCard from "@/components/admin/dashboard/SecurityCard";
 import VisitsCard from "@/components/admin/dashboard/VisitsCard";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -167,6 +168,9 @@ export default function AdminDashboard() {
           <VisitsCard className={card} />
           <HealthCard className={card} />
         </div>
+
+        {/* Audit de sécurité automatique de la base (Edge Function security-audit) */}
+        <SecurityCard className={card} />
 
         {error ? (
           <p role="alert" className="rounded-xl border border-loom-border bg-loom-surface-2 p-4 text-sm">

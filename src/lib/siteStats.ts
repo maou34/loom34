@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UPLOAD_URL } from "@/config";
 import { db } from "@/db/client";
 import { uploadAuthHeaders } from "@/lib/uploadAuth";
@@ -105,3 +105,46 @@ export const STATIC_PAGE_LABELS: Record<string, string> = {
   "/terms": "Conditions d'utilisation",
   "/legal-notice": "Mentions légales",
 };
+
+// ---------------------------------------------------------------------------
+// Audit de sécurité (table security_audit_runs, Edge Function security-audit)
+
+export type AuditFinding = { level: "critical" | "warning" | "info"; code: string; title: string; detail: string };
+export type AuditRun = { id: number; ran_at: string; source: "cron" | "manuel"; status: "ok" | "warning" | "critical"; findings: AuditFinding[] };
+
+/** Dernier audit ; null = aucun audit encore, "absent" = migration pas encore appliquée. */
+export function useLatestSecurityAudit() {
+  return useQuery({
+    queryKey: ["admin", "securityAudit"],
+    staleTime: STALE_MS,
+    retry: 1,
+    queryFn: async (): Promise<AuditRun | null | "absent"> => {
+      const { data, error } = await db.from("security_audit_runs").select("*").order("ran_at", { ascending: false }).limit(1).maybeSingle();
+      if (error) {
+        if (error.code === "42P01" || error.code === "PGRST205") return "absent";
+        throw new Error(error.message);
+      }
+      return data ? ({ ...data, findings: (data.findings ?? []) as AuditFinding[] } as AuditRun) : null;
+    },
+  });
+}
+
+/** Relance l'audit (Edge Function, réservée aux admins) et met à jour la carte. */
+export function useRunSecurityAudit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<AuditRun> => {
+      const { data: session } = await db.auth.getSession();
+      const token = session.session?.access_token;
+      if (!token) throw new Error("Session expirée : reconnectez-vous.");
+      const { data, error } = await db.functions.invoke("security-audit", { body: {}, headers: { Authorization: `Bearer ${token}` } });
+      if (error) {
+        const context = (error as { context?: Response }).context;
+        const message = await context?.json?.().then((b: { error?: string }) => b?.error).catch(() => undefined);
+        throw new Error(message || error.message);
+      }
+      return (data as { run: AuditRun }).run;
+    },
+    onSuccess: (run) => queryClient.setQueryData(["admin", "securityAudit"], run),
+  });
+}
