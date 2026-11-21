@@ -11,6 +11,23 @@ import sharp from 'sharp';
  */
 export const MAX_DIMENSION = 2400;
 
+/** Formats acceptés, lus dans le contenu du fichier (et non dans le type annoncé par le navigateur). */
+const ACCEPTED_FORMATS = new Set(['jpeg', 'png', 'gif', 'webp']);
+
+/**
+ * Format réel de l'image d'après son contenu, ou null si ce n'est pas une image
+ * jpg/png/gif/webp lisible. Le type MIME et l'extension sont fournis par le
+ * client : un fichier texte renommé « x.jpg » passait le filtre de multer.
+ */
+export async function detectImageFormat(buffer) {
+  try {
+    const { format } = await sharp(buffer).metadata();
+    return ACCEPTED_FORMATS.has(format) ? format : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function compressImage(buffer, ext) {
   const extLower = ext.toLowerCase();
   try {

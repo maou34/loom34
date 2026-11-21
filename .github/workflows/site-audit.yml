@@ -19,8 +19,8 @@ jobs:
     name: Failles des dépendances
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       # npm audit se contente de package-lock.json : pas besoin d'installer
@@ -31,8 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       # Chrome est préinstallé sur les machines ubuntu-latest de GitHub
@@ -43,8 +43,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Mesure et seuils (lighthouserc.json)
@@ -62,7 +62,7 @@ jobs:
             const md = ["## Lighthouse (mobile)", "", "| Page | Performance | Accessibilité | Bonnes pratiques | SEO |", "|---|---|---|---|---|", ...rows, "", "Seuils : accessibilité ≥ 95, bonnes pratiques ≥ 90, SEO ≥ 90 (bloquants) ; performance ≥ 25 (alerte)."].join("\n");
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: rapports-lighthouse

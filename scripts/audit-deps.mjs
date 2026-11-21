@@ -15,6 +15,9 @@ const ACCEPTED = {
   // zod n'est utilisé que pour valider les petits formulaires de connexion / mot de passe
   // dans le navigateur : pas de « collection géante » possible. Correctif = zod 4 (majeur).
   "GHSA-mrhx-c7xc-m3w5": "zod : formulaires d'authentification seulement, passage à zod 4 à planifier (revoir le 01/03/2027)",
+  // Les deux avis react-router 6 restants se corrigent en v7 (majeur) et ne s'appliquent pas ici :
+  "GHSA-wrjc-x8rr-h8h6": "react-router : le seul paramètre de redirection (?redirect=) passe par safeAdminRedirect(), qui refuse \\ et // ; passage à react-router 7 à planifier (revoir le 01/03/2027)",
+  "GHSA-337j-9hxr-rhxg": "react-router : concerne l'hydratation SSR, le site est rendu uniquement dans le navigateur (revoir le 01/03/2027)",
 };
 
 const SEVERITIES = ["info", "low", "moderate", "high", "critical"];

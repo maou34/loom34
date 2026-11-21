@@ -1,6 +1,8 @@
 # Mises à jour des dépendances proposées par GitHub (pull requests).
-# Les failles de sécurité sont signalées en plus, dès leur publication, par les
-# « Dependabot alerts » (Settings → Code security, à activer une fois).
+# Les failles de sécurité sont signalées dès leur publication (Dependabot alerts,
+# Settings → Advanced Security) ; leurs correctifs arrivent groupés en une PR.
+# Les versions majeures (vite, react-router, zod…) ne sont pas proposées : elles
+# demandent une migration, décidée et faite à la main.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -8,9 +10,17 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
-      # Une seule PR par mois pour toutes les mises à jour mineures/correctives
+      # Toutes les corrections de failles dans une seule PR
+      securite:
+        applies-to: security-updates
+        patterns: ["*"]
+      # Une seule PR par mois pour les mises à jour mineures / correctives
       mineures:
+        applies-to: version-updates
         update-types: [minor, patch]
     labels: [dependances]
 
@@ -18,4 +28,7 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
     labels: [dependances]

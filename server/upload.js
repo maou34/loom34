@@ -4,7 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { promises as fsp } from 'fs';
-import { compressImage } from './imageCompression.js';
+import { compressImage, detectImageFormat } from './imageCompression.js';
 import { authConfigured, requireAdmin } from './auth.js';
 import { serverStatus } from './status.js';
 
@@ -138,6 +138,13 @@ async function uploadHandler(req, res) {
 
     const files = req.files || [];
     if (!files.length) return res.status(400).json({ error: 'No files' });
+
+    // Contenu vérifié avant toute écriture : un seul fichier qui n'est pas une vraie image refuse tout l'envoi
+    for (const file of files) {
+      if (!(await detectImageFormat(file.buffer))) {
+        return res.status(400).json({ error: `« ${path.basename(file.originalname || 'fichier')} » n'est pas une image JPG, PNG, GIF ou WebP valide` });
+      }
+    }
 
     const items = [];
     for (const file of files) {
