@@ -72,13 +72,10 @@ export default defineConfig(({ mode }) => ({
           "query-vendor": ["@tanstack/react-query"],
           "supabase-vendor": ["@supabase/supabase-js"],
           "markdown-vendor": ["react-markdown", "remark-gfm"],
-
-          // Admin (back-office)
-          admin: [
-            "src/pages/admin/Dashboard.tsx",
-            "src/pages/admin/Articles.tsx",
-            "src/pages/admin/Events.tsx",
-          ],
+          // Pas de groupe « admin » ici : les pages admin sont chargées à la demande
+          // (lazy dans App.tsx). Un groupe manuel y attirait aussi les modules partagés
+          // avec le site public, et index.html préchargeait alors tout l'admin (1,2 Mo)
+          // pour chaque visiteur.
         },
       },
     },

@@ -52,7 +52,8 @@ function certDaysLeft(host) {
   });
 }
 
-for (const host of [SITE_HOST, new URL(UPLOAD).host]) {
+// (un build local servi en http n'a pas de certificat : seul celui du serveur d'images est alors vérifié)
+for (const host of SITE.startsWith("https:") ? [SITE_HOST, new URL(UPLOAD).host] : [new URL(UPLOAD).host]) {
   try {
     const days = await certDaysLeft(host);
     if (days < 14) errors.push(`Certificat HTTPS de ${host} : expire dans ${days} jour(s) — le renouvellement automatique (certbot) ne fonctionne plus ?`);
