@@ -1,0 +1,27 @@
+# Vérification à chaque push sur main et à chaque pull request : lint, types, build.
+# (Sans les variables Supabase : le build passe quand même, le sitemap est seulement réduit aux pages fixes.)
+name: Vérification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verification:
+    name: Lint, types et build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit -p tsconfig.app.json
+      - run: npm run build

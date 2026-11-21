@@ -25,5 +25,11 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-unused-vars": "off",
     },
+  },
+  {
+    // Composants shadcn/ui (générés) : ils exportent aussi leurs variantes (buttonVariants…),
+    // ce qui ne gêne que le rechargement à chaud en développement
+    files: ["src/components/ui/**/*.tsx"],
+    rules: { "react-refresh/only-export-components": "off" },
   }
 );

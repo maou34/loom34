@@ -109,12 +109,6 @@ export const InternalLinks: React.FC<InternalLinksProps> = ({
   );
 };
 
-// Hook pour obtenir les liens internes par catégorie
-export const useInternalLinks = (category?: 'primary' | 'secondary' | 'tertiary') => {
-  return category 
-    ? INTERNAL_LINKS.filter(link => link.category === category)
-    : INTERNAL_LINKS;
-};
 
 // Composant pour les breadcrumbs automatiques
 interface BreadcrumbsProps {

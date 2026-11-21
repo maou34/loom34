@@ -1,5 +1,3 @@
-[functions.admin-create-user]
-verify_jwt = false
 [functions.sync-events]
 verify_jwt = false
 

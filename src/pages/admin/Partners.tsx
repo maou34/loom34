@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -130,9 +131,9 @@ export default function AdminPartners() {
       setSelectedPartner(null);
       fetchPartners();
       queryClient.invalidateQueries({ queryKey: ['partners'] });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving partner:", error);
-      toast.error("Erreur lors de l'enregistrement: " + error.message);
+      toast.error("Erreur lors de l'enregistrement: " + errorMessage(error));
     }
   };
 
@@ -150,9 +151,9 @@ export default function AdminPartners() {
       setDeleteDialogOpen(false);
       setSelectedPartner(null);
       fetchPartners();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting partner:", error);
-      toast.error("Erreur lors de la suppression: " + error.message);
+      toast.error("Erreur lors de la suppression: " + errorMessage(error));
     }
   };
 

@@ -191,7 +191,7 @@ export function generateEventStructuredData(event: {
   updateStructuredData('event', structuredData);
 }
 
-function updateStructuredData(id: string, data: any) {
+function updateStructuredData(id: string, data: Record<string, unknown>) {
   let script = document.querySelector(`script[data-structured-data="${id}"]`);
   
   if (script) {

@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
@@ -85,11 +86,12 @@ const formatDate = (dateStr: string) => {
 };
 
 // 23505 = violation d'unicité (index events_helloasso_form_slug_key, entre autres).
-const describeSaveError = (error: { code?: string; message: string }) => {
-  if (error.code === '23505' && error.message.includes('helloasso_form_slug')) {
+const describeSaveError = (error: unknown) => {
+  const code = error && typeof error === 'object' && 'code' in error ? (error as { code?: unknown }).code : undefined;
+  if (code === '23505' && errorMessage(error).includes('helloasso_form_slug')) {
     return "ce formulaire HelloAsso est déjà rattaché à un autre événement";
   }
-  return error.message;
+  return errorMessage(error);
 };
 
 // "" → null (pas de jauge) ; entier > 0 → nombre ; sinon undefined (invalide).
@@ -277,9 +279,9 @@ export default function AdminEvents() {
       if (error) throw error;
       setEvents(data || []);
       setFilteredEvents(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching events:", error);
-      toast.error("Erreur lors du chargement des événements: " + error.message);
+      toast.error("Erreur lors du chargement des événements: " + errorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -388,7 +390,7 @@ export default function AdminEvents() {
       toast.success("Événement créé avec succès");
       fetchEvents();
       setDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating event:", error);
       toast.error("Erreur lors de la création de l'événement: " + describeSaveError(error));
     }
@@ -459,7 +461,7 @@ export default function AdminEvents() {
       toast.success("Événement mis à jour avec succès");
       fetchEvents();
       setDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating event:", error);
       toast.error("Erreur lors de la mise à jour de l'événement: " + describeSaveError(error));
     }
@@ -487,7 +489,7 @@ export default function AdminEvents() {
     } catch (error: unknown) {
       setPublished(event.published);
       console.error("Error toggling event publication:", error);
-      toast.error("Erreur lors du changement de statut : " + (error instanceof Error ? error.message : String(error)));
+      toast.error("Erreur lors du changement de statut : " + errorMessage(error));
     } finally {
       setTogglingId(null);
     }
@@ -507,9 +509,9 @@ export default function AdminEvents() {
       toast.success("Événement supprimé avec succès");
       fetchEvents();
       setDeleteDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting event:", error);
-      toast.error("Erreur lors de la suppression de l'événement: " + error.message);
+      toast.error("Erreur lors de la suppression de l'événement: " + errorMessage(error));
     }
   };
 

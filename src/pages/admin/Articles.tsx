@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/utils";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { db } from "@/db/client";
@@ -159,9 +160,9 @@ export default function AdminArticles() {
 
       if (error) throw error;
       setArticles(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching articles:", error);
-      toast.error("Erreur lors du chargement des articles: " + error.message);
+      toast.error("Erreur lors du chargement des articles: " + errorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -261,9 +262,9 @@ export default function AdminArticles() {
       toast.success("Article créé avec succès");
       fetchArticles();
       setDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating article:", error);
-      toast.error("Erreur lors de la création de l'article: " + error.message);
+      toast.error("Erreur lors de la création de l'article: " + errorMessage(error));
     }
   };
 
@@ -303,9 +304,9 @@ export default function AdminArticles() {
       toast.success("Article mis à jour avec succès");
       fetchArticles();
       setDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating article:", error);
-      toast.error("Erreur lors de la mise à jour de l'article: " + error.message);
+      toast.error("Erreur lors de la mise à jour de l'article: " + errorMessage(error));
     }
   };
 
@@ -331,9 +332,9 @@ export default function AdminArticles() {
       toast.success("Article supprimé avec succès");
       fetchArticles();
       setDeleteDialogOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting article:", error);
-      toast.error("Erreur lors de la suppression de l'article: " + error.message);
+      toast.error("Erreur lors de la suppression de l'article: " + errorMessage(error));
     }
   };
 
@@ -387,7 +388,7 @@ export default function AdminArticles() {
       });
     } catch (error: unknown) {
       setPublished(article.published);
-      toast.error("Erreur lors du changement de statut : " + (error instanceof Error ? error.message : String(error)));
+      toast.error("Erreur lors du changement de statut : " + errorMessage(error));
     } finally {
       setTogglingId(null);
     }

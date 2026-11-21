@@ -205,7 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Hook
+// Hook (à côté de son contexte, motif habituel ; ne gêne que le rechargement à chaud)
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within an AuthProvider");

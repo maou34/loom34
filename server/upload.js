@@ -317,8 +317,7 @@ app.get('/upload/status', requireAdmin, async (req, res) => {
 });
 
 // Erreurs (fichier refusé, taille dépassée, CORS…) -> réponse JSON propre
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
+app.use((err, req, res, next) => { // 4 paramètres obligatoires pour un gestionnaire d'erreurs Express
   // Envoi coupé avant la fin (connexion perdue, ou Safari sur iPhone qui tronquait
   // les photos converties) : erreur du côté de l'envoi, pas du serveur
   if (/Unexpected end of form/i.test(err.message || '')) {

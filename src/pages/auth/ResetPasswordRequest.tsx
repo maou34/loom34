@@ -47,9 +47,9 @@ export default function ResetPasswordRequest() {
       toast.success(
         "Si un compte existe, un email de réinitialisation vient d'être envoyé."
       );
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error(e?.message ?? "Impossible d'envoyer l'email de réinitialisation.");
+      toast.error((e instanceof Error && e.message) || "Impossible d'envoyer l'email de réinitialisation.");
     } finally {
       setIsLoading(false);
     }
