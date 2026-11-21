@@ -9,7 +9,7 @@ import RegularMeetupsDialog from "@/components/admin/RegularMeetupsDialog";
 import PublishToggle from "@/components/admin/PublishToggle";
 import { ClearFiltersButton, FilterSelect } from "@/components/admin/ListFilters";
 import { ALL, useUrlFilters } from "@/lib/urlFilters";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { slugify } from "@/lib/slug";
 import { 

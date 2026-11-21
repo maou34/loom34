@@ -5,7 +5,7 @@ import { db } from "@/db/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Edit, Trash2, Eye, FileText, Search, MoreHorizontal, CheckCircle2, XCircle, Copy, Image as ImageIcon } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 import { getImageUrl } from "@/config";
 import { toast } from "sonner";
 import PublishToggle from "@/components/admin/PublishToggle";

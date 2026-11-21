@@ -51,7 +51,7 @@ Un espace d'administration permet au bureau de tout gérer sans toucher au code.
 
 | Élément | Technologie |
 |---|---|
-| Site (SPA) | React 18, TypeScript, Vite, React Router, TanStack Query, Tailwind CSS, shadcn/ui (Radix) |
+| Site (SPA) | React 18, TypeScript, Vite, React Router 7, TanStack Query, Tailwind CSS, shadcn/ui (Radix) |
 | Données et comptes | [Supabase](https://supabase.com) : PostgreSQL avec règles d'accès (RLS), Auth, Edge Functions (Deno) |
 | Photos | Serveur Express dédié (`server/upload.js`), sur `upload.lgbt-loom.fr`, et non Supabase Storage |
 | Billetterie | [HelloAsso](https://www.helloasso.com). Le site ne stocke que des compteurs (places vendues), jamais de données de participants |

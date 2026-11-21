@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import { updatePageSEO, generateOrganizationStructuredData, SEOProps } from '@/lib/seo';
 
 export function useSEO(seoProps: Partial<SEOProps>) {

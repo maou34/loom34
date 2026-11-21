@@ -1,8 +1,8 @@
 /**
  * Affiché seulement au tout premier chargement d'une page (ouverture du site ou
  * page pas encore téléchargée). Lors d'un changement de page, la page actuelle
- * reste à l'écran jusqu'à ce que la suivante soit prête (future v7_startTransition
- * de BrowserRouter, App.tsx) : plus de clignotement. Fond aux couleurs du thème,
+ * reste à l'écran jusqu'à ce que la suivante soit prête (react-router 7 enveloppe
+ * les navigations dans startTransition) : plus de clignotement. Fond aux couleurs du thème,
  * avec une fine barre de progression pour les connexions lentes.
  */
 const PageLoader = () => (

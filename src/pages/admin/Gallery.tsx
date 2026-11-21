@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { uploadAuthHeaders } from "@/lib/uploadAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           // Vendor chunks
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          "react-vendor": ["react", "react-dom", "react-router"],
 
           // IMPORTANT:
           // Mettre framer-motion dans un chunk dédié pour éviter l'erreur runtime :

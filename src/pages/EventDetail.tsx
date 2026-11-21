@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useSlugRedirect } from '@/lib/slug';
 import { useQuery } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';

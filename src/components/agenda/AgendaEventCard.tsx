@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import type { Tables } from '@/db/types';
 import { cn } from '@/lib/utils';
 import { dateBlockParts, formatShortDateTime, isRecurringApero } from '@/lib/eventDates';

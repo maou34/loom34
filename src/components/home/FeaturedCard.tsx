@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { CalendarPlus } from 'lucide-react';
 import type { Tables } from '@/db/types';
 import { cn } from '@/lib/utils';

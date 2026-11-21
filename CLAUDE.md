@@ -26,7 +26,7 @@ There is no test suite configured in this repo. `npm run lint` and `npx tsc --no
 
 ## Architecture
 
-React 18 + TypeScript SPA built with Vite, Tailwind + shadcn/ui (Radix), React Router v6, and TanStack Query. Supabase (Postgres + Auth) is the backend; there is no custom API server for app data.
+React 18 + TypeScript SPA built with Vite, Tailwind + shadcn/ui (Radix), React Router 7 (declarative `BrowserRouter` mode, imports from `react-router` — `react-router-dom` was dropped on 21/11/2026), and TanStack Query. Supabase (Postgres + Auth) is the backend; there is no custom API server for app data.
 
 ### Data layer: two Supabase clients
 

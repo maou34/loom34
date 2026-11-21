@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import LegalPage from '@/components/site/LegalPage';
 import { ASSOCIATION as A } from '@/lib/association';
 import useSEO from '@/hooks/useSEO';

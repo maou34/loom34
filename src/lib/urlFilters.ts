@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 /** Valeur « pas de filtre » des listes déroulantes (Radix Select refuse ""). */
 export const ALL = "all";

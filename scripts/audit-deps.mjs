@@ -12,9 +12,7 @@ import { appendFileSync } from "node:fs";
 
 /** Avis GHSA acceptés : { id: "raison (revoir le JJ/MM/AAAA)" } */
 const ACCEPTED = {
-  // Les deux avis react-router 6 restants se corrigent en v7 (majeur) et ne s'appliquent pas ici :
-  "GHSA-wrjc-x8rr-h8h6": "react-router : le seul paramètre de redirection (?redirect=) passe par safeAdminRedirect(), qui refuse \\ et // ; passage à react-router 7 à planifier (revoir le 01/03/2027)",
-  "GHSA-337j-9hxr-rhxg": "react-router : concerne l'hydratation SSR, le site est rendu uniquement dans le navigateur (revoir le 01/03/2027)",
+  // (aucun pour l'instant — zod 4 et react-router 7 ont fermé les trois derniers, 21/11/2026)
 };
 
 const SEVERITIES = ["info", "low", "moderate", "high", "critical"];

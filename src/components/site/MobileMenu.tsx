@@ -1,5 +1,5 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router';
 import { ChevronRight, ExternalLink, Facebook, Instagram, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useExternalLinks } from '@/hooks/useSiteSettings';
