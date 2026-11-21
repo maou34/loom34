@@ -73,6 +73,15 @@ function uploadEndpoint(pathname: string) {
 const HIDDEN_ALBUM_IDS = new Set(["images", "unclassified"]);
 const HIDDEN_ALBUM_PREFIXES = ["tip"]; // masquera tip*, tip-2025, tipTest, etc.
 
+/**
+ * Nom de dossier d'un nouvel album : espaces en trop retirés (un espace final avait
+ * créé un doublon invisible) et « / » ou « \ » remplacés, sinon le serveur ne
+ * gardait que la fin du nom (« Soirée 21/11/2026 » devenait l'album « 2026 »).
+ */
+function cleanAlbumName(raw: string) {
+  return raw.replace(/[\\/]+/g, "-").replace(/\s+/g, " ").trim();
+}
+
 function isHiddenAlbumId(id: string) {
   if (HIDDEN_ALBUM_IDS.has(id)) return true;
   return HIDDEN_ALBUM_PREFIXES.some((prefix) => id.startsWith(prefix));
@@ -142,21 +151,17 @@ export default function Gallery() {
     if (unclassified) {
       setViewUnclassified(true);
       setSelectedAlbum(null);
-    } else if (visibleAlbums.length > 0) {
-      // Album demandé, sinon (absent ou supprimé) le premier : jamais d'écran sans album
-      // sélectionné, où l'import partirait dans « Non classées » à l'insu de l'admin.
-      setSelectedAlbum(visibleAlbums.find((a) => a.id === albumId) ?? visibleAlbums[0]);
+    } else {
+      // Aucun album ouvert d'office : l'admin choisit (ou crée) l'album avant d'importer.
+      // Album inconnu (supprimé, adresse ancienne) = rien de sélectionné, et l'import est
+      // alors indisponible : jamais de photos envoyées dans un album par défaut à son insu.
+      setSelectedAlbum(visibleAlbums.find((a) => a.id === albumId) ?? null);
       setViewUnclassified(false);
-    } else if (!isLoadingAlbums) {
-      setViewUnclassified(true);
-      setSelectedAlbum(null);
     }
-  }, [searchParams, visibleAlbums, isLoadingAlbums]);
+  }, [searchParams, visibleAlbums]);
 
-  // Mobile : la pastille de l'album affiché reste visible dans la liste défilante
-  useEffect(() => {
-    document.querySelector<HTMLElement>('#albums-list [aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [selectedAlbum?.id, viewUnclassified]);
+  /** Album où partira un import ; null = aucun choisi */
+  const uploadTarget = viewUnclassified ? "unclassified" : selectedAlbum?.id ?? null;
 
   // Filter images based on search
   const filteredImages = images.filter((img) =>
@@ -166,21 +171,31 @@ export default function Gallery() {
   // --- Mutations ---
 
   const createAlbumMutation = useMutation({
-    mutationFn: async (title: string) => {
+    mutationFn: async (rawTitle: string): Promise<{ id: string; title: string }> => {
+      const title = cleanAlbumName(rawTitle);
+      if (!title) throw new Error("Le nom de l'album est vide.");
+      if (albums.some((a) => a.id.trim().toLowerCase() === title.toLowerCase())) {
+        throw new Error(`Un album « ${title} » existe déjà.`);
+      }
       const res = await fetch(uploadEndpoint("/upload/albums"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await uploadAuthHeaders()) },
         body: JSON.stringify({ title }),
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Failed to create album");
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ? `${body.error} (HTTP ${res.status})` : `Création impossible (HTTP ${res.status})`);
+      }
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
+    onSuccess: async (album) => {
+      await queryClient.invalidateQueries({ queryKey: ["galleryAlbums"] });
       setIsCreateAlbumOpen(false);
       setAlbumForm({ title: "" });
-      toast({ title: "Album créé avec succès" });
+      // On ouvre le nouvel album, prêt à recevoir les photos
+      setSearchParams({ albumId: album.id });
+      toast({ title: `Album « ${album.title} » créé`, description: "Vous pouvez maintenant y importer les photos." });
     },
     onError: (err: Error) =>
       toast({ title: "Erreur", description: err.message, variant: "destructive" }),
@@ -255,6 +270,10 @@ export default function Gallery() {
   };
 
   const handleDropFiles = async (files: FileList) => {
+    if (!uploadTarget) {
+      toast({ title: "Choisissez d'abord un album", description: "Les photos sont importées dans l'album affiché.", variant: "destructive" });
+      return;
+    }
     setIsUploading(true);
     setUploadFeedback(`Import de ${files.length} photo${files.length > 1 ? "s" : ""} en cours…`);
     try {
@@ -263,7 +282,7 @@ export default function Gallery() {
         if (file.type?.startsWith("image/")) form.append("files", file);
       });
 
-      const albumId = selectedAlbum?.id || "unclassified";
+      const albumId = uploadTarget;
 
       // FIX CORS: slash final AVANT le ?
       const url = uploadEndpoint(`/upload/?albumId=${encodeURIComponent(albumId)}`);
@@ -275,7 +294,10 @@ export default function Gallery() {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error(`Upload échoué (${res.status})`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Upload échoué (HTTP ${res.status})`);
+      }
 
       setUploadFeedback("Import terminé !");
       queryClient.invalidateQueries({ queryKey: ["galleryImages"] });
@@ -308,7 +330,7 @@ export default function Gallery() {
     }
   };
 
-  const currentTitle = viewUnclassified ? "Non classées" : selectedAlbum?.title ?? "Galerie";
+  const currentTitle = viewUnclassified ? "Non classées" : selectedAlbum?.title ?? "Aucun album choisi";
   const photoCount = (n: number) => `${n} photo${n > 1 ? "s" : ""}`;
   const unclassifiedCount = albums.find((a) => a.id === "unclassified")?.image_count ?? 0;
   const albumEntries = [
@@ -331,7 +353,12 @@ export default function Gallery() {
     <AdminLayout
       title="Galerie photos"
       actions={
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+        <Button
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading || !uploadTarget}
+          title={uploadTarget ? undefined : "Choisissez d'abord un album"}
+        >
           <Upload className="h-4 w-4 sm:mr-2" />
           <span className="sr-only sm:not-sr-only">Importer des photos</span>
         </Button>
@@ -351,7 +378,7 @@ export default function Gallery() {
         }}
       />
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        {/* Albums : colonne sur grand écran, pastilles défilantes sur mobile */}
+        {/* Albums : colonne sur grand écran, liste déroulante sur mobile */}
         <aside aria-labelledby="h-albums" className="flex min-w-0 flex-col gap-2 lg:sticky lg:top-6 lg:w-64 lg:flex-none">
           <h2 id="h-albums" className="text-xs font-bold uppercase tracking-[0.06em] text-loom-text-muted">
             Albums
@@ -359,21 +386,48 @@ export default function Gallery() {
           {isLoadingAlbums ? (
             <div className="flex gap-2 lg:flex-col">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-10 w-32 rounded-[10px] lg:w-full" />
+                <Skeleton key={i} className="h-10 w-full rounded-[10px]" />
               ))}
             </div>
           ) : (
-            <ul id="albums-list" className="flex gap-2 overflow-x-auto pb-1 lg:max-h-[calc(100vh-220px)] lg:flex-col lg:gap-1 lg:overflow-y-auto lg:overflow-x-visible">
+            <>
+            {/* Mobile : liste déroulante native + bouton de création toujours visible */}
+            <div className="flex gap-2 lg:hidden">
+              <label className="min-w-0 flex-1">
+                <span className="sr-only">Album affiché</span>
+                <select
+                  value={viewUnclassified ? "unclassified" : selectedAlbum?.id ?? ""}
+                  onChange={(e) => {
+                    const entry = albumEntries.find((a) => a.key === e.target.value);
+                    entry?.select();
+                  }}
+                  className="h-11 w-full rounded-[10px] border border-loom-border-strong bg-loom-surface px-3 text-sm font-semibold text-loom-text"
+                >
+                  <option value="" disabled>
+                    Choisir un album…
+                  </option>
+                  {albumEntries.map((entry) => (
+                    <option key={entry.key} value={entry.key}>
+                      {entry.title} ({entry.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button variant="outline" className="h-11 flex-none" onClick={openCreateAlbum}>
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="sr-only sm:not-sr-only">Nouvel album</span>
+              </Button>
+            </div>
+            <ul id="albums-list" className="hidden lg:flex lg:max-h-[calc(100vh-220px)] lg:flex-col lg:gap-1 lg:overflow-y-auto">
               {albumEntries.map((entry) => (
-                <li key={entry.key} className="max-w-[16rem] flex-none lg:max-w-none">
+                <li key={entry.key}>
                   <button
                     type="button"
                     aria-current={entry.active ? "page" : undefined}
                     onClick={entry.select}
                     className={cn(
                       "relative flex h-10 w-full items-center gap-2 whitespace-nowrap rounded-[10px] px-3 text-left text-sm",
-                      "max-lg:border max-lg:border-loom-border-strong",
-                      entry.active ? "bg-loom-chip-bg font-bold text-loom-chip-fg max-lg:border-loom-chip-fg" : "hover:bg-loom-surface-2",
+                      entry.active ? "bg-loom-chip-bg font-bold text-loom-chip-fg" : "hover:bg-loom-surface-2",
                     )}
                   >
                     {entry.active ? <FolderOpen aria-hidden="true" className="h-4 w-4 flex-none" /> : <Folder aria-hidden="true" className="h-4 w-4 flex-none text-loom-text-muted" />}
@@ -385,23 +439,25 @@ export default function Gallery() {
                   </button>
                 </li>
               ))}
-              <li className="flex-none lg:mt-2">
+              <li className="mt-2">
                 <Button variant="outline" className="h-10 w-full justify-start" onClick={openCreateAlbum}>
                   <Plus className="mr-2 h-4 w-4" /> Nouvel album
                 </Button>
               </li>
             </ul>
+            </>
           )}
         </aside>
 
         {/* Album sélectionné */}
         <section aria-labelledby="h-album" className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex min-w-0 flex-1 items-baseline gap-2">
+            {/* Mobile : titre sur sa propre ligne (les boutons le tronquaient en « Soi… ») */}
+            <div className="flex w-full min-w-0 items-baseline gap-2 sm:w-auto sm:flex-1">
               <h2 id="h-album" className="truncate text-xl font-bold">
                 {currentTitle}
               </h2>
-              <span className="flex-none text-sm text-loom-text-muted">{photoCount(images.length)}</span>
+              {uploadTarget && <span className="flex-none text-sm text-loom-text-muted">{photoCount(images.length)}</span>}
             </div>
             {images.length > 8 && (
               <label className="relative w-full sm:w-56">
@@ -437,7 +493,20 @@ export default function Gallery() {
             )}
           </div>
 
-          {/* Zone de dépôt (toujours visible, compacte quand l'album a des photos) */}
+          {!uploadTarget ? (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-loom-border bg-loom-surface-2 px-4 py-12 text-center">
+              <FolderOpen aria-hidden="true" className="h-8 w-8 text-loom-text-muted" />
+              <p className="font-bold">Choisissez un album pour voir ses photos ou en importer</p>
+              <p className="max-w-md text-sm text-loom-text-muted">
+                <span className="lg:hidden">Utilisez la liste ci-dessus</span>
+                <span className="hidden lg:inline">Cliquez sur un album dans la colonne de gauche</span>, ou créez-en un pour une nouvelle soirée.
+              </p>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={openCreateAlbum}>
+                <Plus className="mr-2 h-4 w-4" /> Créer un album
+              </Button>
+            </div>
+          ) : (
+          /* Zone de dépôt (compacte quand l'album a des photos) */
           <div
             className={cn(
               "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed px-4 text-center transition-colors",
@@ -477,6 +546,7 @@ export default function Gallery() {
               </>
             )}
           </div>
+          )}
 
           {filteredImages.length > 0 && (
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 xl:grid-cols-6">
@@ -513,12 +583,18 @@ export default function Gallery() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nom de l'album</Label>
+              <Label htmlFor="new-album-name">Nom de l'album</Label>
               <Input
+                id="new-album-name"
+                autoFocus
                 value={albumForm.title}
                 onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value })}
-                placeholder="Ex: Soirée Halloween 2024"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && cleanAlbumName(albumForm.title) && !createAlbumMutation.isPending) createAlbumMutation.mutate(albumForm.title);
+                }}
+                placeholder="Ex : Aper'Ours au Coxx 5 décembre 2026"
               />
+              <p className="text-xs text-loom-text-muted">Le nom de l'album sur le site ; mettez la date et le lieu pour s'y retrouver.</p>
             </div>
           </div>
           <DialogFooter>
@@ -528,9 +604,9 @@ export default function Gallery() {
             <Button
               className="bg-primary text-primary-foreground hover:bg-primary/90"
               onClick={() => createAlbumMutation.mutate(albumForm.title)}
-              disabled={!albumForm.title.trim()}
+              disabled={!cleanAlbumName(albumForm.title) || createAlbumMutation.isPending}
             >
-              Créer
+              {createAlbumMutation.isPending ? "Création…" : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
