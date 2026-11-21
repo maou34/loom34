@@ -14,9 +14,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // Profile form validation schema
 const profileSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  avatarUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  fullName: z.string().min(2, 'Au moins 2 caractères'),
+  username: z.string().min(3, 'Au moins 3 caractères'),
+  avatarUrl: z.url('Adresse invalide').optional().or(z.literal('')),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;

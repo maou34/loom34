@@ -18,7 +18,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 const schema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.email("Adresse e-mail invalide"),
 });
 
 type Values = z.infer<typeof schema>;

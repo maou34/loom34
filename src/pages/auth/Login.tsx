@@ -15,7 +15,7 @@ import { safeAdminRedirect } from '@/lib/adminRedirect';
 
 // Login form validation schema
 const loginSchema = z.object({
-  email: z.string().email('Adresse e-mail invalide'),
+  email: z.email('Adresse e-mail invalide'),
   password: z.string().min(6, 'Le mot de passe doit faire au moins 6 caractères'),
 });
 

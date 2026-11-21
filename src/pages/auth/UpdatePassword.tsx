@@ -25,7 +25,7 @@ const schema = z
     confirmPassword: z.string().min(6, "Au moins 6 caractères"),
   })
   .refine((v) => v.password === v.confirmPassword, {
-    message: "Les deux mots de passe ne correspondent pas",
+    error: "Les deux mots de passe ne correspondent pas",
     path: ["confirmPassword"],
   });
 
