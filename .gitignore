@@ -26,3 +26,8 @@ dist-ssr
 documents/
 public/gallery/
 !public/gallery/images/
+# Supabase CLI : état local, jamais à committer
+supabase/.branches/
+supabase/.temp/
+supabase/snippets/
+supabase/functions/.env
