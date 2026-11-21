@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { uploadAuthHeaders } from '@/lib/uploadAuth';
+import { prepareImageForUpload } from '@/lib/prepareImage';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -61,11 +62,14 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      const picked = event.target.files?.[0];
+      if (!picked) return;
 
       setUploading(true);
       setProgress(null);
+
+      // iPhone : envoi tronqué sans cette préparation (cf. lib/prepareImage.ts)
+      const file = await prepareImageForUpload(picked);
 
       const formData = new FormData();
       formData.append('files', file);
@@ -79,8 +83,8 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       });
 
       if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        throw new Error(`Upload failed (${response.status}): ${text}`);
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.error ?? `Envoi refusé (HTTP ${response.status})`);
       }
 
       const data = (await response.json()) as UploadResponse;
@@ -97,7 +101,7 @@ export default function ImageUpload({ onUploadComplete, folder = 'images' }: Ima
       toast.success('Image téléchargée avec succès');
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error("Erreur lors du téléchargement de l'image");
+      toast.error("Erreur lors de l'envoi de l'image", { description: error instanceof Error ? error.message : undefined });
     } finally {
       setUploading(false);
       setProgress(0);

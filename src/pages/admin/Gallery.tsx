@@ -34,6 +34,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { db } from "@/db/client";
+import { prepareImageForUpload } from "@/lib/prepareImage";
 import AlbumInfoDialog from "@/components/admin/gallery/AlbumInfoDialog";
 import { Info } from "lucide-react";
 
@@ -277,10 +278,11 @@ export default function Gallery() {
     setIsUploading(true);
     setUploadFeedback(`Import de ${files.length} photo${files.length > 1 ? "s" : ""} en cours…`);
     try {
+      // Photos préparées une par une (iPhone : envoi tronqué sinon, cf. lib/prepareImage.ts)
       const form = new FormData();
-      Array.from(files).forEach((file) => {
-        if (file.type?.startsWith("image/")) form.append("files", file);
-      });
+      for (const file of Array.from(files)) {
+        if (file.type?.startsWith("image/") || /\.(heic|heif)$/i.test(file.name)) form.append("files", await prepareImageForUpload(file));
+      }
 
       const albumId = uploadTarget;
 

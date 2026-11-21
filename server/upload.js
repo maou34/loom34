@@ -308,6 +308,16 @@ app.get('/upload/status', requireAdmin, async (req, res) => {
 // Erreurs (fichier refusé, taille dépassée, CORS…) -> réponse JSON propre
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
+  // Envoi coupé avant la fin (connexion perdue, ou Safari sur iPhone qui tronquait
+  // les photos converties) : erreur du côté de l'envoi, pas du serveur
+  if (/Unexpected end of form/i.test(err.message || '')) {
+    console.warn('Envoi interrompu :', req.method, req.originalUrl);
+    return res.status(400).json({ error: "Envoi interrompu avant la fin : vérifiez la connexion et réessayez" });
+  }
+  // Origine refusée par CORS : un navigateur d'un autre site, pas une panne
+  if (/^Origin not allowed by CORS|^Invalid Origin header/.test(err.message || '')) {
+    return res.status(403).json({ error: err.message });
+  }
   const status = err.status || (err instanceof multer.MulterError ? 400 : 500);
   if (status >= 500) console.error('Unhandled error', err);
   res.status(status).json({ error: err.message || 'Server error' });
