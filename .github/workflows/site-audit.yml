@@ -62,7 +62,7 @@ jobs:
             const md = ["## Lighthouse (mobile)", "", "| Page | Performance | Accessibilité | Bonnes pratiques | SEO |", "|---|---|---|---|---|", ...rows, "", "Seuils : accessibilité ≥ 95, bonnes pratiques ≥ 90, SEO ≥ 90 (bloquants) ; performance ≥ 25 (alerte)."].join("\n");
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: rapports-lighthouse
