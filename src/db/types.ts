@@ -275,6 +275,7 @@ export type Database = {
       }
       articles: {
         Row: {
+          author_id: string | null
           id: string
           title: string
           slug: string
@@ -292,6 +293,7 @@ export type Database = {
           is_featured: boolean
         }
         Insert: {
+          author_id?: string | null
           id?: string
           title: string
           slug: string
@@ -307,6 +309,7 @@ export type Database = {
           is_featured?: boolean
         }
         Update: {
+          author_id?: string | null
           id?: string
           title?: string
           slug?: string
@@ -333,6 +336,7 @@ export type Database = {
       }
       events: {
         Row: {
+          author_id: string | null
           id: string
           title: string
           description: string
@@ -369,6 +373,7 @@ export type Database = {
           longitude: number | null
         }
         Insert: {
+          author_id?: string | null
           id?: string
           title: string
           description: string
@@ -397,6 +402,7 @@ export type Database = {
           longitude?: number | null
         }
         Update: {
+          author_id?: string | null
           id?: string
           title?: string
           description?: string
