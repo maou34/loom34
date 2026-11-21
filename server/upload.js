@@ -218,10 +218,21 @@ app.get('/upload/albums', async (req, res) => {
  */
 app.post('/upload/albums', requireAdmin, express.json(), async (req, res) => {
   try {
-    const { title } = req.body || {};
-    if (!title) return res.status(400).json({ error: 'Title required' });
+    // Nom normalisé ici aussi (un onglet d'admin ouvert avant une mise à jour peut
+    // envoyer un nom brut) : un espace final créait un album « X » vide à côté de
+    // « X », puisque l'envoi des photos, lui, retire les espaces (21/11/2026).
+    const title = String(req.body?.title || '')
+      .normalize('NFC')
+      .replace(/[\\/]+/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!title) return res.status(400).json({ error: "Nom d'album manquant" });
 
     const safeName = sanitizeAlbumId(title);
+    const existing = (await fsp.readdir(ROOT_DIR, { withFileTypes: true }))
+      .find((d) => d.isDirectory() && d.name.normalize('NFC').trim().toLowerCase() === safeName.toLowerCase());
+    if (existing) return res.status(409).json({ error: `Un album « ${existing.name.trim()} » existe déjà` });
+
     await ensureDir(path.join(ROOT_DIR, safeName));
     return res.json({ id: safeName, title: safeName });
   } catch (err) {

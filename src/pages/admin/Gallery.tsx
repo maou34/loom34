@@ -135,7 +135,7 @@ export default function Gallery() {
     queryFn: async () => {
       const albumId = viewUnclassified ? "unclassified" : selectedAlbum?.id;
       if (!albumId) return [];
-      const res = await fetch(uploadEndpoint(`/upload/albums/${albumId}/images`), {
+      const res = await fetch(uploadEndpoint(`/upload/albums/${encodeURIComponent(albumId)}/images`), {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch images");
@@ -204,7 +204,9 @@ export default function Gallery() {
 
   const deleteAlbumMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(uploadEndpoint(`/upload/albums/${id}`), {
+      const res = await fetch(// Nom encodé : sans ça le navigateur retirait l'espace final d'un album « X » et
+      // supprimait l'album « X » voisin (21/11/2026)
+      uploadEndpoint(`/upload/albums/${encodeURIComponent(id)}`), {
         method: "DELETE",
         headers: await uploadAuthHeaders(),
         credentials: "include",
