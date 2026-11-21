@@ -922,7 +922,7 @@ export default function AdminEvents() {
                   onChange={value => setEventForm(prev => ({ ...prev, description: value || '' }))}
                   height={400}
                   preview="edit"
-                  visiableDragbar={false}
+                  visibleDragbar={false}
                 />
               </div>
             </div>

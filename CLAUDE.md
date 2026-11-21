@@ -89,6 +89,10 @@ Content authored via `MDEditor` is rendered on public detail pages (`ArticleDeta
 
 `slugify()` in `src/lib/slug.ts` transliterates accents (« Nîmes » → `nimes`; the old admin rule dropped accented letters, giving `nmes`, `f-te`, trailing `-`) and must stay identical to the SQL `public.slugify()` in `src/db/slug_redirects.sql`. The admin forms only derive the slug from the title while creating or while the item is unpublished; a manually typed slug is normalised on blur. Every slug change on `events`/`articles` is recorded by the `record_slug_redirect` trigger into `slug_redirects (kind, old_slug, new_slug)` (chains collapsed, a revived slug drops its redirect), whoever makes the change; `EventDetail`/`ArticleDetail` look it up via `useSlugRedirect()` when the slug isn't found and `navigate(..., { replace: true })` to the new address, else 404. These are client-side redirects (the SPA has no server-side 301s); a generated NGINX map could add real 301s later.
 
+### Build (Vite 8 / Rolldown)
+
+Since 21/11/2026 the build runs on Vite 8 (Rolldown instead of Rollup + esbuild). Library chunks are declared in `vite.config.ts` under `build.rolldownOptions.output.codeSplitting.groups` (regex on the module path; a library's own dependencies must be listed explicitly, unlike Rollup's object-form `manualChunks`, which no longer exists). Never add an « admin » group: it pulled modules shared with the public site into the admin chunk and made every visitor preload 1.2 MB. Use `import.meta.dirname`, not `__dirname`, in the config.
+
 ### Path alias
 
 `@/*` maps to `src/*` (configured in `vite.config.ts` and `tsconfig.json`).

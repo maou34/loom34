@@ -695,7 +695,7 @@ export default function AdminArticles() {
                   onChange={value => setArticleForm(prev => ({ ...prev, content: value || '' }))}
                   height={400}
                   preview="edit"
-                  visiableDragbar={false}
+                  visibleDragbar={false}
                 />
               </div>
             </div>

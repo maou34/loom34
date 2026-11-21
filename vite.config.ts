@@ -38,44 +38,35 @@ export default defineConfig(({ mode }) => ({
 
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
 
   optimizeDeps: {
     include: [
-      "react-dnd",
-      "react-dnd-html5-backend",
-
       // Force pré-bundling pour éviter des imports ESM "cassés" dans certains découpages de chunks
       "framer-motion",
     ],
   },
 
   build: {
-    rollupOptions: {
+    // Vite 8 (Rolldown) : groupes de fichiers des bibliothèques, pour qu'elles restent en
+    // cache chez les visiteurs d'une mise en ligne à l'autre. Chaque groupe capture les
+    // fichiers dont le chemin correspond (contrairement à l'ancien manualChunks de Rollup,
+    // les dépendances d'une bibliothèque ne suivent pas d'office : elles sont listées).
+    // Pas de groupe « admin » : les pages admin sont chargées à la demande (lazy dans
+    // App.tsx) ; un groupe manuel y attirait des modules partagés avec le site public et
+    // faisait précharger tout l'admin (1,2 Mo) par chaque visiteur.
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks
-          "react-vendor": ["react", "react-dom", "react-router"],
-
-          // IMPORTANT:
-          // Mettre framer-motion dans un chunk dédié pour éviter l'erreur runtime :
-          // "local binding for export 'AnimatePresence' not found"
-          "framer-motion": ["framer-motion"],
-
-          "ui-vendor": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-toast",
+        codeSplitting: {
+          groups: [
+            { name: "react-vendor", test: /node_modules[\\/](react|react-dom|scheduler|react-router|cookie|set-cookie-parser)[\\/]/, priority: 10 },
+            { name: "framer-motion", test: /node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/, priority: 9 },
+            { name: "query-vendor", test: /node_modules[\\/]@tanstack[\\/]/, priority: 8 },
+            { name: "supabase-vendor", test: /node_modules[\\/]@supabase[\\/]/, priority: 8 },
+            { name: "ui-vendor", test: /node_modules[\\/]@radix-ui[\\/]/, priority: 7 },
           ],
-          "query-vendor": ["@tanstack/react-query"],
-          "supabase-vendor": ["@supabase/supabase-js"],
-          "markdown-vendor": ["react-markdown", "remark-gfm"],
-          // Pas de groupe « admin » ici : les pages admin sont chargées à la demande
-          // (lazy dans App.tsx). Un groupe manuel y attirait aussi les modules partagés
-          // avec le site public, et index.html préchargeait alors tout l'admin (1,2 Mo)
-          // pour chaque visiteur.
         },
       },
     },
