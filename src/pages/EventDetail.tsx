@@ -18,7 +18,7 @@ import type { EventChip } from '@/lib/eventChips';
 import { btnDisabled, btnPrimary, btnSecondary, card, container, pageFocus, strongLink } from '@/components/site/styles';
 import useSEO from '@/hooks/useSEO';
 import { useExternalLinks } from '@/hooks/useSiteSettings';
-import { generateEventStructuredData } from '@/lib/seo';
+import { generateEventStructuredData, schemaStartDate } from '@/lib/seo';
 import { stripMarkdown } from '@/lib/markdown';
 import { cn } from '@/lib/utils';
 import { HELLOASSO_BASE_URL } from '@/config';
@@ -143,16 +143,16 @@ const EventDetail = () => {
   });
 
   useEffect(() => {
-    if (event) {
-      generateEventStructuredData({
-        name: event.title,
-        description: stripMarkdown(event.description),
-        startDate: event.date,
-        location: event.location,
-        image: event.image,
-        url: window.location.href,
-      });
-    }
+    if (!event) return;
+    // Retiré en quittant la page (fonction de nettoyage renvoyée)
+    return generateEventStructuredData({
+      name: event.title,
+      description: stripMarkdown(event.description),
+      startDate: schemaStartDate(event.date, event.time),
+      location: event.location,
+      image: event.image ? new URL(event.image, window.location.origin).href : undefined,
+      url: `${window.location.origin}/events/${event.slug}`,
+    });
   }, [event]);
 
   // Adresse inconnue : contenu renommé ? (slug_redirects) — sinon page 404

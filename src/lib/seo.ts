@@ -1,4 +1,5 @@
-// SEO utility functions
+// Fonctions SEO : balises meta, Open Graph et données structurées JSON-LD
+import { parseEventTime } from './eventDates';
 export interface SEOProps {
   title: string;
   description: string;
@@ -91,31 +92,6 @@ function updateLinkTag(rel: string, href: string) {
   }
 }
 
-// Generate structured data for organization
-export function generateOrganizationStructuredData() {
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "LOOM - Les Ours Occitanie Montpellier",
-    "alternateName": "LOOM",
-    "description": "Association Bear fondée en 2017 à Montpellier pour les Bears et tous ceux qui aiment les Ours.",
-    "foundingDate": "2017",
-    "url": "https://lgbt-loom.fr",
-    "logo": "/loom_logo_round.png",
-    "sameAs": [
-      "https://www.instagram.com/loom_bears",
-      "https://www.facebook.com/loom.bears"
-    ],
-    "address": {
-      "@type": "PostalAddress",
-      "addressRegion": "Occitanie",
-      "addressCountry": "FR"
-    }
-  };
-  
-  updateStructuredData('organization', structuredData);
-}
-
 // Generate structured data for articles
 export function generateArticleStructuredData(article: {
   title: string;
@@ -143,13 +119,13 @@ export function generateArticleStructuredData(article: {
       "name": "LOOM - Les Ours Occitanie Montpellier",
       "logo": {
         "@type": "ImageObject",
-        "url": "/loom_logo_round.png"
+        "url": "https://lgbt-loom.fr/loom_logo_round.png"
       }
     },
     "url": article.url
   };
   
-  updateStructuredData('article', structuredData);
+  return updateStructuredData('article', structuredData);
 }
 
 // Generate structured data for events
@@ -172,7 +148,8 @@ export function generateEventStructuredData(event: {
     "endDate": event.endDate,
     "location": event.location ? {
       "@type": "Place",
-      "name": event.location
+      "name": event.location,
+      "address": event.location
     } : undefined,
     "image": event.image,
     "url": event.url,
@@ -188,19 +165,39 @@ export function generateEventStructuredData(event: {
     } : undefined
   };
   
-  updateStructuredData('event', structuredData);
+  return updateStructuredData('event', structuredData);
 }
 
-function updateStructuredData(id: string, data: Record<string, unknown>) {
+/**
+ * Pose (ou remplace) un bloc JSON-LD dans <head> et renvoie la fonction qui le retire :
+ * à renvoyer depuis le useEffect de la page, pour qu'il disparaisse quand on la quitte.
+ */
+function updateStructuredData(id: string, data: Record<string, unknown>): () => void {
   let script = document.querySelector(`script[data-structured-data="${id}"]`);
-  
-  if (script) {
-    script.textContent = JSON.stringify(data);
-  } else {
+  if (!script) {
     script = document.createElement('script');
     (script as HTMLScriptElement).type = 'application/ld+json';
     script.setAttribute('data-structured-data', id);
-    script.textContent = JSON.stringify(data);
     document.head.appendChild(script);
   }
+  script.textContent = JSON.stringify(data);
+  const placed = script;
+  return () => placed.remove();
+}
+
+/**
+ * Date de début schema.org : « 2026-12-05T20:00:00+01:00 » (heure de Paris, décalage
+ * été/hiver du jour même) si l'heure texte est lisible, sinon la date seule.
+ */
+export function schemaStartDate(date: string, time?: string | null): string {
+  const t = parseEventTime(time);
+  if (!t) return date;
+  const noonUtc = new Date(`${date}T12:00:00Z`);
+  const offset =
+    new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', timeZoneName: 'longOffset' })
+      .formatToParts(noonUtc)
+      .find((p) => p.type === 'timeZoneName')
+      ?.value.replace('GMT', '') || '+01:00';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date}T${pad(t.hours)}:${pad(t.minutes)}:00${offset}`;
 }

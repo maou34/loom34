@@ -69,17 +69,17 @@ const ArticleDetail = () => {
   });
 
   useEffect(() => {
-    if (article) {
-      generateArticleStructuredData({
-        title: article.title,
-        description: article.excerpt,
-        image: article.image,
-        publishedTime: article.date,
-        modifiedTime: article.updated_at,
-        author: 'LOOM',
-        url: window.location.href,
-      });
-    }
+    if (!article) return;
+    // Retiré en quittant la page (fonction de nettoyage renvoyée)
+    return generateArticleStructuredData({
+      title: article.title,
+      description: article.excerpt,
+      image: article.image ? new URL(article.image, window.location.origin).href : undefined,
+      publishedTime: article.date,
+      modifiedTime: article.updated_at,
+      author: 'LOOM',
+      url: `${window.location.origin}/articles/${article.slug}`,
+    });
   }, [article]);
 
   // Adresse inconnue : contenu renommé ? (slug_redirects) — sinon page 404

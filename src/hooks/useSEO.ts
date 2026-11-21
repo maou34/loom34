@@ -1,28 +1,24 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
-import { updatePageSEO, generateOrganizationStructuredData, SEOProps } from '@/lib/seo';
+import { updatePageSEO, SEOProps } from '@/lib/seo';
 
+/**
+ * Titre, description, Open Graph… de la page courante. Le bloc JSON-LD « Organization »
+ * est posé une fois pour tout le site (LOOMOrganizationSchema, App.tsx) ; ceux des
+ * articles et événements par leur page (generateArticle/EventStructuredData), qui les
+ * retire elle-même en partant.
+ *
+ * L'effet ne dépend que du contenu (sérialisé) : `seoProps` est un nouvel objet à chaque
+ * rendu, et l'ancienne version, qui en dépendait, se relançait à chaque rendu et
+ * effaçait au passage les blocs Event/Article (Google ne les voyait jamais).
+ */
 export function useSEO(seoProps: Partial<SEOProps>) {
   const location = useLocation();
-  
+  const key = JSON.stringify(seoProps);
+
   useEffect(() => {
-    // Update SEO with current URL
-    const currentUrl = `${window.location.origin}${location.pathname}`;
-    updatePageSEO({ ...seoProps, url: currentUrl });
-    
-    // Always include organization structured data
-    generateOrganizationStructuredData();
-    
-    // Cleanup function to remove specific structured data when component unmounts
-    return () => {
-      // Remove article or event specific structured data
-      const articleScript = document.querySelector('script[data-structured-data="article"]');
-      const eventScript = document.querySelector('script[data-structured-data="event"]');
-      
-      if (articleScript) articleScript.remove();
-      if (eventScript) eventScript.remove();
-    };
-  }, [location.pathname, seoProps]);
+    updatePageSEO({ ...(JSON.parse(key) as Partial<SEOProps>), url: `${window.location.origin}${location.pathname}` });
+  }, [location.pathname, key]);
 }
 
 export default useSEO;
