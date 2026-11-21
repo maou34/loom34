@@ -18,9 +18,11 @@ npm run compress:gallery   # Re-compresses images already in public/gallery (res
 npm run pull:gallery        # Downloads every image from the upload server (prod by default) into public/gallery/ locally
 npm run seo:generate        # Regenerates dist/sitemap.xml (runs automatically as `postbuild`)
 npm run seo:validate        # Validates SEO output (scripts/validate-seo.js)
+node scripts/site-check.mjs   # Renders every sitemap page in headless Chrome against prod: 404s, JS errors, broken images/links, certificates (~6 min)
+node scripts/audit-deps.mjs   # npm audit (production deps) with an explicit ACCEPTED list; exits 1 on anything unaccepted ≥ moderate
 ```
 
-There is no test suite configured in this repo.
+There is no test suite configured in this repo. A weekly GitHub Actions workflow (`.github/workflows/site-audit.yml`, Monday 5:30 UTC + manual run) runs those two scripts plus Lighthouse CI (`lighthouserc.json`: accessibility ≥ 95, best practices ≥ 90, SEO ≥ 90 blocking; performance ≥ 25 warning only — the site is at ~30 on mobile) against the live site; a failed job e-mails the repo owner. The repo is public: step summaries are public too. Dependabot (`.github/dependabot.yml`) opens one grouped PR per month. When accepting a vulnerability instead of fixing it, add its GHSA id to `ACCEPTED` in `scripts/audit-deps.mjs` with a reason and a review date.
 
 ## Architecture
 

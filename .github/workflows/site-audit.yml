@@ -1,0 +1,70 @@
+# Audit hebdomadaire du site en ligne et des dépendances.
+# Chaque lundi à 5 h 30 UTC, et à la demande (onglet Actions → « Audit du site » → Run workflow).
+# Un job en échec = un problème à traiter : GitHub prévient par e-mail le compte qui a
+# modifié ce fichier en dernier (réglage par défaut des notifications Actions).
+# Le détail est dans le résumé de l'exécution ; les rapports Lighthouse en artefact.
+# Dépôt public : ces résumés sont visibles de tous — n'y écrire que des informations publiques.
+name: Audit du site
+
+on:
+  schedule:
+    - cron: "30 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependances:
+    name: Failles des dépendances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # npm audit se contente de package-lock.json : pas besoin d'installer
+      - run: node scripts/audit-deps.mjs
+
+  site:
+    name: Pages, liens et certificats
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Chrome est préinstallé sur les machines ubuntu-latest de GitHub
+      - run: node scripts/site-check.mjs https://lgbt-loom.fr
+
+  lighthouse:
+    name: Lighthouse (accessibilité, SEO, performance)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Mesure et seuils (lighthouserc.json)
+        run: npx --yes @lhci/cli@0.14.0 autorun
+      - name: Scores dans le résumé
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const dir = "lighthouse-reports";
+            if (!fs.existsSync(dir + "/manifest.json")) process.exit(0);
+            const m = JSON.parse(fs.readFileSync(dir + "/manifest.json", "utf8"));
+            const pct = (v) => (v == null ? "–" : Math.round(v * 100));
+            const rows = m.map((r) => `| ${new URL(r.url).pathname} | ${pct(r.summary.performance)} | ${pct(r.summary.accessibility)} | ${pct(r.summary["best-practices"])} | ${pct(r.summary.seo)} |`);
+            const md = ["## Lighthouse (mobile)", "", "| Page | Performance | Accessibilité | Bonnes pratiques | SEO |", "|---|---|---|---|---|", ...rows, "", "Seuils : accessibilité ≥ 95, bonnes pratiques ≥ 90, SEO ≥ 90 (bloquants) ; performance ≥ 25 (alerte)."].join("\n");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapports-lighthouse
+          path: lighthouse-reports
+          retention-days: 30

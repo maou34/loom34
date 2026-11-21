@@ -1,0 +1,21 @@
+# Mises à jour des dépendances proposées par GitHub (pull requests).
+# Les failles de sécurité sont signalées en plus, dès leur publication, par les
+# « Dependabot alerts » (Settings → Code security, à activer une fois).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      # Une seule PR par mois pour toutes les mises à jour mineures/correctives
+      mineures:
+        update-types: [minor, patch]
+    labels: [dependances]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [dependances]
