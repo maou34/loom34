@@ -77,7 +77,7 @@ const upload = multer({
     const okExt = /\.(jpe?g|png|gif|webp)$/i.test(file.originalname || '');
     const okMime = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype || '');
     if (okExt && okMime) return cb(null, true);
-    const err = new Error(`Type de fichier refusé : ${file.originalname}`);
+    const err = new Error(`Type de fichier refusé : ${decodeOriginalName(file.originalname)}`);
     err.status = 400;
     return cb(err);
   }
@@ -90,8 +90,21 @@ const upload = multer({
  */
 function sanitizeSegment(seg) {
   return String(seg || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // accents retirés : « Été » -> « Ete » (et non « __t »)
     .replace(/[^a-zA-Z0-9-_]/g, '_')
     .slice(0, 128) || 'unclassified';
+}
+
+/**
+ * Nom de fichier envoyé par le navigateur. Busboy (sous multer) le lit en latin1 alors
+ * que les navigateurs l'envoient en UTF-8 : « Été » arrivait en « Ã\u0089tÃ© ». On le
+ * relit en UTF-8, sauf si ça produit des caractères invalides (nom déjà correct).
+ */
+function decodeOriginalName(name) {
+  const raw = String(name || '');
+  const utf8 = Buffer.from(raw, 'latin1').toString('utf8');
+  return utf8.includes('\uFFFD') ? raw : utf8;
 }
 
 function sanitizeAlbumId(seg) {
@@ -142,13 +155,13 @@ async function uploadHandler(req, res) {
     // Contenu vérifié avant toute écriture : un seul fichier qui n'est pas une vraie image refuse tout l'envoi
     for (const file of files) {
       if (!(await detectImageFormat(file.buffer))) {
-        return res.status(400).json({ error: `« ${path.basename(file.originalname || 'fichier')} » n'est pas une image JPG, PNG, GIF ou WebP valide` });
+        return res.status(400).json({ error: `« ${path.basename(decodeOriginalName(file.originalname) || 'fichier')} » n'est pas une image JPG, PNG, GIF ou WebP valide` });
       }
     }
 
     const items = [];
     for (const file of files) {
-      const original = path.basename(file.originalname || 'image.jpg');
+      const original = path.basename(decodeOriginalName(file.originalname) || 'image.jpg');
       const safeBase = sanitizeSegment(original.replace(/\.[^.]+$/, ''));
       const ext = path.extname(original).toLowerCase() || '.jpg';
 
