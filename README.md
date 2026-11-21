@@ -1,219 +1,173 @@
-# LOOM - Les Ours Occitanie Montpellier
+# LOOM – Les Ours Occitanie Montpellier
 
-## 🚀 Vue d'ensemble
+Site de l'association LOOM, en ligne sur **[lgbt-loom.fr](https://lgbt-loom.fr)** :
+- l'agenda des soirées, avec inscription et paiement via HelloAsso ;
+- les actualités ;
+- la présentation de l'association et de Monsieur Ours ;
+- les albums photos ;
+- les partenaires ;
+- un formulaire de contact.
 
-LOOM est une application web moderne pour l'association Les Ours Occitanie Montpellier, construite avec React et TypeScript.
+Un espace d'administration permet au bureau de tout gérer sans toucher au code.
 
-## 🛠️ Stack Technique
+> Ce dépôt est public. N'y committez jamais de secret (clés, mots de passe, fichiers `.env`).
 
-### Frontend
-- **Framework**: React 18 avec TypeScript
-- **Routing**: React Router v6
-- **State Management**: React Query (TanStack Query)
-- **UI Components**: Shadcn/ui (basé sur Radix UI)
-- **Styling**: Tailwind CSS
-- **Form Handling**: React Hook Form
-- **Validation**: Zod
-- **Icons**: Lucide React
+## Sommaire
 
-### Backend & Services
-- **Base de données**: Supabase (PostgreSQL)
-- **Authentification**: Supabase Auth
-- **Stockage des images**: serveur Express dédié (`server/upload.js`), pas Supabase Storage — voir la section Galerie ci-dessous
-- **API**: REST avec Supabase
+- [Fonctionnalités](#fonctionnalités)
+- [Architecture](#architecture)
+- [Démarrer en local](#démarrer-en-local)
+- [Commandes utiles](#commandes-utiles)
+- [Base de données](#base-de-données)
+- [Mise en ligne](#mise-en-ligne)
+- [Surveillance et audits](#surveillance-et-audits)
+- [Pour aller plus loin](#pour-aller-plus-loin)
 
-## 📁 Structure du Projet
+## Fonctionnalités
+
+**Site public**
+- Accueil avec la soirée à la une, les prochains événements et les rendez-vous réguliers.
+- Agenda filtrable par ville, et fiche de chaque événement. La fiche donne :
+  - les tarifs et les places restantes ;
+  - l'inscription HelloAsso (intégrée sur ordinateur, en nouvel onglet sur mobile) ;
+  - un plan OpenStreetMap ;
+  - un lien « Ajouter à mon agenda ».
+- Actualités par catégorie, page de l'association (histoire, équipe, contact), palmarès de Monsieur Ours.
+- Albums photos avec visionneuse, et partenaires filtrables par catégorie et par ville.
+- Mode nuit (par défaut), options d'accessibilité (taille du texte, police OpenDyslexic, contraste renforcé…).
+- Installable sur téléphone (PWA).
+
+**Administration** (`/admin`, réservée aux comptes administrateurs)
+- Tableau de bord :
+  - prochains événements et choses à traiter ;
+  - visites (Cloudflare Web Analytics) et santé du site ;
+  - résultat de l'audit de sécurité.
+- Gestion des événements, articles, partenaires, albums photos, Monsieur Ours, histoire et équipe.
+- Réglages de la page d'accueil et des liens Boutique / Adhérer.
+- Messages du formulaire de contact, avec alerte par e-mail.
+- Gestion des administrateurs par invitation. Les inscriptions publiques sont fermées.
+
+## Architecture
+
+| Élément | Technologie |
+|---|---|
+| Site (SPA) | React 18, TypeScript, Vite, React Router, TanStack Query, Tailwind CSS, shadcn/ui (Radix) |
+| Données et comptes | [Supabase](https://supabase.com) : PostgreSQL avec règles d'accès (RLS), Auth, Edge Functions (Deno) |
+| Photos | Serveur Express dédié (`server/upload.js`), sur `upload.lgbt-loom.fr`, et non Supabase Storage |
+| Billetterie | [HelloAsso](https://www.helloasso.com). Le site ne stocke que des compteurs (places vendues), jamais de données de participants |
+| Hébergement | VPS OVH (nginx) pour le site et le serveur de photos ; Supabase pour la base |
+
+Organisation du code :
 
 ```
 src/
-├── components/         # Composants réutilisables
-│   ├── admin/         # Composants spécifiques à l'admin
-│   ├── auth/          # Composants d'authentification
-│   ├── ui/            # Composants UI de base
-│   └── shared/        # Composants partagés
-├── contexts/          # Contextes React
-├── hooks/             # Hooks personnalisés
-├── lib/               # Utilitaires et configurations
-├── pages/             # Pages de l'application
-│   ├── admin/         # Pages du panneau d'administration
-│   ├── auth/          # Pages d'authentification
-│   └── public/        # Pages publiques
-└── types/             # Types TypeScript
+├── pages/            # Pages publiques (Index, Events, EventDetail…) et pages admin (pages/admin/)
+├── components/       # Composants par zone : site/, home/, agenda/, event/, asso/, gallery/, admin/, ui/ (shadcn)
+├── lib/              # Logique partagée (billetterie, dates, slugs, préparation des photos…)
+├── db/               # Client Supabase, types de la base (types.ts) et schéma documenté (*.sql)
+├── theme/            # Couleurs (clair / nuit) en variables CSS
+└── contexts/, hooks/
+server/               # Serveur de photos (envoi, compression, albums) — Node/Express
+supabase/functions/   # Edge Functions : synchro HelloAsso, webhook, notifications, statistiques, audit…
+scripts/              # Sitemap, outils photos, contrôles du site et des dépendances
 ```
 
-## 🔐 Authentification
+## Démarrer en local
 
-- Système d'authentification complet avec Supabase
-- Rôles utilisateurs : Admin et Utilisateur standard
-- Protection des routes admin avec `RequireAuth` et `RequireAdmin`
-- Gestion des sessions persistantes
-
-## 🎨 Fonctionnalités Principales
-
-### Public
-- Galerie de photos
-- Liste des événements
-- Articles et actualités
-- Page "Monsieur Ours"
-- Liste des partenaires
-- Formulaire de contact
-- Redirection vers HelloAsso (adhésion et boutique)
-
-### Administration
-- Dashboard avec statistiques
-- Gestion des articles (CRUD)
-- Gestion des événements (CRUD)
-- Gestion de la galerie photos
-- Gestion des utilisateurs
-- Gestion des tickets de contact
-
-## 🗄️ Galerie: stockage d'images en local
-
-La galerie n'utilise plus Supabase Storage. Les images sont servies en statique depuis `public/gallery` par un serveur Express dédié (`server/upload.js`, `npm run server:upload`, port 8081 en dev), et les enregistrements en base (table `gallery_images`) référencent un chemin relatif (ex: `/gallery/<albumId>/photo.jpg`).
-
-### Ajouter des images
-
-Dans l'admin (page Galerie, ou HomeSettings/Articles/Events pour leurs images dédiées), le composant `ImageUpload` envoie le fichier au serveur d'upload. Celui-ci le redimensionne et le recompresse automatiquement avant de l'écrire sur disque (voir « Compression des images » ci-dessous) — aucune manipulation manuelle de fichiers n'est nécessaire.
-
-En dev, Vite proxifie `/upload` vers `localhost:8081` (voir `vite.config.ts`) ; en prod, l'upload part vers `upload.lgbt-loom.fr`, un déploiement séparé du site principal.
-
-Remarque: seul `public/gallery/images/` (assets statiques du site, ex. l'image de secours du hero) est committé dans le repo — voir `.gitignore`. Les autres albums vivent uniquement sur le disque du serveur d'upload ; utilisez `npm run pull:gallery` pour en récupérer une copie locale (voir plus bas).
-
-### Compression des images
-
-Chaque upload est automatiquement redimensionné (2400px max sur le plus grand côté, jamais agrandi) et recompressé (JPEG/WebP qualité 82, PNG compression max) par `server/imageCompression.js`, partagé par le serveur d'upload et par le script `scripts/compress-gallery.js` :
+Prérequis : Node.js 22 et npm.
 
 ```bash
-npm run compress:gallery              # dry-run: affiche les gains projetés sans rien modifier
-npm run compress:gallery -- --write    # applique la compression aux images déjà présentes dans public/gallery
+npm ci
+cp .env.example .env.local   # puis remplir les valeurs
+npm run dev                  # http://localhost:8080
 ```
 
-Le script est idempotent (n'écrase un fichier que si le résultat est plus léger) et peut être relancé sans risque.
-
-### Récupérer les images depuis le serveur
-
-`scripts/pull-gallery.js` télécharge toutes les images d'un serveur d'upload en cours d'exécution (prod par défaut) vers `public/gallery/` en local :
+Variables d'environnement (`.env.local`, jamais committé) :
 
 ```bash
-npm run pull:gallery                                          # depuis https://upload.lgbt-loom.fr
-PULL_UPLOAD_URL=http://localhost:8081 npm run pull:gallery    # depuis un serveur d'upload local
-npm run pull:gallery -- --force                                # re-télécharge même les fichiers déjà présents
+VITE_SUPABASE_URL=https://<projet>.supabase.co
+VITE_SUPABASE_ANON_KEY=<clé publique « anon »>
+# Facultatif
+VITE_UPLOAD_URL=http://localhost:8081                     # serveur de photos (déduit de l'adresse sinon)
+VITE_HELLOASSO_BASE_URL=https://www.helloasso-sandbox.com # bac à sable HelloAsso en développement
+VITE_HELLOASSO_ORG_SLUG=<organisation HelloAsso>
 ```
 
-Incrémental par défaut (ignore les fichiers déjà présents localement).
+Seules les variables `VITE_…` arrivent dans le navigateur : n'y mettez jamais de clé secrète. Les secrets des Edge Functions se règlent avec `supabase secrets set`.
 
-### Migration depuis Supabase Storage
-
-Un script de migration est fourni pour rapatrier les images existantes de Supabase vers `public/gallery` et mettre à jour les chemins dans la base.
-
-Pré-requis variables d'environnement:
-
-```
-VITE_SUPABASE_URL=...           # requis
-SUPABASE_SERVICE_ROLE_KEY=...   # recommandé pour mettre à jour la base automatiquement
-VITE_SUPABASE_ANON_KEY=...      # utilisé si pas de service role (mise à jour manuelle)
-```
-
-Exécution:
-
-```
-npm run migrate:gallery
-```
-
-Ce script:
-- Télécharge les images référencées par des URLs Supabase.
-- Les enregistre sous `public/gallery/<albumId|unclassified>/`.
-- Si `SUPABASE_SERVICE_ROLE_KEY` est fourni, met à jour `gallery_images.image_url` et `gallery_albums.cover_image` avec les chemins relatifs (ex: `/gallery/<albumId>/file.jpg`).
-- Sinon, il génère un rapport JSON `scripts/migrate-gallery-report.json` à appliquer manuellement.
-
-## �🔄 Navigation
-
-- Navigation forcée avec rechargement complet pour garantir la stabilité de la connexion Supabase
-- Titres de page dynamiques pour chaque route
-- Protection des routes sensibles
-
-## 🚀 Déploiement
-
-Le site est hébergé sur un VPS OVH :
-- mise à jour par `git pull` puis `npm run build` dans le dépôt du serveur ; le dossier `dist/` est servi tel quel ;
-- `npm run build` régénère aussi `dist/sitemap.xml` (étape `postbuild`) à partir des articles, événements et albums publiés ;
-- le serveur d'images (`server/upload.js`, `upload.lgbt-loom.fr`) se déploie et se redémarre à part ; quand une modification touche les deux, déployer d'abord le site, puis le serveur d'images ;
-- les fonctions Supabase (`supabase/functions/*`) se déploient avec `supabase functions deploy <nom>`.
-
-## 🔧 Configuration Requise
+Pour envoyer des photos en local, lancez aussi le serveur de photos :
 
 ```bash
-# Variables d'environnement (.env)
-VITE_SUPABASE_URL=votre_url_supabase
-VITE_SUPABASE_ANON_KEY=votre_clé_anon_supabase
+npm run server:upload        # http://127.0.0.1:8081 (a besoin de SUPABASE_URL et SUPABASE_ANON_KEY)
 ```
 
-## 📦 Installation
+## Commandes utiles
+
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | Serveur de développement |
+| `npm run build` | Build de production dans `dist/`, puis génération de `dist/sitemap.xml` |
+| `npm run lint` | ESLint |
+| `npm run preview` | Sert le build de production en local |
+| `npm run server:upload` | Serveur de photos |
+| `npm run pull:gallery` | Copie locale des photos du serveur de prod |
+| `npm run compress:gallery` | Recompresse les photos déjà en place (simulation par défaut, `-- --write` pour appliquer) |
+| `node scripts/site-check.mjs` | Contrôle du site en ligne : pages, liens, images, certificats |
+| `node scripts/audit-deps.mjs` | Failles connues dans les dépendances de production |
+
+Il n'y a pas de tests automatisés. Avant chaque mise en ligne, `npm run build` doit passer. Vérifiez aussi les pages modifiées à 390 px et à 1440 px de large, en mode clair et en mode nuit.
+
+## Base de données
+
+- Le schéma de chaque table est documenté dans `src/db/*.sql`, et les types TypeScript dans `src/db/types.ts`, tenus à jour à la main.
+- Les nouvelles évolutions de schéma passent par des migrations Supabase (`supabase/migrations/`, branche `feature/supabase-docker`), appliquées avec `supabase db push`.
+- Chaque table a ses règles d'accès (RLS) :
+  - lecture publique de ce qui est publié ;
+  - écriture réservée aux administrateurs ;
+  - le formulaire de contact est la seule écriture ouverte aux visiteurs.
+
+  Une nouvelle table sans règles est bloquée en écriture ; une table sans RLS est ouverte à tous. L'audit de sécurité nocturne le signale.
+
+## Mise en ligne
+
+Sur le VPS, dans le dépôt cloné :
 
 ```bash
-# Installation des dépendances
-npm install
-
-# Démarrage en développement
-npm run dev
-
-# Build pour production
-npm run build
+git pull
+npm ci                              # seulement si package-lock.json a changé
+npm run build                       # le dossier dist/ est servi par nginx
+sudo systemctl restart loom-upload  # seulement si server/ ou les dépendances ont changé
 ```
 
-## 🛠️ Maintenance
+- Quand une modification touche le site et le serveur de photos, mettez d'abord le site en ligne, puis le serveur.
+- Les Edge Functions se déploient à part : `supabase functions deploy <nom>`.
+- Ne modifiez jamais de fichier suivi par git directement sur le serveur : le `git pull` suivant serait bloqué.
 
-- Mise à jour régulière des dépendances
-- Sauvegarde automatique de la base de données Supabase
+## Surveillance et audits
 
-### Migration galerie vers stockage local
+- **Chaque nuit**, un audit de sécurité de la base contrôle notamment :
+  - la protection RLS de chaque table ;
+  - les droits des visiteurs ;
+  - la protection du statut administrateur ;
+  - la fermeture des inscriptions ;
+  - l'apparition d'un nouvel administrateur ou d'un nouveau compte.
 
-La galerie photos n'utilise plus Supabase Storage. Les fichiers sont servis depuis `public/gallery` et les chemins stockés en base sont relatifs (ex: `/gallery/<albumId>/photo.jpg`).
+  Les administrateurs sont prévenus par e-mail en cas de problème.
+- **Chaque lundi**, un workflow GitHub Actions (`.github/workflows/site-audit.yml`) vérifie :
+  - les failles des dépendances ;
+  - toutes les pages du site rendues dans Chrome, et leurs liens ;
+  - les certificats HTTPS ;
+  - les scores Lighthouse (accessibilité, bonnes pratiques et SEO bloquants).
 
-Outils fournis:
+  On peut aussi le lancer à la main depuis l'onglet *Actions*.
+- **Dependabot** propose chaque mois une pull request groupée de mises à jour mineures, et une pour les correctifs de sécurité.
 
-- Script de migration: `scripts/migrate-gallery.js`
-	- Télécharge les images distantes (URL http/https) référencées dans `gallery_images.image_url` vers `public/gallery/<albumId|unclassified>/`
-	- Télécharge les covers d'albums (si URL distante) vers `public/gallery/<albumId>/`
-	- Met à jour la base (si `SUPABASE_SERVICE_ROLE_KEY` présent) ou génère un rapport `.json` et `.sql` sinon
-	- Options: `--dry-run` (ne fait que préparer les changements, sans téléchargement ni update DB)
+## Pour aller plus loin
 
-Utilisation:
+[`CLAUDE.md`](CLAUDE.md) est la documentation technique détaillée, en anglais. On y trouve notamment :
+- les décisions sur la billetterie HelloAsso ;
+- le fonctionnement du serveur de photos ;
+- les règles d'accès de la base ;
+- le thème et les pièges connus.
 
-```powershell
-# PowerShell (Windows)
-$env:VITE_SUPABASE_URL="https://<your>.supabase.co"
-$env:SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"
-npm run migrate:gallery
-
-# Mode simulation (dry-run)
-npm run migrate:gallery -- --dry-run
-```
-
-Après migration, vous pouvez supprimer les fichiers du bucket Supabase si nécessaire (optionnel), et déployer le site avec les fichiers statiques désormais inclus dans `public/gallery`.
-
-## 📝 Notes Techniques
-
-- Utilisation de React Query pour la gestion du cache et des requêtes
-- Compression automatique des images à l'upload (voir section Galerie)
-- Gestion des erreurs globalisée
-- Support multilingue (préparé pour internationalisation)
-
-## 🔍 SEO
-
-- Meta tags dynamiques
-- Sitemap généré automatiquement
-- Structure sémantique HTML5
-- Optimisation des images et du contenu
-
-## 🤝 Contribution
-
-1. Fork du projet
-2. Création d'une branche (`git checkout -b feature/AmazingFeature`)
-3. Commit des changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
-5. Ouverture d'une Pull Request
-
-## 📄 Licence
-
-Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+Contact : [contactloom34@gmail.com](mailto:contactloom34@gmail.com).
