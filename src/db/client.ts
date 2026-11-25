@@ -1,5 +1,6 @@
 import { createClient, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { Database } from '@/db/types';
+import { resolveRuntimeUrl } from '@/config';
 
 // Configuration
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -10,7 +11,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 // Create the Supabase client
-export const db = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
+export const db = createClient<Database>(resolveRuntimeUrl(SUPABASE_URL), SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

@@ -3,10 +3,37 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 
+/**
+ * Mode « tunnel » (`npm run dev:tunnel` + `npm run tunnel`) : le site local, sur la
+ * base Supabase LOCALE, partagé via un tunnel Cloudflare temporaire. Les visiteurs
+ * ne peuvent pas joindre 127.0.0.1 : Vite relaie donc Supabase (/supabase) et le
+ * serveur d'images (/upload, /gallery, comme nginx en prod) sous la même adresse.
+ * L'en-tête Origin est retiré vers le serveur d'images, dont la liste CORS ne
+ * connaît pas les adresses *.trycloudflare.com (les requêtes restent du même site
+ * côté navigateur). Pas de rechargement à chaud : son websocket ne passerait pas.
+ */
+const dropOrigin = (proxy: { on: (event: "proxyReq", cb: (req: { removeHeader: (name: string) => void }) => void) => void }) =>
+  proxy.on("proxyReq", (req) => req.removeHeader("origin"));
+const tunnelServer = {
+  host: "localhost",
+  port: 8080,
+  allowedHosts: [".trycloudflare.com"],
+  hmr: false,
+  proxy: {
+    "/supabase": {
+      target: "http://127.0.0.1:54321",
+      changeOrigin: true,
+      rewrite: (p: string) => p.replace(/^\/supabase/, ""),
+    },
+    "/upload": { target: "http://127.0.0.1:8081", changeOrigin: true, configure: dropOrigin },
+    "/gallery": { target: "http://127.0.0.1:8081", changeOrigin: true, configure: dropOrigin },
+  },
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   // 🔧 Serveur DEV uniquement
-  server: {
+  server: mode === "tunnel" ? tunnelServer : {
     host: "localhost",
     port: 8080,
     proxy: {

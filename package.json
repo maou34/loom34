@@ -7,6 +7,8 @@
     "dev": "vite",
     "dev:localdb": "vite --mode localdb",
     "dev:vps": "vite --mode vps",
+    "dev:tunnel": "vite --mode tunnel",
+    "tunnel": "cloudflared tunnel --url http://localhost:8080",
     "build": "vite build",
     "postbuild": "node scripts/generate-seo.js",
     "build:dev": "vite build --mode development",

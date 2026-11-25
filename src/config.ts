@@ -7,7 +7,17 @@ const isProdHostname = typeof window !== 'undefined' && (
   window.location.hostname.endsWith('.lgbt-loom.fr')
 );
 
-export const UPLOAD_URL = import.meta.env.VITE_UPLOAD_URL || (isProd || isProdHostname ? 'https://upload.lgbt-loom.fr' : 'http://localhost:8081');
+/**
+ * Une adresse commençant par « / » est relative au site lui-même (mode tunnel,
+ * `npm run dev:tunnel`) : le serveur Vite relaie alors Supabase et le serveur
+ * d'images, et tout passe par la seule adresse publique du tunnel.
+ */
+export function resolveRuntimeUrl(value: string): string {
+  if (!value.startsWith('/') || typeof window === 'undefined') return value;
+  return `${window.location.origin}${value}`.replace(/\/+$/, '');
+}
+
+export const UPLOAD_URL = resolveRuntimeUrl(import.meta.env.VITE_UPLOAD_URL || (isProd || isProdHostname ? 'https://upload.lgbt-loom.fr' : 'http://localhost:8081'));
 
 // HelloAsso (billetterie). En local, pour tester avec la sandbox :
 //   VITE_HELLOASSO_BASE_URL=https://www.helloasso-sandbox.com
